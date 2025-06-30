@@ -17,17 +17,19 @@ public class WebInitializer implements WebApplicationInitializer {
 
     @Override
     public void onStartup(ServletContext servletContext) throws ServletException {
-        AnnotationConfigWebApplicationContext ctx = new AnnotationConfigWebApplicationContext();
-        ctx.register(SpringConfig.class);
-        ctx.setServletContext(servletContext);
+        AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
+        context.register(SpringConfig.class);
 
-        ServletRegistration.Dynamic servlet = servletContext.addServlet("dispatcher", new DispatcherServlet(ctx));
+        servletContext.setInitParameter("spring.profiles.active", "default");
+
+        System.out.println(">> Servlet 3.0 multipart support: " + servletContext.getMajorVersion() + "." + servletContext.getMinorVersion());
+
+        ServletRegistration.Dynamic servlet = servletContext.addServlet("dispatcher", new DispatcherServlet(context));
         servlet.setLoadOnStartup(1);
         servlet.addMapping("/");
 
         MultipartConfigElement multipartConfig = new MultipartConfigElement(
-                LOCATION, MAX_FILE_SIZE, MAX_REQUEST_SIZE, FILE_SIZE_THRESHOLD
-        );
+                LOCATION, MAX_FILE_SIZE, MAX_REQUEST_SIZE, FILE_SIZE_THRESHOLD);
         servlet.setMultipartConfig(multipartConfig);
     }
 }

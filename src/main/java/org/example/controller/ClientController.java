@@ -1,26 +1,26 @@
 package org.example.controller;
 
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestBody;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.example.model.ClientData;
 import org.example.model.ClientForm;
 import org.example.dto.ClientDto;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/clients")
@@ -76,30 +76,39 @@ public class ClientController {
         }
     }
 
-    @Operation(summary = "Upload clients TSV file")
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> uploadClientTsv(
-            @RequestParam("file") MultipartFile file,
-            HttpServletRequest request
-    ) {
-        try {
-            String contentType = request.getContentType();
-            System.out.println(">>> Received Content-Type: " + contentType);
+    @Operation(summary = "Upload clients via TSV file")
+    @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> uploadClientsFromTsv(
+            @RequestParam("file") MultipartFile file) {
+        if (file.isEmpty() || !file.getOriginalFilename().endsWith(".tsv")) {
+            return ResponseEntity.badRequest().body("Please upload a non-empty .tsv file.");
+        }
+        System.out.println(file);
 
-            if (file == null || file.isEmpty()) {
-                return ResponseEntity.badRequest().body("No file uploaded or file is empty.");
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+            String header = reader.readLine(); // Assuming header is: "clientName"
+            if (header == null || !header.toLowerCase().contains("clientname")) {
+                return ResponseEntity.badRequest().body("Missing or invalid header: 'clientName'");
             }
 
-            clientDto.uploadClientTsv(file);
-            return ResponseEntity.ok("Client TSV uploaded successfully.");
+            int count = 0;
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] cols = line.split("\t");
+                if (cols.length < 1 || cols[0].trim().isEmpty()) continue;
 
-        } catch (Exception ex) {
-            ex.printStackTrace(); // Useful for debugging
+                ClientForm form = new ClientForm();
+                form.setClientName(cols[0].trim().toLowerCase());
+
+                clientDto.add(form);
+                count++;
+            }
+
+            return ResponseEntity.ok("Successfully uploaded " + count + " clients.");
+        } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error uploading TSV: " + ex.getMessage());
+                    .body("Error while processing file: " + e.getMessage());
         }
     }
-
-
-
 }
