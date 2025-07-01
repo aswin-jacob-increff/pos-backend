@@ -34,7 +34,16 @@
             <param-name>contextConfigLocation</param-name>
             <param-value>org.example.config.SpringConfig</param-value>
         </init-param>
+
+
+
         <load-on-startup>1</load-on-startup>
+        <multipart-config>
+            <location>/tmp</location>
+            <max-file-size>10485760</max-file-size> <!-- 10MB -->
+            <max-request-size>10485760</max-request-size>
+            <file-size-threshold>1048576</file-size-threshold>
+        </multipart-config>
     </servlet>
 
     <servlet-mapping>

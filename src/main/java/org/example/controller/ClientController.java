@@ -2,12 +2,9 @@ package org.example.controller;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.http.ResponseEntity;
@@ -79,14 +76,17 @@ public class ClientController {
     @Operation(summary = "Upload clients via TSV file")
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> uploadClientsFromTsv(
-            @RequestParam("file") MultipartFile file) {
-        if (file.isEmpty() || !file.getOriginalFilename().endsWith(".tsv")) {
-            return ResponseEntity.badRequest().body("Please upload a non-empty .tsv file.");
-        }
-        System.out.println(file);
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(name = "uploadedBy", required = false) String uploadedBy) {
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
-            String header = reader.readLine(); // Assuming header is: "clientName"
+        if (file == null || file.isEmpty() || !file.getOriginalFilename().endsWith(".tsv")) {
+            return ResponseEntity.badRequest().body("Please upload a valid non-empty .tsv file.");
+        }
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+
+            String header = reader.readLine(); // Expecting: clientName
             if (header == null || !header.toLowerCase().contains("clientname")) {
                 return ResponseEntity.badRequest().body("Missing or invalid header: 'clientName'");
             }
@@ -104,11 +104,16 @@ public class ClientController {
                 count++;
             }
 
-            return ResponseEntity.ok("Successfully uploaded " + count + " clients.");
+            return ResponseEntity.ok("Uploaded " + count + " clients" +
+                    (uploadedBy != null ? " by " + uploadedBy : "") + ".");
+
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error while processing file: " + e.getMessage());
+                    .body("Failed to process file: " + e.getMessage());
         }
     }
+
+
+
 }

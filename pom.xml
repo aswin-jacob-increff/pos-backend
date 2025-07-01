@@ -38,7 +38,7 @@
         <dependency>
             <groupId>jakarta.persistence</groupId>
             <artifactId>jakarta.persistence-api</artifactId>
-            <version>3.1.0</version>
+            <version>3.2.0</version>
         </dependency>
 
         <!-- MySQL Connector -->
@@ -127,7 +127,7 @@
         <dependency>
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
-            <version>2.1.1</version>
+            <version>3.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>
@@ -155,6 +155,13 @@
             <artifactId>spring-web</artifactId>
             <version>6.1.13</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.jetty.ee10</groupId>
+            <artifactId>jetty-ee10-servlet</artifactId>
+            <version>12.0.11</version>
+        </dependency>
+
     </dependencies>
 
     <build>

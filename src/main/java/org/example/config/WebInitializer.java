@@ -32,4 +32,5 @@ public class WebInitializer implements WebApplicationInitializer {
                 LOCATION, MAX_FILE_SIZE, MAX_REQUEST_SIZE, FILE_SIZE_THRESHOLD);
         servlet.setMultipartConfig(multipartConfig);
     }
+
 }
