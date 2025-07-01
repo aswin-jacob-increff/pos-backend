@@ -40,7 +40,7 @@ public class ProductDao {
 
 
     public List<ProductPojo> selectAll() {
-        String query = "SELECT p FROM ProductPojo p";
+        String query = "SELECT p FROM ProductPojo p JOIN FETCH p.client";
         return em.createQuery(query, ProductPojo.class).getResultList();
     }
 

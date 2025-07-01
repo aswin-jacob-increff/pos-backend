@@ -7,10 +7,7 @@ import org.example.flow.ClientFlow;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -72,27 +69,6 @@ public class ClientDto {
             throw new IllegalArgumentException("Client name cannot be null");
         }
         clientFlow.deleteClientByName(name);
-    }
-
-    public void uploadClientTsv(MultipartFile file) throws Exception {
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
-            String line;
-            boolean isHeader = true;
-            while ((line = br.readLine()) != null) {
-                if (isHeader) {
-                    isHeader = false;
-                    continue;
-                }
-
-                String[] parts = line.trim().split("\t");
-                if (parts.length < 1) continue;
-
-                String clientName = parts[0].trim().toLowerCase();
-                if (clientName.isEmpty()) continue;
-
-                clientFlow.createClient(clientName);
-            }
-        }
     }
 
     private void validate(ClientForm clientForm) {

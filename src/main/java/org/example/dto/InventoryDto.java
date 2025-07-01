@@ -111,7 +111,7 @@ public class InventoryDto {
         inventoryData.setId(inventoryPojo.getId());
         inventoryData.setProductName(inventoryPojo.getProduct().getName());
         inventoryData.setProductBarcode(inventoryPojo.getProduct().getBarcode());
-        inventoryData.setProductName(inventoryPojo.getProduct().getName());
+        inventoryData.setProductId(inventoryPojo.getProduct().getId());
         inventoryData.setClientId(inventoryPojo.getProduct().getClient().getId());
         inventoryData.setClientName(inventoryPojo.getProduct().getClient().getClientName());
         inventoryData.setQuantity(inventoryPojo.getQuantity());

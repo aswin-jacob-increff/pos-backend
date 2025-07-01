@@ -23,8 +23,10 @@ public class InventoryDao {
     }
 
     public List<InventoryPojo> selectAll() {
-        String query = "SELECT i FROM InventoryPojo i";
-        return em.createQuery(query, InventoryPojo.class).getResultList();
+        String jpql = "SELECT i FROM InventoryPojo i " +
+                "JOIN FETCH i.product p " +
+                "JOIN FETCH p.client";
+        return em.createQuery(jpql, InventoryPojo.class).getResultList();
     }
 
     public void update(Integer id, InventoryPojo inventory) {
