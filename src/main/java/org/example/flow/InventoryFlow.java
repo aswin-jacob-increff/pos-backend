@@ -2,12 +2,15 @@ package org.example.flow;
 
 import org.example.pojo.InventoryPojo;
 import org.example.service.InventoryService;
+import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Component
+@Transactional
 public class InventoryFlow {
 
     @Autowired
@@ -45,5 +48,17 @@ public class InventoryFlow {
 
     public void delete(Integer id) {
         inventoryService.delete(id);
+    }
+
+    public void addStock(Integer productId, Integer quantity) {
+        inventoryService.addStock(productId, quantity);
+    }
+
+    public void removeStock(Integer productId, Integer quantity) {
+        inventoryService.removeStock(productId, quantity);
+    }
+
+    public void setStock(Integer productId, Integer quantity) {
+        inventoryService.setStock(productId, quantity);
     }
 }

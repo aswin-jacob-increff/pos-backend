@@ -1,5 +1,6 @@
 package org.example.controller;
 
+import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,7 +25,7 @@ public class InventoryController {
     @GetMapping("/{id}")
     public InventoryData get(@PathVariable Integer id) {
         if (id == null) {
-            throw new IllegalArgumentException("Inventory ID cannot be null");
+            throw new ApiException("Inventory ID cannot be null");
         }
         return inventoryDto.get(id);
     }
@@ -49,21 +50,63 @@ public class InventoryController {
         } else if (name != null && !name.trim().isEmpty()) {
             inventoryData = inventoryDto.getByProductName(name.trim());
         } else {
-            throw new RuntimeException("Requires either of product name, product id or product barcode");
+            throw new ApiException("Requires either of product name, product id or product barcode");
         }
 
         if (inventoryData == null) {
-            throw new RuntimeException("Inventory not found for the provided input.");
+            throw new ApiException("Inventory not found for the provided input.");
         }
 
         return inventoryData;
     }
 
     @PutMapping("/{id}")
-    public void update(@PathVariable Integer id, @RequestBody InventoryForm form) {
+    public InventoryData update(@PathVariable Integer id, @RequestBody InventoryForm form) {
         if (id == null) {
-            throw new IllegalArgumentException("Inventory ID cannot be null");
+            throw new ApiException("Inventory ID cannot be null");
         }
-        inventoryDto.update(id, form);
+        return inventoryDto.update(id, form);
+    }
+    
+    @PutMapping("/{productId}/addStock")
+    public InventoryData addStock(
+            @PathVariable Integer productId,
+            @RequestParam Integer quantity
+    ) {
+        if (productId == null) {
+            throw new ApiException("Product ID cannot be null");
+        }
+        if (quantity == null || quantity <= 0) {
+            throw new ApiException("Quantity must be positive");
+        }
+        return inventoryDto.addStock(productId, quantity);
+    }
+    
+    @PutMapping("/{productId}/removeStock")
+    public InventoryData removeStock(
+            @PathVariable Integer productId,
+            @RequestParam Integer quantity
+    ) {
+        if (productId == null) {
+            throw new ApiException("Product ID cannot be null");
+        }
+        if (quantity == null || quantity <= 0) {
+            throw new ApiException("Quantity must be positive");
+        }
+        return inventoryDto.removeStock(productId, quantity);
+    }
+    
+    @PutMapping("/{productId}/setStock")
+    public InventoryData setStock(
+            @PathVariable Integer productId,
+            @RequestParam Integer quantity
+    ) {
+        if (productId == null) {
+            throw new ApiException("Product ID cannot be null");
+        }
+        if (quantity == null || quantity < 0) {
+            throw new ApiException("Quantity cannot be negative");
+        }
+        return inventoryDto.setStock(productId, quantity);
     }
 }

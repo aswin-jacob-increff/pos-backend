@@ -1,6 +1,7 @@
 package org.example.controller;
 
 import org.example.dto.OrderDto;
+import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,7 +26,7 @@ public class OrderController {
     @GetMapping("/{id}")
     public OrderData get(@PathVariable Integer id) {
         if (id == null) {
-            throw new IllegalArgumentException("Order ID cannot be null");
+            throw new ApiException("Order ID cannot be null");
         }
         return orderDto.get(id);
     }
@@ -36,18 +37,26 @@ public class OrderController {
     }
 
     @PutMapping("/{id}")
-    public void update(@PathVariable Integer id, @RequestBody OrderForm form) {
+    public OrderData update(@PathVariable Integer id, @RequestBody OrderForm form) {
         if (id == null) {
-            throw new IllegalArgumentException("Order ID cannot be null");
+            throw new ApiException("Order ID cannot be null");
         }
-        orderDto.update(id, form);
+        return orderDto.update(id, form);
     }
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Integer id) {
         if (id == null) {
-            throw new IllegalArgumentException("Order ID cannot be null");
+            throw new ApiException("Order ID cannot be null");
         }
         orderDto.delete(id);
+    }
+    
+    @PutMapping("/{id}/cancel")
+    public OrderData cancelOrder(@PathVariable Integer id) {
+        if (id == null) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        return orderDto.cancelOrder(id);
     }
 }

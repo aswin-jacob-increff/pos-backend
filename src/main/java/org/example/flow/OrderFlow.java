@@ -7,10 +7,12 @@ import org.example.service.OrderItemService;
 import org.example.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Component
+@Transactional
 public class OrderFlow {
 
     @Autowired
@@ -26,16 +28,8 @@ public class OrderFlow {
             throw new ApiException("Order must contain at least one item");
         }
 
-        // First, create the order
-        OrderPojo createdOrder = orderService.add(orderPojo);
-
-        // Then add each order item, linking it to the created order
-        for (OrderItemPojo item : orderItems) {
-            item.setOrder(createdOrder);
-            orderItemService.add(item);
-        }
-
-        return createdOrder;
+        // Create the order with all items - OrderService handles the complete creation
+        return orderService.add(orderPojo);
     }
 
     public OrderPojo get(Integer id) {
@@ -56,5 +50,10 @@ public class OrderFlow {
             orderItemService.delete(orderItemPojo.getId());
         }
         orderService.delete(id);
+    }
+
+    public OrderPojo cancelOrder(Integer id) {
+        orderService.updateStatusToCancelled(id);
+        return orderService.get(id);
     }
 }

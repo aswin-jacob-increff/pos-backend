@@ -1,14 +1,12 @@
 package org.example.dao;
 
 import jakarta.persistence.*;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import org.example.pojo.InventoryPojo;
 
 @Repository
-@Transactional
 public class InventoryDao {
 
     @PersistenceContext

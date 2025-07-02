@@ -5,6 +5,8 @@ import org.example.dao.OrderDao;
 import org.example.pojo.InvoicePojo;
 import org.example.pojo.OrderPojo;
 import org.example.service.InvoiceService;
+import org.example.service.OrderService;
+import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,24 +25,37 @@ public class InvoiceFlow {
 
     @Autowired
     private OrderDao orderDao;
+    
+    @Autowired
+    private OrderService orderService;
 
     /**
      * Generate an invoice if one doesn't already exist for the order.
      */
     public InvoicePojo generateInvoice(Integer orderId) {
         // Check if order exists
-//        OrderPojo order = orderDao.select(orderId);
-//        if (order == null) {
-//            throw new RuntimeException("Order with ID " + orderId + " not found.");
-//        }
+        OrderPojo order = orderDao.select(orderId);
+        if (order == null) {
+            throw new ApiException("Order with ID " + orderId + " not found.");
+        }
 
         // Return existing invoice if it already exists
-//        InvoicePojo existing = invoiceDao.selectByOrderId(orderId);
-//        if (existing != null) {
-//            return existing;
-//        }
+        try {
+            InvoicePojo existing = invoiceDao.selectByOrderId(orderId);
+            if (existing != null) {
+                return existing;
+            }
+        } catch (Exception e) {
+            // No existing invoice found, continue with generation
+        }
 
-        return invoiceService.generateInvoice(orderId);
+        // Generate new invoice (no inventory changes)
+        InvoicePojo invoice = invoiceService.generateInvoice(orderId);
+        
+        // Update order status to INVOICED (no inventory impact)
+        orderService.updateStatusToInvoiced(orderId);
+        
+        return invoice;
     }
 
     /**

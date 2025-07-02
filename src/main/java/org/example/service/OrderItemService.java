@@ -1,16 +1,15 @@
 package org.example.service;
 
-import jakarta.transaction.Transactional;
 import org.example.pojo.InventoryPojo;
 import org.example.pojo.OrderItemPojo;
 import org.example.dao.OrderItemDao;
+import org.example.exception.ApiException;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 
 @Service
-@Transactional
 public class OrderItemService {
 
     @Autowired
@@ -26,8 +25,12 @@ public class OrderItemService {
         Integer productId = orderItemPojo.getProduct().getId();
         InventoryPojo inventoryPojo = inventoryService.getByProductId(productId);
 
+        if (inventoryPojo == null) {
+            throw new ApiException("No inventory found for product ID: " + productId);
+        }
+
         if (orderItemPojo.getQuantity() > inventoryPojo.getQuantity()) {
-            throw new RuntimeException("Quantity must be less than available stock in inventory");
+            throw new ApiException("Quantity must be less than available stock in inventory. Available: " + inventoryPojo.getQuantity() + ", Requested: " + orderItemPojo.getQuantity());
         }
 
         // ✅ Calculate amount
@@ -43,7 +46,11 @@ public class OrderItemService {
     }
 
     public OrderItemPojo get(Integer id) {
-        return orderItemDao.select(id);
+        OrderItemPojo orderItem = orderItemDao.select(id);
+        if (orderItem == null) {
+            throw new ApiException("Order item with ID " + id + " not found");
+        }
+        return orderItem;
     }
 
     public List<OrderItemPojo> getAll() {
@@ -54,10 +61,20 @@ public class OrderItemService {
         return orderItemDao.selectByOrderId(orderId);
     }
 
+    public List<OrderItemPojo> getByProductId(Integer productId) {
+        return orderItemDao.selectByProductId(productId);
+    }
+
     public OrderItemPojo update(Integer id, OrderItemPojo updatedOrderItem) {
         OrderItemPojo existingOrderItem = orderItemDao.select(id);
+        if (existingOrderItem == null) {
+            throw new ApiException("Order item with ID " + id + " not found");
+        }
 
         InventoryPojo inventoryPojo = inventoryService.getByProductId(existingOrderItem.getProduct().getId());
+        if (inventoryPojo == null) {
+            throw new ApiException("No inventory found for product ID: " + existingOrderItem.getProduct().getId());
+        }
 
         // ✅ Revert old quantity to inventory before check
         int oldQty = existingOrderItem.getQuantity();
@@ -65,7 +82,7 @@ public class OrderItemService {
         int available = inventoryPojo.getQuantity() + oldQty;
 
         if (newQty > available) {
-            throw new RuntimeException("Quantity must be less than available stock in inventory");
+            throw new ApiException("Quantity must be less than available stock in inventory. Available: " + available + ", Requested: " + newQty);
         }
 
         // ✅ Update inventory

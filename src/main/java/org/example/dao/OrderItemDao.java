@@ -1,7 +1,6 @@
 package org.example.dao;
 
 import jakarta.persistence.*;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -9,7 +8,6 @@ import org.example.pojo.OrderItemPojo;
 
 
 @Repository
-@Transactional
 public class OrderItemDao {
 
     @PersistenceContext
@@ -43,5 +41,10 @@ public class OrderItemDao {
     public List<OrderItemPojo> selectByOrderId(Integer orderId) {
         String query = "SELECT oi FROM OrderItemPojo oi WHERE oi.order.id = :orderId";
         return em.createQuery(query, OrderItemPojo.class).setParameter("orderId", orderId).getResultList();
+    }
+
+    public List<OrderItemPojo> selectByProductId(Integer productId) {
+        String query = "SELECT oi FROM OrderItemPojo oi WHERE oi.product.id = :productId";
+        return em.createQuery(query, OrderItemPojo.class).setParameter("productId", productId).getResultList();
     }
 }

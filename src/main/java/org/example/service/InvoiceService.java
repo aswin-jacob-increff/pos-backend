@@ -33,6 +33,10 @@ public class InvoiceService {
 
     public InvoicePojo generateInvoice(Integer orderId) {
         OrderPojo order = orderDao.select(orderId);
+        if (order == null) {
+            throw new RuntimeException("Order with ID " + orderId + " not found");
+        }
+        
         InvoicePojo invoice = new InvoicePojo();
         invoice.setOrder(order);
         invoice.setTotalQuantity(0);
