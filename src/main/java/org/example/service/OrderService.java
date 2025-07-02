@@ -3,18 +3,17 @@ package org.example.service;
 import jakarta.transaction.Transactional;
 import org.example.dao.InvoiceDao;
 import org.example.dao.InvoiceItemDao;
+import org.example.dao.OrderDao;
 import org.example.pojo.InvoiceItemPojo;
 import org.example.pojo.InvoicePojo;
 import org.example.pojo.OrderItemPojo;
+import org.example.pojo.OrderPojo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.example.dao.OrderDao;
-import org.example.pojo.OrderPojo;
 
 @Service
 @Transactional
@@ -33,8 +32,31 @@ public class OrderService {
     private InvoiceItemDao invoiceItemDao;
 
     public OrderPojo add(OrderPojo orderPojo) {
-        orderPojo.setDateTime(Instant.now());
+        orderPojo.setDate(Instant.now());
+
+        // 1. Save order to generate ID
         orderDao.insert(orderPojo);
+
+        // 2. Add each order item
+        List<OrderItemPojo> orderItems = orderPojo.getOrderItems();
+        double totalAmount = 0.0;
+
+        for (OrderItemPojo item : orderItems) {
+            item.setOrder(orderPojo); // link order to item
+
+            // Calculate amount in backend
+            double amount = item.getSellingPrice() * item.getQuantity();
+            item.setAmount(amount);
+
+            orderItemService.add(item);
+
+            totalAmount += amount;
+        }
+
+        // 3. Set total and update order again
+        orderPojo.setTotal(totalAmount);
+        orderDao.update(orderPojo.getId(), orderPojo);
+
         return orderPojo;
     }
 
@@ -48,34 +70,12 @@ public class OrderService {
 
     public OrderPojo update(Integer id, OrderPojo updatedOrder) {
         OrderPojo existingOrder = orderDao.select(id);
-        existingOrder.setDateTime(updatedOrder.getDate());
-        orderDao.update(id, existingOrder);
-        return orderDao.select(id);
-    }
+        existingOrder.setDate(updatedOrder.getDate());
 
-    public InvoicePojo generateInvoice(Integer orderId) {
-        OrderPojo order = orderDao.select(orderId);
-        InvoicePojo invoice = new InvoicePojo();
-        invoice.setOrder(order);
-        invoice.setTotalQuantity(0);
-        invoice.setTotal(0.0);
-        List<OrderItemPojo> orderItemPojoList = orderItemService.getByOrderId(orderId);
-        List<InvoiceItemPojo> invoiceItemPojoList = new ArrayList<>();
-        for (OrderItemPojo orderItemPojo : orderItemPojoList) {
-            InvoiceItemPojo invoiceItemPojo = new InvoiceItemPojo();
-            invoiceItemPojo.setOrderItem(orderItemPojo);
-            invoiceItemPojo.setName(orderItemPojo.getProduct().getName());
-            invoiceItemPojo.setPrice(orderItemPojo.getSellingPrice());
-            invoiceItemPojo.setQuantity(orderItemPojo.getQuantity());
-            invoiceItemPojo.setAmount(invoiceItemPojo.getPrice() * invoice.getTotalQuantity());
-            invoiceItemDao.insert(invoiceItemPojo);
-            invoiceItemPojoList.add(invoiceItemPojo);
-            invoice.setTotal(invoice.getTotal() + invoiceItemPojo.getAmount());
-            invoice.setTotalQuantity(invoice.getTotalQuantity() + invoiceItemPojo.getQuantity());
-        }
-        invoice.setInvoiceItemList(invoiceItemPojoList);
-        invoiceDao.insert(invoice);
-        return invoice;
+        // Optional: update other fields like status here
+        orderDao.update(id, existingOrder);
+
+        return orderDao.select(id);
     }
 
     public void delete(Integer id) {

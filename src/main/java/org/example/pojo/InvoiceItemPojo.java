@@ -14,11 +14,11 @@ public class InvoiceItemPojo {
     @GeneratedValue(strategy = GenerationType.TABLE)
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "orderItem_id")
     private OrderItemPojo orderItem;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "invoice_id")
     private InvoicePojo invoice;
 

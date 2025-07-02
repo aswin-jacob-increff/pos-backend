@@ -1,13 +1,14 @@
 package org.example.dto;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
-import org.example.model.InvoiceData;
-import org.example.model.OrderForm;
-import org.example.model.OrderData;
-import org.example.pojo.InvoicePojo;
-import org.example.pojo.OrderPojo;
+import org.example.pojo.OrderStatus;
 import org.example.flow.OrderFlow;
-
+import org.example.model.OrderData;
+import org.example.model.OrderForm;
+import org.example.model.OrderItemData;
+import org.example.model.OrderItemForm;
+import org.example.pojo.OrderItemPojo;
+import org.example.pojo.OrderPojo;
+import org.example.pojo.ProductPojo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +21,13 @@ public class OrderDto {
     @Autowired
     private OrderFlow orderFlow;
 
+    @Autowired
+    private ProductDto productDto;
+
     public OrderData add(OrderForm orderForm) {
+        if (orderForm.getOrderItemFormList() == null || orderForm.getOrderItemFormList().isEmpty()) {
+            throw new IllegalArgumentException("Order must contain at least one order item");
+        }
         OrderPojo orderPojo = orderFlow.add(convert(orderForm));
         return convert(orderPojo);
     }
@@ -35,7 +42,7 @@ public class OrderDto {
     public List<OrderData> getAll() {
         List<OrderPojo> orderPojoList = orderFlow.getAll();
         List<OrderData> orderDataList = new ArrayList<>();
-        for(OrderPojo orderPojo : orderPojoList) {
+        for (OrderPojo orderPojo : orderPojoList) {
             orderDataList.add(convert(orderPojo));
         }
         return orderDataList;
@@ -55,16 +62,59 @@ public class OrderDto {
         orderFlow.delete(id);
     }
 
-    OrderPojo convert(OrderForm orderForm) {
+    private OrderPojo convert(OrderForm orderForm) {
         OrderPojo orderPojo = new OrderPojo();
-        orderPojo.setDateTime(orderForm.getDate());
+        orderPojo.setDate(orderForm.getDate());
+        orderPojo.setStatus(orderForm.getStatus());
+        orderPojo.setTotal(0.0);
+
+        // Convert list of OrderItemForm to OrderItemPojo
+        if (orderForm.getOrderItemFormList() != null) {
+            List<OrderItemPojo> itemPojoList = new ArrayList<>();
+            for (OrderItemForm itemForm : orderForm.getOrderItemFormList()) {
+                OrderItemPojo itemPojo = new OrderItemPojo();
+                itemPojo.setQuantity(itemForm.getQuantity());
+                itemPojo.setSellingPrice(itemForm.getSellingPrice());
+                itemPojo.setAmount(itemForm.getSellingPrice() * itemForm.getQuantity());
+
+                // Assuming productId is provided in form and must be converted to a ProductPojo
+                ProductPojo product = new ProductPojo();
+                product.setId(itemForm.getProductId());
+                itemPojo.setProduct(product);
+
+                itemPojoList.add(itemPojo);
+            }
+            orderPojo.setOrderItems(itemPojoList);
+        }
+
         return orderPojo;
     }
 
-    OrderData convert(OrderPojo orderPojo) {
+    private OrderData convert(OrderPojo orderPojo) {
         OrderData orderData = new OrderData();
         orderData.setId(orderPojo.getId());
         orderData.setDate(orderPojo.getDate());
+        orderData.setTotal(orderPojo.getTotal());
+        orderData.setStatus(orderPojo.getStatus());
+
+        if (orderPojo.getOrderItems() != null) {
+            List<OrderItemData> orderItemDataList = new ArrayList<>();
+            for (OrderItemPojo itemPojo : orderPojo.getOrderItems()) {
+                OrderItemData itemData = new OrderItemData();
+                itemData.setId(itemPojo.getId());
+                itemData.setQuantity(itemPojo.getQuantity());
+                itemData.setSellingPrice(itemPojo.getSellingPrice());
+                itemData.setAmount(itemPojo.getAmount());
+
+                // This can be expanded using productDto if needed
+                itemData.setProductId(itemPojo.getProduct().getId());
+                itemData.setProductName(itemPojo.getProduct().getName());
+
+                orderItemDataList.add(itemData);
+            }
+            orderData.setOrderItemDataList(orderItemDataList);
+        }
+
         return orderData;
     }
 }

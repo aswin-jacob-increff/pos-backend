@@ -14,6 +14,7 @@ public class OrderItemFlow {
     private OrderItemService orderItemService;
 
     public OrderItemPojo add(OrderItemPojo orderItemPojo) {
+        calculateAmount(orderItemPojo);
         return orderItemService.add(orderItemPojo);
     }
 
@@ -30,10 +31,19 @@ public class OrderItemFlow {
     }
 
     public OrderItemPojo update(OrderItemPojo orderItemPojo, Integer id) {
+        calculateAmount(orderItemPojo);
         return orderItemService.update(id, orderItemPojo);
     }
 
     public void delete(Integer id) {
         orderItemService.delete(id);
+    }
+
+    private void calculateAmount(OrderItemPojo item) {
+        if (item.getSellingPrice() != null && item.getQuantity() != null) {
+            item.setAmount(item.getSellingPrice() * item.getQuantity());
+        } else {
+            throw new RuntimeException("Selling price and quantity must not be null");
+        }
     }
 }

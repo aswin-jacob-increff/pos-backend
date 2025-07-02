@@ -17,13 +17,13 @@ public class InvoicePojo extends AbstractPojo {
     @GeneratedValue(strategy = GenerationType.TABLE)
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "order_id", nullable = false)
     private OrderPojo order;
 
     private Double total;
 
-    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<InvoiceItemPojo> invoiceItemList;
 
     private Integer totalQuantity;

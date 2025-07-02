@@ -20,5 +20,6 @@ public class OrderItemData {
     private String clientName;
     private Integer quantity;
     private Double sellingPrice;
+    private Double amount;
 
 }

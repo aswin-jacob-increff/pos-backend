@@ -19,5 +19,6 @@ public class OrderItemForm {
     private Integer clientId;
     private String clientName;
     private Integer quantity;
+    private Double sellingPrice;
 }
 

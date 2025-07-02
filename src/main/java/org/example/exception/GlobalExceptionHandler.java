@@ -15,6 +15,11 @@ public class GlobalExceptionHandler {
                 .body("Duplicate entry detected: " + extractConstraintMessage(ex));
     }
 
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<String> handleApiException(ApiException ex) {
+        return ResponseEntity.badRequest().body(ex.getMessage());
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException ex) {
         return ResponseEntity
