@@ -158,6 +158,11 @@ public class OrderDto {
                 // This can be expanded using productDto if needed
                 itemData.setProductId(itemPojo.getProduct().getId());
                 itemData.setProductName(itemPojo.getProduct().getName());
+                
+                // Add product image to order item data
+                if (itemPojo.getProduct().getImageUrl() != null && !itemPojo.getProduct().getImageUrl().trim().isEmpty()) {
+                    itemData.setImageUrl(itemPojo.getProduct().getImageUrl());
+                }
 
                 orderItemDataList.add(itemData);
             }
@@ -165,5 +170,12 @@ public class OrderDto {
         }
 
         return orderData;
+    }
+
+    public String generateInvoice(Integer orderId) throws Exception {
+        if (orderId == null) {
+            throw new IllegalArgumentException("Order ID cannot be null");
+        }
+        return orderFlow.generateInvoice(orderId);
     }
 }

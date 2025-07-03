@@ -3,6 +3,7 @@ package org.example.model;
 import lombok.Getter;
 import lombok.Setter;
 import org.example.pojo.ProductPojo;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 
@@ -15,11 +16,12 @@ public class OrderItemData {
     private Instant dateTime;
     private Integer productId;
     private String productName;
-    private String productBarcode;
+    private String barcode;
     private Integer clientId;
     private String clientName;
     private Integer quantity;
     private Double sellingPrice;
     private Double amount;
+    private String imageUrl; // Reference to image endpoint: /api/products/{productId}/image
 
 }

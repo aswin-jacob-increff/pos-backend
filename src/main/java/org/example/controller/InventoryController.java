@@ -3,8 +3,13 @@ package org.example.controller;
 import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
 
 import java.util.List;
+import java.util.Base64;
 
 import org.example.model.InventoryData;
 import org.example.model.InventoryForm;
@@ -108,5 +113,30 @@ public class InventoryController {
             throw new ApiException("Quantity cannot be negative");
         }
         return inventoryDto.setStock(productId, quantity);
+    }
+    
+    @GetMapping("/{productId}/image")
+    public ResponseEntity<ByteArrayResource> getProductImage(@PathVariable Integer productId) {
+        if (productId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        try {
+            InventoryData inventory = inventoryDto.getByProductId(productId);
+            if (inventory.getImageUrl() == null || inventory.getImageUrl().trim().isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Extract the actual base64 data from the product
+            // We need to get the product's base64 data, not the URL
+            // This is a bit complex since we're going through inventory
+            // For now, we'll redirect to the product image endpoint
+            return ResponseEntity.status(302)
+                    .header("Location", "/api/products/" + productId + "/image")
+                    .build();
+                    
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 }

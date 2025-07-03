@@ -14,7 +14,7 @@ public class ProductData {
     private Integer clientId;
     private String name;
     private Double mrp;
-    private String imageUrl;
+    private String imageUrl; // Reference to image endpoint: /api/products/{id}/image
 
 }
 

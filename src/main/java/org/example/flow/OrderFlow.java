@@ -56,4 +56,8 @@ public class OrderFlow {
         orderService.updateStatusToCancelled(id);
         return orderService.get(id);
     }
+
+    public String generateInvoice(Integer orderId) throws Exception {
+        return orderService.generateInvoice(orderId);
+    }
 }

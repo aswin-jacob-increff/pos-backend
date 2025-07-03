@@ -5,14 +5,14 @@ import org.example.model.OrderItemForm;
 import org.example.model.OrderItemData;
 import org.example.pojo.OrderItemPojo;
 import org.example.flow.OrderItemFlow;
-
 import org.example.service.OrderService;
 import org.example.service.ProductService;
+import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Base64;
 
 @Component
 public class OrderItemDto {
@@ -35,7 +35,7 @@ public class OrderItemDto {
 
     public OrderItemData get(Integer id) {
         if (id == null) {
-            throw new IllegalArgumentException("Order Item ID cannot be null");
+            throw new ApiException("Order Item ID cannot be null");
         }
         return convert(orderItemFlow.get(id));
     }
@@ -51,7 +51,7 @@ public class OrderItemDto {
 
     public List<OrderItemData> getByOrderId(Integer orderId) {
         if (orderId == null) {
-            throw new IllegalArgumentException("Order ID cannot be null");
+            throw new ApiException("Order ID cannot be null");
         }
         List<OrderItemPojo> orderItemPojoList = orderItemFlow.getByOrderId(orderId);
         List<OrderItemData> orderItemDataList = new ArrayList<>();
@@ -63,7 +63,7 @@ public class OrderItemDto {
 
     public OrderItemData update(OrderItemForm orderItemForm, Integer id) {
         if (id == null) {
-            throw new IllegalArgumentException("Order Item ID cannot be null");
+            throw new ApiException("Order Item ID cannot be null");
         }
         validate(orderItemForm);
         return convert(orderItemFlow.update(convert(orderItemForm), id));
@@ -71,60 +71,87 @@ public class OrderItemDto {
 
     public void delete(Integer id) {
         if (id == null) {
-            throw new IllegalArgumentException("Order Item ID cannot be null");
+            throw new ApiException("Order Item ID cannot be null");
         }
         orderItemFlow.delete(id);
     }
 
     public void validate(OrderItemForm orderItemForm) {
         if (orderItemForm.getOrderId() == null) {
-            throw new IllegalArgumentException("Order ID cannot be null");
+            throw new ApiException("Order ID cannot be null");
         }
         orderItemForm.setDateTime(orderService.get(orderItemForm.getOrderId()).getDate());
         if (orderItemForm.getProductId() == null) {
-            if (orderItemForm.getProductBarcode().trim().isEmpty()) {
-                if (orderItemForm.getProductName().trim().isEmpty()) {
-                    throw new IllegalArgumentException("One of the three (product id, name, barcode) must be present");
+            if (orderItemForm.getBarcode() == null || orderItemForm.getBarcode().trim().isEmpty()) {
+                if (orderItemForm.getProductName() == null || orderItemForm.getProductName().trim().isEmpty()) {
+                    throw new ApiException("One of the three (product id, name, barcode) must be present");
                 } else {
                     orderItemForm.setProductId(productService.getByName(orderItemForm.getProductName()).getId());
-                    orderItemForm.setProductBarcode(productService.getByName(orderItemForm.getProductName()).getBarcode());
+                    orderItemForm.setBarcode(productService.getByName(orderItemForm.getProductName()).getBarcode());
                 }
             } else {
-                orderItemForm.setProductId(productService.getByBarcode(orderItemForm.getProductBarcode()).getId());
-                orderItemForm.setProductName(productService.getByBarcode(orderItemForm.getProductBarcode()).getName());
+                orderItemForm.setProductId(productService.getByBarcode(orderItemForm.getBarcode()).getId());
+                orderItemForm.setProductName(productService.getByBarcode(orderItemForm.getBarcode()).getName());
             }
         } else {
-            orderItemForm.setProductBarcode(productService.get(orderItemForm.getProductId()).getBarcode());
+            orderItemForm.setBarcode(productService.get(orderItemForm.getProductId()).getBarcode());
             orderItemForm.setProductName(productService.get(orderItemForm.getProductId()).getName());
         }
-        orderItemForm.setClientId(productService.get(orderItemForm.getProductId()).getClient().getId());
-        orderItemForm.setClientName(productService.get(orderItemForm.getProductId()).getClient().getClientName());
+        
         if (orderItemForm.getQuantity() == null) {
-            throw new IllegalArgumentException("Order Item quantity cannot be null");
+            throw new ApiException("Order Item quantity cannot be null");
+        }
+        if (orderItemForm.getQuantity() <= 0) {
+            throw new ApiException("Order Item quantity must be positive");
+        }
+        
+        // Validate base64 image if provided
+        if (orderItemForm.getImage() != null && !orderItemForm.getImage().trim().isEmpty()) {
+            if (!isValidBase64(orderItemForm.getImage())) {
+                throw new ApiException("Image must be a valid base64 string");
+            }
         }
     }
 
     private OrderItemPojo convert(OrderItemForm orderItemForm) {
         OrderItemPojo orderItemPojo = new OrderItemPojo();
         orderItemPojo.setOrder(orderService.get(orderItemForm.getOrderId()));
-        orderItemPojo.setProduct(productService.get(orderItemForm.getOrderId()));
+        orderItemPojo.setProduct(productService.get(orderItemForm.getProductId()));
         orderItemPojo.setQuantity(orderItemForm.getQuantity());
         orderItemPojo.setSellingPrice(productService.get(orderItemForm.getProductId()).getMrp());
+        
+        // Handle base64 image if provided (this would update the product's image)
+        if (orderItemForm.getImage() != null && !orderItemForm.getImage().trim().isEmpty()) {
+            // For now, we'll just validate the image
+            // In a real implementation, you might want to update the product's image
+        }
+        
         return orderItemPojo;
     }
 
     private OrderItemData convert(OrderItemPojo orderItemPojo) {
         OrderItemData orderItemData = new OrderItemData();
         orderItemData.setId(orderItemPojo.getId());
-        orderItemData.setOrderId(orderItemPojo.getOrder().getId());
-        orderItemData.setDateTime(orderItemPojo.getOrder().getDate());
         orderItemData.setProductId(orderItemPojo.getProduct().getId());
-        orderItemData.setProductBarcode(orderItemPojo.getProduct().getBarcode());
+        orderItemData.setBarcode(orderItemPojo.getProduct().getBarcode());
         orderItemData.setProductName(orderItemPojo.getProduct().getName());
-        orderItemData.setClientId(orderItemPojo.getProduct().getClient().getId());
-        orderItemData.setClientName(orderItemPojo.getProduct().getClient().getClientName());
         orderItemData.setQuantity(orderItemPojo.getQuantity());
         orderItemData.setSellingPrice(orderItemPojo.getSellingPrice());
+        
+        // Set imageUrl as reference to product image endpoint
+        if (orderItemPojo.getProduct().getImageUrl() != null && !orderItemPojo.getProduct().getImageUrl().trim().isEmpty()) {
+            orderItemData.setImageUrl("/api/products/" + orderItemPojo.getProduct().getId() + "/image");
+        }
+        
         return orderItemData;
+    }
+    
+    private boolean isValidBase64(String str) {
+        try {
+            Base64.getDecoder().decode(str);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 }

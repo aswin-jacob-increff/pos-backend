@@ -13,6 +13,6 @@ public class ProductForm {
     private Integer clientId;
     private String name;
     private Double mrp;
-    private String imageUrl;
+    private String image; // Base64 string from frontend
 
 }

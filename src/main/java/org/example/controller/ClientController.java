@@ -6,6 +6,7 @@ import java.util.List;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.example.util.ClientTsvParser;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -83,34 +84,23 @@ public class ClientController {
             return ResponseEntity.badRequest().body("Please upload a valid non-empty .tsv file.");
         }
 
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+        try {
+            List<ClientForm> clientForms = ClientTsvParser.parse(file.getInputStream());
 
-            String header = reader.readLine(); // Expecting: clientName
-            if (header == null || !header.toLowerCase().contains("clientname")) {
-                return ResponseEntity.badRequest().body("Missing or invalid header: 'clientName'");
-            }
-
-            int count = 0;
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] cols = line.split("\t");
-                if (cols.length < 1 || cols[0].trim().isEmpty()) continue;
-
-                ClientForm form = new ClientForm();
-                form.setClientName(cols[0].trim().toLowerCase());
-
+            for (ClientForm form : clientForms) {
                 clientDto.add(form);
-                count++;
             }
 
-            return ResponseEntity.ok("Uploaded " + count + " clients" +
+            return ResponseEntity.ok("Uploaded " + clientForms.size() + " clients" +
                     (uploadedBy != null ? " by " + uploadedBy : "") + ".");
 
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Invalid input: " + e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Failed to process file: " + e.getMessage());
         }
     }
+
 }

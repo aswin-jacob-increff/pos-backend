@@ -11,12 +11,14 @@ import org.springframework.web.bind.annotation.*;
 import org.example.model.ProductData;
 import org.example.model.ProductForm;
 import org.example.dto.ProductDto;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Base64;
 
 @RestController
 @RequestMapping("/api/products")
@@ -74,9 +76,38 @@ public class ProductController {
         }
     }
 
+    @GetMapping("/{id}/image")
+    public ResponseEntity<ByteArrayResource> getProductImage(@PathVariable Integer id) {
+        if (id == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        try {
+            ProductData product = productDto.get(id);
+            if (product.getImageUrl() == null || product.getImageUrl().trim().isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Convert base64 to byte array
+            byte[] imageBytes = Base64.getDecoder().decode(product.getImageUrl());
+            ByteArrayResource resource = new ByteArrayResource(imageBytes);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.IMAGE_JPEG); // Adjust based on actual image type
+            headers.setContentLength(imageBytes.length);
+            
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(resource);
+                    
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @Operation(summary = "Upload products via TSV file")
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> uploadProductsFromTsv(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> uploadProductsFromTsv(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
         if (file == null || file.isEmpty() || !file.getOriginalFilename().endsWith(".tsv")) {
             return ResponseEntity.badRequest().body("Please upload a valid non-empty .tsv file.");
         }
@@ -115,7 +146,7 @@ public class ProductController {
                 form.setClientName(clientName);
                 form.setName(name);
                 form.setMrp(mrp);
-                form.setImageUrl(imageUrl);
+                form.setImage(imageUrl);
 
                 productDto.add(form); // assumes productDto resolves clientId internally
                 count++;

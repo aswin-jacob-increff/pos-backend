@@ -15,10 +15,11 @@ public class OrderItemForm {
     private Instant dateTime;
     private Integer productId;
     private String productName;
-    private String productBarcode;
+    private String barcode;
     private Integer clientId;
     private String clientName;
     private Integer quantity;
     private Double sellingPrice;
+    private String image; // Base64 string from frontend
 }
 
