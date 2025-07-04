@@ -16,6 +16,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.example.util.TimeUtil;
+import java.time.LocalDateTime;
 
 @Service
 public class OrderService {
@@ -29,31 +31,35 @@ public class OrderService {
     @Autowired
     private InventoryService inventoryService;
 
+    @Autowired
+    private RestTemplate restTemplate;
+
     public OrderPojo add(OrderPojo orderPojo) {
-        orderPojo.setDate(Instant.now());
+        if (orderPojo == null) {
+            throw new ApiException("Order cannot be null");
+        }
+        if (orderPojo.getOrderItems() == null || orderPojo.getOrderItems().isEmpty()) {
+            throw new ApiException("Order must contain at least one item");
+        }
+        orderPojo.setDate(orderPojo.getDate() != null ? orderPojo.getDate() : Instant.now());
         if (orderPojo.getStatus() == null) {
             orderPojo.setStatus(OrderStatus.CREATED);
         }
         orderDao.insert(orderPojo);
         List<OrderItemPojo> orderItems = orderPojo.getOrderItems();
         double totalAmount = 0.0;
-
         for (OrderItemPojo item : orderItems) {
+            if (item == null) {
+                throw new ApiException("Order item cannot be null");
+            }
             item.setOrder(orderPojo); // link order to item
-
-            // Calculate amount in backend
             double amount = item.getSellingPrice() * item.getQuantity();
             item.setAmount(amount);
-
             orderItemService.add(item);
-
             totalAmount += amount;
         }
-
-        // 3. Set total and update order again
         orderPojo.setTotal(totalAmount);
         orderDao.update(orderPojo.getId(), orderPojo);
-
         return orderPojo;
     }
 
@@ -156,7 +162,7 @@ public class OrderService {
         List<OrderItemPojo> orderItems = orderItemService.getByOrderId(orderId);
         InvoiceData invoiceData = new InvoiceData();
         invoiceData.setOrderId(orderId);
-        invoiceData.setDateTime(order.getDate());
+        invoiceData.setDateTime(TimeUtil.toIST(order.getDate()));
         invoiceData.setTotal(order.getTotal());
         invoiceData.setTotalQuantity(orderItems.stream().mapToInt(OrderItemPojo::getQuantity).sum());
         invoiceData.setId(order.getId());
@@ -175,18 +181,25 @@ public class OrderService {
         }).toList();
         invoiceData.setInvoiceItemPojoList(itemDataList);
         String invoiceAppUrl = "http://localhost:8081/api/invoice";
-        RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/json");
         HttpEntity<InvoiceData> entity = new HttpEntity<>(invoiceData, headers);
-
-        ResponseEntity<String> response = restTemplate.postForEntity(invoiceAppUrl, entity, String.class);
-        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+        ResponseEntity<String> response;
+        try {
+            response = restTemplate.postForEntity(invoiceAppUrl, entity, String.class);
+        } catch (Exception e) {
+            throw new ApiException("Failed to connect to invoice service: " + e.getMessage());
+        }
+        if (response == null || !response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
             throw new ApiException("Failed to generate invoice for order ID: " + orderId);
         }
         String fileName = "order-" + orderId + ".pdf";
         String savePath = "src/main/resources/invoice/" + fileName;
-        Base64ToPdfUtil.saveBase64AsPdf(response.getBody(), savePath);
+        try {
+            Base64ToPdfUtil.saveBase64AsPdf(response.getBody(), savePath);
+        } catch (Exception e) {
+            throw new ApiException("Failed to save invoice PDF: " + e.getMessage());
+        }
         updateStatusToInvoiced(orderId);
         return "/invoice/" + fileName;
     }

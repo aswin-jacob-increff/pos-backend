@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Base64;
+import jakarta.validation.Valid;
 
 @Component
 public class InventoryDto {
@@ -21,8 +22,8 @@ public class InventoryDto {
     @Autowired
     private ProductService productService;
 
-    public InventoryData add(InventoryForm inventoryForm) {
-        validateInventoryForm(inventoryForm);
+    public InventoryData add(@Valid InventoryForm inventoryForm) {
+        preprocess(inventoryForm);
         InventoryPojo inventoryPojo = convert(inventoryForm);
         inventoryFlow.add(inventoryPojo);
         return convert(inventoryPojo);
@@ -42,9 +43,9 @@ public class InventoryDto {
         return inventoryDataList;
     }
 
-    public InventoryData update(Integer id, InventoryForm inventoryForm) {
+    public InventoryData update(Integer id, @Valid InventoryForm inventoryForm) {
         validateInventoryId(id);
-        validateInventoryForm(inventoryForm);
+        preprocess(inventoryForm);
         inventoryFlow.update(id, convert(inventoryForm));
         return get(id);
     }
@@ -141,17 +142,13 @@ public class InventoryDto {
         }
     }
 
-    private void validate(InventoryForm inventoryForm) {
-        if (inventoryForm == null) {
-            throw new ApiException("Inventory form cannot be null");
-        }
-        
-        if(inventoryForm.getProductId() == null) {
-            if(inventoryForm.getBarcode() == null || inventoryForm.getBarcode().trim().isEmpty()) {
-                if(inventoryForm.getProductName() == null || inventoryForm.getProductName().trim().isEmpty()) {
+    private void preprocess(InventoryForm inventoryForm) {
+        // Cross-field/entity logic: productId/productName/barcode lookup, base64 image validation
+        if (inventoryForm.getProductId() == null) {
+            if (inventoryForm.getBarcode() == null || inventoryForm.getBarcode().trim().isEmpty()) {
+                if (inventoryForm.getProductName() == null || inventoryForm.getProductName().trim().isEmpty()) {
                     throw new ApiException("One of product ID, name or barcode is required");
-                }
-                else {
+                } else {
                     try {
                         inventoryForm.setProductId(productService.getByName(inventoryForm.getProductName()).getId());
                         inventoryForm.setBarcode(productService.getByName(inventoryForm.getProductName()).getBarcode());
@@ -159,8 +156,7 @@ public class InventoryDto {
                         throw new ApiException("Product with name '" + inventoryForm.getProductName() + "' not found");
                     }
                 }
-            }
-            else {
+            } else {
                 try {
                     inventoryForm.setProductId(productService.getByBarcode(inventoryForm.getBarcode()).getId());
                     inventoryForm.setProductName(productService.getByBarcode(inventoryForm.getBarcode()).getName());
@@ -168,8 +164,7 @@ public class InventoryDto {
                     throw new ApiException("Product with barcode '" + inventoryForm.getBarcode() + "' not found");
                 }
             }
-        }
-        else {
+        } else {
             try {
                 inventoryForm.setProductName(productService.get(inventoryForm.getProductId()).getName());
                 inventoryForm.setBarcode(productService.get(inventoryForm.getProductId()).getBarcode());
@@ -177,24 +172,12 @@ public class InventoryDto {
                 throw new ApiException("Product with ID " + inventoryForm.getProductId() + " not found");
             }
         }
-        
-        if (inventoryForm.getQuantity() == null) {
-            throw new ApiException("Quantity cannot be null");
-        }
-        if (inventoryForm.getQuantity() < 0) {
-            throw new ApiException("Quantity cannot be negative");
-        }
-        
         // Validate base64 image if provided
         if (inventoryForm.getImage() != null && !inventoryForm.getImage().trim().isEmpty()) {
             if (!isValidBase64(inventoryForm.getImage())) {
                 throw new ApiException("Image must be a valid base64 string");
             }
         }
-    }
-    
-    private void validateInventoryForm(InventoryForm inventoryForm) {
-        validate(inventoryForm);
     }
 
     private InventoryPojo convert(InventoryForm inventoryForm) {

@@ -4,21 +4,28 @@ import lombok.Getter;
 import lombok.Setter;
 import org.example.pojo.OrderPojo;
 import org.example.pojo.ProductPojo;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Setter
 @Getter
 public class OrderItemForm {
 
     private Integer orderId;
-    private Instant dateTime;
+    private LocalDateTime dateTime; // Always IST from frontend
+    @NotNull(message = "Product ID is required")
     private Integer productId;
     private String productName;
     private String barcode;
     private Integer clientId;
     private String clientName;
+    @NotNull(message = "Quantity is required")
+    @Positive(message = "Quantity must be positive")
     private Integer quantity;
+    @NotNull(message = "Selling price is required")
+    @Positive(message = "Selling price must be positive")
     private Double sellingPrice;
     private String image; // Base64 string from frontend
 }

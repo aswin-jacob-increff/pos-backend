@@ -13,6 +13,9 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Base64;
+import jakarta.validation.Valid;
+import org.example.util.TimeUtil;
+import java.time.LocalDateTime;
 
 @Component
 public class OrderItemDto {
@@ -26,8 +29,8 @@ public class OrderItemDto {
     @Autowired
     private ProductService productService;
 
-    public OrderItemData add(OrderItemForm orderItemForm) {
-        validate(orderItemForm);
+    public OrderItemData add(@Valid OrderItemForm orderItemForm) {
+        preprocess(orderItemForm);
         OrderItemPojo orderItemPojo = convert(orderItemForm);
         orderItemFlow.add(orderItemPojo);
         return convert(orderItemPojo);
@@ -61,11 +64,11 @@ public class OrderItemDto {
         return orderItemDataList;
     }
 
-    public OrderItemData update(OrderItemForm orderItemForm, Integer id) {
+    public OrderItemData update(@Valid OrderItemForm orderItemForm, Integer id) {
         if (id == null) {
             throw new ApiException("Order Item ID cannot be null");
         }
-        validate(orderItemForm);
+        preprocess(orderItemForm);
         return convert(orderItemFlow.update(convert(orderItemForm), id));
     }
 
@@ -76,11 +79,12 @@ public class OrderItemDto {
         orderItemFlow.delete(id);
     }
 
-    public void validate(OrderItemForm orderItemForm) {
+    private void preprocess(OrderItemForm orderItemForm) {
+        // Cross-field/entity logic: orderId lookup, productId/productName/barcode lookup, base64 image validation
         if (orderItemForm.getOrderId() == null) {
             throw new ApiException("Order ID cannot be null");
         }
-        orderItemForm.setDateTime(orderService.get(orderItemForm.getOrderId()).getDate());
+        // No need to setDateTime here; handled in convert
         if (orderItemForm.getProductId() == null) {
             if (orderItemForm.getBarcode() == null || orderItemForm.getBarcode().trim().isEmpty()) {
                 if (orderItemForm.getProductName() == null || orderItemForm.getProductName().trim().isEmpty()) {
@@ -97,14 +101,6 @@ public class OrderItemDto {
             orderItemForm.setBarcode(productService.get(orderItemForm.getProductId()).getBarcode());
             orderItemForm.setProductName(productService.get(orderItemForm.getProductId()).getName());
         }
-        
-        if (orderItemForm.getQuantity() == null) {
-            throw new ApiException("Order Item quantity cannot be null");
-        }
-        if (orderItemForm.getQuantity() <= 0) {
-            throw new ApiException("Order Item quantity must be positive");
-        }
-        
         // Validate base64 image if provided
         if (orderItemForm.getImage() != null && !orderItemForm.getImage().trim().isEmpty()) {
             if (!isValidBase64(orderItemForm.getImage())) {
@@ -119,13 +115,15 @@ public class OrderItemDto {
         orderItemPojo.setProduct(productService.get(orderItemForm.getProductId()));
         orderItemPojo.setQuantity(orderItemForm.getQuantity());
         orderItemPojo.setSellingPrice(productService.get(orderItemForm.getProductId()).getMrp());
-        
+        // Convert LocalDateTime (IST) to Instant (UTC) for DB if dateTime is present
+        if (orderItemForm.getDateTime() != null) {
+            orderItemPojo.getOrder().setDate(TimeUtil.toUTC(orderItemForm.getDateTime()));
+        }
         // Handle base64 image if provided (this would update the product's image)
         if (orderItemForm.getImage() != null && !orderItemForm.getImage().trim().isEmpty()) {
             // For now, we'll just validate the image
             // In a real implementation, you might want to update the product's image
         }
-        
         return orderItemPojo;
     }
 
@@ -137,12 +135,12 @@ public class OrderItemDto {
         orderItemData.setProductName(orderItemPojo.getProduct().getName());
         orderItemData.setQuantity(orderItemPojo.getQuantity());
         orderItemData.setSellingPrice(orderItemPojo.getSellingPrice());
-        
+        // Convert UTC Instant to IST LocalDateTime for frontend
+        orderItemData.setDateTime(TimeUtil.toIST(orderItemPojo.getOrder().getDate()));
         // Set imageUrl as reference to product image endpoint
         if (orderItemPojo.getProduct().getImageUrl() != null && !orderItemPojo.getProduct().getImageUrl().trim().isEmpty()) {
             orderItemData.setImageUrl("/api/products/" + orderItemPojo.getProduct().getId() + "/image");
         }
-        
         return orderItemData;
     }
     

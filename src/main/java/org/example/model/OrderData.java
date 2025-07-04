@@ -13,7 +13,7 @@ import java.util.List;
 public class OrderData {
 
     private Integer id;
-    private Instant date;
+    private LocalDateTime date; // Always IST for frontend
     private List<OrderItemData> orderItemDataList;
     private OrderStatus status;
     private Double total;

@@ -28,10 +28,10 @@ public class ProductFlow {
 
     public ProductPojo add(ProductPojo productPojo) {
         productPojo = productService.add(productPojo);
-        InventoryPojo inventoryPojo = new InventoryPojo();
-        inventoryPojo.setProduct(productPojo);
-        inventoryPojo.setQuantity(0);
-        inventoryService.add(inventoryPojo);
+//        InventoryPojo inventoryPojo = new InventoryPojo();
+//        inventoryPojo.setProduct(productPojo);
+//        inventoryPojo.setQuantity(0);
+//        inventoryService.add(inventoryPojo);
         return productPojo;
     }
 

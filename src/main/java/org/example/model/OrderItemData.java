@@ -6,6 +6,7 @@ import org.example.pojo.ProductPojo;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Setter
 @Getter
@@ -13,7 +14,7 @@ public class OrderItemData {
 
     private Integer id;
     private Integer orderId;
-    private Instant dateTime;
+    private LocalDateTime dateTime; // Always IST for frontend
     private Integer productId;
     private String productName;
     private String barcode;

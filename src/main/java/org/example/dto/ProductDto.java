@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Base64;
+import jakarta.validation.Valid;
 
 @Component
 public class ProductDto {
@@ -23,8 +24,8 @@ public class ProductDto {
     @Autowired
     private ClientService clientService;
 
-    public ProductData add(ProductForm productForm) {
-        validate(productForm);
+    public ProductData add(@Valid ProductForm productForm) {
+        preprocess(productForm);
         ProductPojo productPojo = productFlow.add(convert(productForm));
         return convert(productPojo);
     }
@@ -50,8 +51,8 @@ public class ProductDto {
         return productDataList;
     }
 
-    public ProductData update(int id, ProductForm productForm) {
-        validate(productForm);
+    public ProductData update(int id, @Valid ProductForm productForm) {
+        preprocess(productForm);
         productFlow.update(id, convert(productForm));
         return get(id);
     }
@@ -68,33 +69,22 @@ public class ProductDto {
         productFlow.deleteByBarcode(barcode);
     }
 
-    private void validate(ProductForm productForm) {
-        if(productForm.getBarcode() == null || productForm.getBarcode().trim().isEmpty()) {
-            throw new ApiException("Product barcode cannot be empty");
-        } else if (productForm.getName() == null || productForm.getName().trim().isEmpty()) {
-            throw new ApiException("Product name cannot be empty");
-        } else if (productForm.getMrp() == null) {
-            throw new ApiException("Product mrp cannot be empty");
-        } else if (productForm.getClientId() == null) {
+    private void preprocess(ProductForm productForm) {
+        // Cross-field/entity logic: clientId/clientName lookup, base64 image validation
+        if (productForm.getClientId() == null) {
             if (productForm.getClientName() == null || productForm.getClientName().trim().isEmpty()) {
                 throw new ApiException("Both client id and name cannot be null");
-            }
-            else {
+            } else {
                 productForm.setClientId(clientService.getByName(productForm.getClientName()).getId());
             }
-        }
-        else {
+        } else {
             productForm.setClientName(clientService.get(productForm.getClientId()).getClientName());
         }
-        
-        // Validate image
-        if (productForm.getImage() == null || productForm.getImage().trim().isEmpty()) {
-            throw new ApiException("Product image is required");
-        }
-        
-        // Validate base64 format
-        if (!isValidBase64(productForm.getImage())) {
-            throw new ApiException("Image must be a valid base64 string");
+        // Validate base64 image if provided
+        if (productForm.getImage() != null && !productForm.getImage().trim().isEmpty()) {
+            if (!isValidBase64(productForm.getImage())) {
+                throw new ApiException("Image must be a valid base64 string");
+            }
         }
     }
 

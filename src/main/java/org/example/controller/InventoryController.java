@@ -1,7 +1,9 @@
 package org.example.controller;
 
 import org.example.exception.ApiException;
+import org.example.util.InventoryTsvParser;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,7 @@ import java.util.Base64;
 import org.example.model.InventoryData;
 import org.example.model.InventoryForm;
 import org.example.dto.InventoryDto;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/inventory")
@@ -139,4 +142,32 @@ public class InventoryController {
             return ResponseEntity.status(500).build();
         }
     }
+
+    @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> uploadInventoryFromTsv(@RequestParam("file") MultipartFile file) {
+        if (file == null || file.isEmpty() || !file.getOriginalFilename().endsWith(".tsv")) {
+            throw new ApiException("Please upload a valid non-empty .tsv file.");
+        }
+        try {
+            List<InventoryForm> forms = InventoryTsvParser.parse(file.getInputStream());
+            if (forms.size() > 5000) {
+                throw new ApiException("File upload limit exceeded: Maximum 5000 rows allowed.");
+            }
+            int count = 0;
+            for (InventoryForm form : forms) {
+                inventoryDto.update(form.getProductId(), form); // Assuming update() handles existing productId
+                count++;
+            }
+            return ResponseEntity.ok("Successfully uploaded " + count + " inventory records.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Invalid TSV format: " + e.getMessage());
+        } catch (ApiException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to process file: " + e.getMessage());
+        }
+    }
+
 }

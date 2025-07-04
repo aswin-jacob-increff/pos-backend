@@ -2,6 +2,7 @@ package org.example.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import org.example.model.ClientForm;
+import org.example.util.ProductTsvParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -13,12 +14,14 @@ import org.example.model.ProductForm;
 import org.example.dto.ProductDto;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Base64;
+import org.example.exception.ApiException;
 
 @RestController
 @RequestMapping("/api/products")
@@ -107,57 +110,29 @@ public class ProductController {
 
     @Operation(summary = "Upload products via TSV file")
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> uploadProductsFromTsv(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+    public ResponseEntity<String> uploadProductsFromTsv(@RequestParam("file") MultipartFile file) {
         if (file == null || file.isEmpty() || !file.getOriginalFilename().endsWith(".tsv")) {
-            return ResponseEntity.badRequest().body("Please upload a valid non-empty .tsv file.");
+            throw new ApiException("Please upload a valid non-empty .tsv file.");
         }
-
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
-
-            String header = reader.readLine(); // expecting: barcode, clientName, name, mrp, imageUrl
-            if (header == null || !header.toLowerCase().contains("barcode")) {
-                return ResponseEntity.badRequest().body("Missing or invalid header row. Expected 'barcode<TAB>clientName<TAB>name<TAB>mrp<TAB>imageUrl'");
+        try {
+            List<ProductForm> productForms = ProductTsvParser.parse(file.getInputStream());
+            if (productForms.size() > 5000) {
+                throw new ApiException("File upload limit exceeded: Maximum 5000 rows allowed.");
             }
-
             int count = 0;
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] cols = line.split("\t");
-                if (cols.length < 4) continue;
-
-                String barcode = cols[0].trim().toLowerCase();
-                String clientName = cols[1].trim().toLowerCase();
-                String name = cols[2].trim();
-                String mrpStr = cols[3].trim();
-                String imageUrl = cols.length >= 5 ? cols[4].trim() : "";
-
-                if (barcode.isEmpty() || clientName.isEmpty() || name.isEmpty() || mrpStr.isEmpty()) continue;
-
-                double mrp;
-                try {
-                    mrp = Double.parseDouble(mrpStr);
-                } catch (NumberFormatException e) {
-                    continue; // skip invalid lines
-                }
-
-                ProductForm form = new ProductForm();
-                form.setBarcode(barcode);
-                form.setClientName(clientName);
-                form.setName(name);
-                form.setMrp(mrp);
-                form.setImage(imageUrl);
-
-                productDto.add(form); // assumes productDto resolves clientId internally
+            for (ProductForm form : productForms) {
+                productDto.add(form); // assumes clientDto resolves clientName → clientId
                 count++;
             }
-
             return ResponseEntity.ok("Successfully uploaded " + count + " products.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Invalid TSV: " + e.getMessage());
+        } catch (ApiException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error while processing file: " + e.getMessage());
         }
     }
-
 }

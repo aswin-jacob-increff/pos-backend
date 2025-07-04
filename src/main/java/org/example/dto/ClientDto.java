@@ -12,14 +12,16 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.validation.Valid;
+
 @Component
 public class ClientDto {
 
     @Autowired
     private ClientFlow clientFlow;
 
-    public ClientData add(ClientForm clientForm) {
-        validate(clientForm);
+    public ClientData add(@Valid ClientForm clientForm) {
+        preprocess(clientForm);
         ClientPojo clientPojo = convert(clientForm);
         clientFlow.add(clientPojo);
         return convert(clientPojo);
@@ -50,11 +52,11 @@ public class ClientDto {
         return clientDataList;
     }
 
-    public ClientData update(Integer id, ClientForm clientForm) {
+    public ClientData update(Integer id, @Valid ClientForm clientForm) {
         if (id == null) {
             throw new ApiException("Client ID cannot be null.");
         }
-        validate(clientForm);
+        preprocess(clientForm);
         return convert(clientFlow.update(id, convert(clientForm)));
     }
 
@@ -72,11 +74,10 @@ public class ClientDto {
         clientFlow.deleteClientByName(name.trim().toLowerCase());
     }
 
-    private void validate(ClientForm clientForm) {
-        if(clientForm.getClientName() == null || clientForm.getClientName().trim().isEmpty()) {
-            throw new ApiException("Client name cannot be empty");
+    private void preprocess(ClientForm clientForm) {
+        if (clientForm.getClientName() != null) {
+            clientForm.setClientName(clientForm.getClientName().trim().toLowerCase());
         }
-        clientForm.setClientName(clientForm.getClientName().trim().toLowerCase());
     }
 
     private ClientPojo convert(ClientForm clientForm) {

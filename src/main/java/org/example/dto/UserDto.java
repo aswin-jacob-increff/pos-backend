@@ -6,6 +6,7 @@ import org.example.model.UserForm;
 import org.example.pojo.UserPojo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import jakarta.validation.Valid;
 
 @Component
 public class UserDto {
@@ -13,16 +14,16 @@ public class UserDto {
     @Autowired
     private UserFlow userFlow;
 
-    public void signup(UserForm form) {
-        validate(form);
+    public void signup(@Valid UserForm form) {
+        preprocess(form);
         UserPojo pojo = new UserPojo();
         pojo.setEmail(form.getEmail().toLowerCase().trim());
         pojo.setPassword(form.getPassword().trim());
         userFlow.signup(pojo);
     }
 
-    public UserData login(UserForm form) {
-        validate(form);
+    public UserData login(@Valid UserForm form) {
+        preprocess(form);
         UserPojo pojo = userFlow.getByEmail(form.getEmail());
         if (pojo == null || !userFlow.checkPassword(form.getPassword(), pojo.getPassword())) {
             throw new RuntimeException("Invalid email or password");
@@ -30,12 +31,13 @@ public class UserDto {
         return convert(pojo);
     }
 
-    private void validate(UserForm form) {
-        if (form.getEmail() == null || form.getEmail().trim().isEmpty()) {
-            throw new RuntimeException("Email cannot be empty");
+    private void preprocess(UserForm form) {
+        // Cross-field/entity logic: email normalization
+        if (form.getEmail() != null) {
+            form.setEmail(form.getEmail().trim().toLowerCase());
         }
-        if (form.getPassword() == null || form.getPassword().trim().isEmpty()) {
-            throw new RuntimeException("Password cannot be empty");
+        if (form.getPassword() != null) {
+            form.setPassword(form.getPassword().trim());
         }
     }
 

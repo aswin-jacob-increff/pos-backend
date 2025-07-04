@@ -1,5 +1,6 @@
 package org.example.util;
 
+import org.example.exception.ApiException;
 import org.example.model.ClientForm;
 
 import java.io.BufferedReader;
@@ -23,7 +24,10 @@ public class ClientTsvParser {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] cols = line.split("\t");
-                if (cols.length < 1 || cols[0].trim().isEmpty()) continue;
+                if (cols.length != 1) {
+                    throw new ApiException("Client file doesnt match criteria for upload");
+                }
+                if (cols[0].trim().isEmpty()) continue;
 
                 ClientForm form = new ClientForm();
                 form.setClientName(cols[0].trim().toLowerCase());

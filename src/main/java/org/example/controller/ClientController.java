@@ -19,6 +19,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.example.model.ClientData;
 import org.example.model.ClientForm;
 import org.example.dto.ClientDto;
+import org.example.exception.ApiException;
 
 @RestController
 @RequestMapping("/api/clients")
@@ -81,21 +82,22 @@ public class ClientController {
             @RequestParam(name = "uploadedBy", required = false) String uploadedBy) {
 
         if (file == null || file.isEmpty() || !file.getOriginalFilename().endsWith(".tsv")) {
-            return ResponseEntity.badRequest().body("Please upload a valid non-empty .tsv file.");
+            throw new ApiException("Please upload a valid non-empty .tsv file.");
         }
-
         try {
             List<ClientForm> clientForms = ClientTsvParser.parse(file.getInputStream());
-
+            if (clientForms.size() > 5000) {
+                throw new ApiException("File upload limit exceeded: Maximum 5000 rows allowed.");
+            }
             for (ClientForm form : clientForms) {
                 clientDto.add(form);
             }
-
             return ResponseEntity.ok("Uploaded " + clientForms.size() + " clients" +
                     (uploadedBy != null ? " by " + uploadedBy : "") + ".");
-
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("Invalid input: " + e.getMessage());
+        } catch (ApiException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
