@@ -1,8 +1,8 @@
 package org.example.dao;
 
 import jakarta.persistence.*;
+import jakarta.persistence.criteria.*;
 import org.springframework.stereotype.Repository;
-
 import org.example.pojo.ProductPojo;
 import java.util.List;
 
@@ -21,33 +21,57 @@ public class ProductDao {
     }
 
     public ProductPojo selectByBarcode(String barcode) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<ProductPojo> query = cb.createQuery(ProductPojo.class);
+        Root<ProductPojo> root = query.from(ProductPojo.class);
+        
+        query.select(root)
+             .where(cb.equal(root.get("barcode"), barcode));
+        
         try {
-            String query = "SELECT p FROM ProductPojo p WHERE p.barcode = :barcode";
-            return em.createQuery(query, ProductPojo.class).setParameter("barcode", barcode).getSingleResult();
+            return em.createQuery(query).getSingleResult();
         } catch (NoResultException e) {
             return null;
         }
     }
 
     public ProductPojo selectByName(String name) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<ProductPojo> query = cb.createQuery(ProductPojo.class);
+        Root<ProductPojo> root = query.from(ProductPojo.class);
+        
+        query.select(root)
+             .where(cb.equal(root.get("name"), name));
+        
         try {
-            String jpql = "SELECT p FROM ProductPojo p WHERE p.name = :name";
-            return em.createQuery(jpql, ProductPojo.class)
-                    .setParameter("name", name)
-                    .getSingleResult();
+            return em.createQuery(query).getSingleResult();
         } catch (NoResultException e) {
             return null;
         }
     }
 
     public List<ProductPojo> selectAll() {
-        String query = "SELECT p FROM ProductPojo p JOIN FETCH p.client";
-        return em.createQuery(query, ProductPojo.class).getResultList();
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<ProductPojo> query = cb.createQuery(ProductPojo.class);
+        Root<ProductPojo> root = query.from(ProductPojo.class);
+        
+        // Join with client to fetch eagerly
+        root.fetch("client", JoinType.LEFT);
+        query.select(root);
+        
+        return em.createQuery(query).getResultList();
     }
 
     public void update(Integer id, ProductPojo product) {
-        product.setId(id);
-        em.merge(product);
+        // Preserve the version field to avoid optimistic locking conflicts
+        ProductPojo existing = select(id);
+        if (existing != null) {
+            existing.setName(product.getName());
+            existing.setMrp(product.getMrp());
+            existing.setImageUrl(product.getImageUrl());
+            existing.setClient(product.getClient());
+            em.merge(existing);
+        }
     }
 
     public void delete(Integer id) {

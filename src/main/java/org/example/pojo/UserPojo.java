@@ -3,6 +3,7 @@ package org.example.pojo;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.example.enums.Role;
 
 @Getter
 @Setter

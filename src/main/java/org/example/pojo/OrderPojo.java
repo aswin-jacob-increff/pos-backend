@@ -19,9 +19,6 @@ public class OrderPojo extends AbstractPojo {
 
     private Instant date;
 
-    @Enumerated(EnumType.STRING)
-    private OrderStatus status;
-
     private double total;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)

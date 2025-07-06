@@ -2,8 +2,6 @@ package org.example.model;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.example.pojo.ProductPojo;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.time.LocalDateTime;

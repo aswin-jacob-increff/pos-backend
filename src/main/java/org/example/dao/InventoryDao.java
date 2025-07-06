@@ -1,8 +1,8 @@
 package org.example.dao;
 
 import jakarta.persistence.*;
+import jakarta.persistence.criteria.*;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 import org.example.pojo.InventoryPojo;
 
@@ -21,15 +21,25 @@ public class InventoryDao {
     }
 
     public List<InventoryPojo> selectAll() {
-        String jpql = "SELECT i FROM InventoryPojo i " +
-                "JOIN FETCH i.product p " +
-                "JOIN FETCH p.client";
-        return em.createQuery(jpql, InventoryPojo.class).getResultList();
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<InventoryPojo> query = cb.createQuery(InventoryPojo.class);
+        Root<InventoryPojo> root = query.from(InventoryPojo.class);
+        
+        // Fetch product and its client eagerly
+        root.fetch("product", JoinType.LEFT).fetch("client", JoinType.LEFT);
+        
+        query.select(root);
+        return em.createQuery(query).getResultList();
     }
 
     public void update(Integer id, InventoryPojo inventory) {
-        inventory.setId(id);
-        em.merge(inventory);
+        // Preserve the version field to avoid optimistic locking conflicts
+        InventoryPojo existing = select(id);
+        if (existing != null) {
+            existing.setQuantity(inventory.getQuantity());
+            existing.setProduct(inventory.getProduct());
+            em.merge(existing);
+        }
     }
 
     public void delete(Integer id) {
@@ -40,32 +50,35 @@ public class InventoryDao {
     }
 
     public InventoryPojo getByProductId(Integer product_id) {
-        String jpql = "SELECT i FROM InventoryPojo i WHERE i.product.id = :product_id";
-        TypedQuery<InventoryPojo> query = em.createQuery(jpql, InventoryPojo.class);
-        query.setParameter("product_id", product_id);
-
-        return query.getResultStream().findFirst().orElse(null); // returns null if not found
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<InventoryPojo> query = cb.createQuery(InventoryPojo.class);
+        Root<InventoryPojo> root = query.from(InventoryPojo.class);
+        
+        query.select(root)
+             .where(cb.equal(root.get("product").get("id"), product_id));
+        
+        return em.createQuery(query).getResultStream().findFirst().orElse(null);
     }
 
     public InventoryPojo getByProductName(String name) {
-        String jpql = """
-            SELECT i FROM InventoryPojo i
-            WHERE LOWER(i.product.name) = :name
-        """;
-        TypedQuery<InventoryPojo> query = em.createQuery(jpql, InventoryPojo.class);
-        query.setParameter("name", name.trim().toLowerCase());
-
-        return query.getResultStream().findFirst().orElse(null);
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<InventoryPojo> query = cb.createQuery(InventoryPojo.class);
+        Root<InventoryPojo> root = query.from(InventoryPojo.class);
+        
+        query.select(root)
+             .where(cb.equal(cb.lower(root.get("product").get("name")), name.trim().toLowerCase()));
+        
+        return em.createQuery(query).getResultStream().findFirst().orElse(null);
     }
 
     public InventoryPojo getByProductBarcode(String barcode) {
-        String jpql = """
-            SELECT i FROM InventoryPojo i
-            WHERE LOWER(i.product.barcode) = :barcode
-        """;
-        TypedQuery<InventoryPojo> query = em.createQuery(jpql, InventoryPojo.class);
-        query.setParameter("barcode", barcode.trim().toLowerCase());
-
-        return query.getResultStream().findFirst().orElse(null);
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<InventoryPojo> query = cb.createQuery(InventoryPojo.class);
+        Root<InventoryPojo> root = query.from(InventoryPojo.class);
+        
+        query.select(root)
+             .where(cb.equal(cb.lower(root.get("product").get("barcode")), barcode.trim().toLowerCase()));
+        
+        return em.createQuery(query).getResultStream().findFirst().orElse(null);
     }
 }

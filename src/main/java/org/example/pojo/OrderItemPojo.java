@@ -14,7 +14,7 @@ public class OrderItemPojo extends AbstractPojo {
     @GeneratedValue(strategy = GenerationType.TABLE)
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn (name = "order_id")
     private OrderPojo order;
 

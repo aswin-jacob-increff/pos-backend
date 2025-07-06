@@ -3,23 +3,22 @@ package org.example.flow;
 import org.example.exception.ApiException;
 import org.example.pojo.OrderItemPojo;
 import org.example.pojo.OrderPojo;
-import org.example.service.OrderItemService;
-import org.example.service.OrderService;
+import org.example.api.OrderItemApi;
+import org.example.api.OrderApi;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 
-@Component
+@Service
 @Transactional
 public class OrderFlow {
 
     @Autowired
-    private OrderService orderService;
+    private OrderApi api;
 
     @Autowired
-    private OrderItemService orderItemService;
+    private OrderItemApi orderItemApi;
 
     public OrderPojo add(OrderPojo orderPojo) {
         List<OrderItemPojo> orderItems = orderPojo.getOrderItems();
@@ -28,36 +27,48 @@ public class OrderFlow {
             throw new ApiException("Order must contain at least one item");
         }
 
-        // Create the order with all items - OrderService handles the complete creation
-        return orderService.add(orderPojo);
+        // Create the order with all items - OrderApi handles the complete creation
+        return api.add(orderPojo);
     }
 
     public OrderPojo get(Integer id) {
-        return orderService.get(id);
+        return api.get(id);
     }
 
     public List<OrderPojo> getAll() {
-        return orderService.getAll();
+        return api.getAll();
     }
 
     public OrderPojo update(Integer id, OrderPojo form) {
-        return orderService.update(id, form);
+        return api.update(id, form);
     }
 
     public void delete(Integer id) {
-        List<OrderItemPojo> orderItemPojoList = orderItemService.getByOrderId(id);
+        List<OrderItemPojo> orderItemPojoList = orderItemApi.getByOrderId(id);
         for (OrderItemPojo orderItemPojo : orderItemPojoList) {
-            orderItemService.delete(orderItemPojo.getId());
+            orderItemApi.delete(orderItemPojo.getId());
         }
-        orderService.delete(id);
+        api.delete(id);
     }
 
-    public OrderPojo cancelOrder(Integer id) {
-        orderService.updateStatusToCancelled(id);
-        return orderService.get(id);
+    public void cancelOrder(Integer id) {
+        api.cancelOrder(id);
     }
 
     public String generateInvoice(Integer orderId) throws Exception {
-        return orderService.generateInvoice(orderId);
+        return api.generateInvoice(orderId);
+    }
+
+    public org.springframework.core.io.Resource getInvoiceFile(Integer orderId) {
+        String fileName = "order-" + orderId + ".pdf";
+        java.nio.file.Path filePath = java.nio.file.Paths.get("src/main/resources/invoice/", fileName);
+        if (!java.nio.file.Files.exists(filePath)) {
+            throw new ApiException("Invoice PDF not found for order ID: " + orderId);
+        }
+        try {
+            return new org.springframework.core.io.UrlResource(filePath.toUri());
+        } catch (Exception e) {
+            throw new ApiException("Failed to load invoice PDF: " + e.getMessage());
+        }
     }
 }

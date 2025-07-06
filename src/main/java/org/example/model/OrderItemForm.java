@@ -2,8 +2,6 @@ package org.example.model;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.example.pojo.OrderPojo;
-import org.example.pojo.ProductPojo;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 

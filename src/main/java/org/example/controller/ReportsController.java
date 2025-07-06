@@ -1,14 +1,14 @@
 package org.example.controller;
 
-import jakarta.validation.Valid;
-import org.example.dto.SalesReportRequest;
-import org.example.dto.SalesReportResponse;
+import org.example.model.SalesReportForm;
+import org.example.model.SalesReportData;
+import org.example.dto.ReportsDto;
+import org.example.pojo.DaySales;
+import org.example.dao.DaySalesRepository;
 import org.example.exception.ApiException;
-import org.example.service.ReportsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -17,21 +17,27 @@ import java.util.List;
 public class ReportsController {
 
     @Autowired
-    private ReportsService reportsService;
+    private ReportsDto reportsDto;
 
-    @GetMapping("/sales")
-    public List<SalesReportResponse> getSalesReport(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) String brand,
-            @RequestParam(required = false) String category) {
-        if (startDate == null || endDate == null) {
-            throw new ApiException("Start date and end date are required");
+    @Autowired
+    private DaySalesRepository daySalesRepo;
+
+    @GetMapping("/day-sales")
+    public List<DaySales> getDaySales(
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        if (startDate.isAfter(endDate)) {
+            throw new ApiException("Start date cannot be after end date.");
         }
-        if (endDate.isBefore(startDate)) {
-            throw new ApiException("End date cannot be before start date");
+        return daySalesRepo.findByDateRange(startDate, endDate);
+    }
+
+    @PostMapping("/sales")
+    public List<SalesReportData> getSalesReport(@RequestBody SalesReportForm form) {
+        if (form.getStartDate().isAfter(form.getEndDate())) {
+            throw new ApiException("Start date cannot be after end date.");
         }
-        SalesReportRequest request = new SalesReportRequest(startDate, endDate, brand, category);
-        return reportsService.getSalesReport(request);
+        return reportsDto.getSalesReport(form);
     }
 } 

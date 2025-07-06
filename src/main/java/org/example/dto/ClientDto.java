@@ -5,12 +5,12 @@ import org.example.model.ClientForm;
 import org.example.model.ClientData;
 import org.example.pojo.ClientPojo;
 import org.example.flow.ClientFlow;
-
+import org.example.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import jakarta.validation.Valid;
 
@@ -28,18 +28,10 @@ public class ClientDto {
     }
 
     public ClientData get(Integer id) {
-        if (id == null) {
+        if (Objects.isNull(id)) {
             throw new ApiException("Integer ID cannot be null.");
         }
         ClientPojo clientPojo = clientFlow.get(id);
-        return convert(clientPojo);
-    }
-
-    public ClientData getByName(String clientName) {
-        if (clientName.trim().isEmpty()) {
-            throw new ApiException("Client Name cannot be null.");
-        }
-        ClientPojo clientPojo = clientFlow.getByName(clientName.trim().toLowerCase());
         return convert(clientPojo);
     }
 
@@ -53,7 +45,7 @@ public class ClientDto {
     }
 
     public ClientData update(Integer id, @Valid ClientForm clientForm) {
-        if (id == null) {
+        if (Objects.isNull(id)) {
             throw new ApiException("Client ID cannot be null.");
         }
         preprocess(clientForm);
@@ -61,7 +53,7 @@ public class ClientDto {
     }
 
     public void delete(Integer id) {
-        if (id == null) {
+        if (Objects.isNull(id)) {
             throw new IllegalArgumentException("Client ID cannot be null");
         }
         clientFlow.delete(id);
@@ -71,12 +63,26 @@ public class ClientDto {
         if (name.trim().isEmpty()) {
             throw new IllegalArgumentException("Client name cannot be null");
         }
-        clientFlow.deleteClientByName(name.trim().toLowerCase());
+        clientFlow.deleteClientByName(StringUtil.format(name));
+    }
+
+    public void toggleStatus(Integer id) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("Client ID cannot be null");
+        }
+        clientFlow.toggleStatus(id);
+    }
+
+    public void toggleStatusByName(String name) {
+        if (Objects.isNull(name) || name.trim().isEmpty()) {
+            throw new ApiException("Client name cannot be null or empty");
+        }
+        clientFlow.toggleStatusByName(StringUtil.format(name));
     }
 
     private void preprocess(ClientForm clientForm) {
         if (clientForm.getClientName() != null) {
-            clientForm.setClientName(clientForm.getClientName().trim().toLowerCase());
+            clientForm.setClientName(StringUtil.format(clientForm.getClientName()));
         }
     }
 
@@ -91,5 +97,26 @@ public class ClientDto {
         clientData.setId(clientPojo.getId());
         clientData.setClientName(clientPojo.getClientName());
         return clientData;
+    }
+
+    public ClientData getByNameOrId(Integer id, String name) {
+        name = StringUtil.format(name);
+        if (Objects.nonNull(id) && Objects.nonNull(name)) {
+            try {
+                ClientPojo idPojo = clientFlow.get(id);
+                ClientPojo namePojo = clientFlow.getByName(name);
+                if (idPojo.equals(namePojo)) {
+                    return convert(idPojo);
+                } else {
+                    throw new ApiException("Client Name and Client ID does not match");
+                }
+            } catch (ApiException e) {
+                throw new ApiException(e.getMessage());
+            }
+        } else if (Objects.nonNull(id)) {
+            return convert(clientFlow.get(id));
+        } else {
+            return convert(clientFlow.getByName(name));
+        }
     }
 }

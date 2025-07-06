@@ -2,7 +2,7 @@ package org.example.model;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.example.pojo.Role;
+import org.example.enums.Role;
 
 @Getter
 @Setter

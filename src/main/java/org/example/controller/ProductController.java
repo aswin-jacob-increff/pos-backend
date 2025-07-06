@@ -1,24 +1,18 @@
 package org.example.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import org.example.model.ClientForm;
 import org.example.util.ProductTsvParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import org.example.model.ProductData;
 import org.example.model.ProductForm;
 import org.example.dto.ProductDto;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Base64;
 import org.example.exception.ApiException;
@@ -37,9 +31,6 @@ public class ProductController {
 
     @GetMapping("/id/{id}")
     public ProductData get(@PathVariable Integer id) {
-        if (id == null) {
-            throw new IllegalArgumentException("Product ID cannot be null");
-        }
         return productDto.get(id);
     }
 
@@ -50,17 +41,11 @@ public class ProductController {
 
     @GetMapping("/barcode/{barcode}")
     public ProductData getByBarcode(@PathVariable String barcode) {
-        if (barcode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Product Barcode cannot be null");
-        }
         return productDto.getByBarcode(barcode);
     }
 
     @PutMapping("/{id}")
     public ProductData update(@PathVariable Integer id, @RequestBody ProductForm form) {
-        if (id == null) {
-            throw new IllegalArgumentException("Product ID cannot be null");
-        }
         return productDto.update(id, form);
     }
 
@@ -81,9 +66,6 @@ public class ProductController {
 
     @GetMapping("/{id}/image")
     public ResponseEntity<ByteArrayResource> getProductImage(@PathVariable Integer id) {
-        if (id == null) {
-            return ResponseEntity.badRequest().build();
-        }
         
         try {
             ProductData product = productDto.get(id);

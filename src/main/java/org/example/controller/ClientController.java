@@ -1,9 +1,7 @@
 package org.example.controller;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
-
+import java.util.Objects;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.util.ClientTsvParser;
@@ -14,8 +12,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.multipart.MultipartFile;
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.example.model.ClientData;
 import org.example.model.ClientForm;
 import org.example.dto.ClientDto;
@@ -41,45 +37,36 @@ public class ClientController {
         return clientDto.getAll();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/search")
     public ClientData getClient(@RequestParam(required = false) Integer id,
                                @RequestParam(required = false) String name) {
-        if (id != null) {
-            return clientDto.get(id);
-        } else if (name != null) {
-            return clientDto.getByName(name);
-        } else {
-            throw new IllegalArgumentException("Either 'id' or 'name' must be provided");
-        }
+        return clientDto.getByNameOrId(id, name);
     }
 
     @Operation(summary = "Updates a client by ID")
     @PutMapping("/{id}")
     public ClientData update(@PathVariable Integer id, @RequestBody ClientForm form) {
-        if (id == null) {
-            throw new IllegalArgumentException("Client ID cannot be empty");
-        }
         return clientDto.update(id, form);
     }
 
-    @Operation(summary = "Deletes a client by ID or name")
-    @DeleteMapping
-    public void delete(@RequestParam(required = false) Integer id,
-                       @RequestParam(required = false) String name) {
+    @Operation(summary = "Toggles client status by ID or name")
+    @PutMapping("/toggle")
+    public void toggleStatus(@RequestParam(required = false) Integer id,
+                            @RequestParam(required = false) String name) {
         if (id != null) {
-            clientDto.delete(id);
+            clientDto.toggleStatus(id);
         } else if (name != null) {
-            clientDto.deleteByName(name);
+            clientDto.toggleStatusByName(name);
         } else {
-            throw new IllegalArgumentException("Either 'id' or 'name' must be provided for deletion");
+            throw new IllegalArgumentException("Either 'id' or 'name' must be provided for status toggle");
         }
     }
 
+    //TODO refactor this
     @Operation(summary = "Upload clients via TSV file")
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> uploadClientsFromTsv(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(name = "uploadedBy", required = false) String uploadedBy) {
+            @RequestParam("file") MultipartFile file) {
 
         if (file == null || file.isEmpty() || !file.getOriginalFilename().endsWith(".tsv")) {
             throw new ApiException("Please upload a valid non-empty .tsv file.");
@@ -92,8 +79,7 @@ public class ClientController {
             for (ClientForm form : clientForms) {
                 clientDto.add(form);
             }
-            return ResponseEntity.ok("Uploaded " + clientForms.size() + " clients" +
-                    (uploadedBy != null ? " by " + uploadedBy : "") + ".");
+            return ResponseEntity.ok("Uploaded " + clientForms.size() + " clients");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("Invalid input: " + e.getMessage());
         } catch (ApiException e) {

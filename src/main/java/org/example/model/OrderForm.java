@@ -2,7 +2,6 @@ package org.example.model;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.example.pojo.OrderStatus;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -17,7 +16,6 @@ public class OrderForm {
     @NotNull(message = "Order must contain at least one item")
     @Size(min = 1, message = "Order must contain at least one item")
     private List<OrderItemForm> orderItemFormList;
-    private OrderStatus status;
     private Double total;
 
 }

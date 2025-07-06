@@ -4,13 +4,14 @@ import org.example.model.InventoryForm;
 import org.example.model.InventoryData;
 import org.example.pojo.InventoryPojo;
 import org.example.flow.InventoryFlow;
-import org.example.service.ProductService;
+import org.example.api.ProductApi;
 import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Base64;
+import java.util.Objects;
 import jakarta.validation.Valid;
 
 @Component
@@ -20,7 +21,7 @@ public class InventoryDto {
     private InventoryFlow inventoryFlow;
 
     @Autowired
-    private ProductService productService;
+    private ProductApi productApi;
 
     public InventoryData add(@Valid InventoryForm inventoryForm) {
         preprocess(inventoryForm);
@@ -95,7 +96,7 @@ public class InventoryDto {
     }
     
     private void validateInventoryId(Integer id) {
-        if (id == null) {
+        if (Objects.isNull(id)) {
             throw new ApiException("Inventory ID cannot be null");
         }
         if (id <= 0) {
@@ -104,7 +105,7 @@ public class InventoryDto {
     }
     
     private void validateProductId(Integer productId) {
-        if (productId == null) {
+        if (Objects.isNull(productId)) {
             throw new ApiException("Product ID cannot be null");
         }
         if (productId <= 0) {
@@ -125,7 +126,7 @@ public class InventoryDto {
     }
     
     private void validateQuantity(Integer quantity, String fieldName) {
-        if (quantity == null) {
+        if (Objects.isNull(quantity)) {
             throw new ApiException(fieldName + " cannot be null");
         }
         if (quantity <= 0) {
@@ -134,7 +135,7 @@ public class InventoryDto {
     }
     
     private void validateSetStockQuantity(Integer quantity) {
-        if (quantity == null) {
+        if (Objects.isNull(quantity)) {
             throw new ApiException("Stock quantity cannot be null");
         }
         if (quantity < 0) {
@@ -144,30 +145,30 @@ public class InventoryDto {
 
     private void preprocess(InventoryForm inventoryForm) {
         // Cross-field/entity logic: productId/productName/barcode lookup, base64 image validation
-        if (inventoryForm.getProductId() == null) {
+        if (Objects.isNull(inventoryForm.getProductId())) {
             if (inventoryForm.getBarcode() == null || inventoryForm.getBarcode().trim().isEmpty()) {
                 if (inventoryForm.getProductName() == null || inventoryForm.getProductName().trim().isEmpty()) {
                     throw new ApiException("One of product ID, name or barcode is required");
                 } else {
                     try {
-                        inventoryForm.setProductId(productService.getByName(inventoryForm.getProductName()).getId());
-                        inventoryForm.setBarcode(productService.getByName(inventoryForm.getProductName()).getBarcode());
+                        inventoryForm.setProductId(productApi.getByName(inventoryForm.getProductName()).getId());
+                        inventoryForm.setBarcode(productApi.getByName(inventoryForm.getProductName()).getBarcode());
                     } catch (ApiException e) {
                         throw new ApiException("Product with name '" + inventoryForm.getProductName() + "' not found");
                     }
                 }
             } else {
                 try {
-                    inventoryForm.setProductId(productService.getByBarcode(inventoryForm.getBarcode()).getId());
-                    inventoryForm.setProductName(productService.getByBarcode(inventoryForm.getBarcode()).getName());
+                    inventoryForm.setProductId(productApi.getByBarcode(inventoryForm.getBarcode()).getId());
+                    inventoryForm.setProductName(productApi.getByBarcode(inventoryForm.getBarcode()).getName());
                 } catch (ApiException e) {
                     throw new ApiException("Product with barcode '" + inventoryForm.getBarcode() + "' not found");
                 }
             }
         } else {
             try {
-                inventoryForm.setProductName(productService.get(inventoryForm.getProductId()).getName());
-                inventoryForm.setBarcode(productService.get(inventoryForm.getProductId()).getBarcode());
+                inventoryForm.setProductName(productApi.get(inventoryForm.getProductId()).getName());
+                inventoryForm.setBarcode(productApi.get(inventoryForm.getProductId()).getBarcode());
             } catch (ApiException e) {
                 throw new ApiException("Product with ID " + inventoryForm.getProductId() + " not found");
             }
@@ -182,7 +183,7 @@ public class InventoryDto {
 
     private InventoryPojo convert(InventoryForm inventoryForm) {
         InventoryPojo inventoryPojo = new InventoryPojo();
-        inventoryPojo.setProduct(productService.get(inventoryForm.getProductId()));
+        inventoryPojo.setProduct(productApi.get(inventoryForm.getProductId()));
         inventoryPojo.setQuantity(inventoryForm.getQuantity());
         
         // Handle base64 image if provided (this would update the product's image)

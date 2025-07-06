@@ -2,9 +2,7 @@ package org.example.model;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.example.pojo.OrderStatus;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -15,7 +13,8 @@ public class OrderData {
     private Integer id;
     private LocalDateTime date; // Always IST for frontend
     private List<OrderItemData> orderItemDataList;
-    private OrderStatus status;
     private Double total;
+    private String invoiceBase64; // Base64 encoded invoice PDF
+    private String invoiceUrl; // URL to download invoice
 
 }

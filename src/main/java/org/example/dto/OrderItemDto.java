@@ -1,21 +1,20 @@
 package org.example.dto;
 
-import org.example.flow.OrderFlow;
 import org.example.model.OrderItemForm;
 import org.example.model.OrderItemData;
 import org.example.pojo.OrderItemPojo;
 import org.example.flow.OrderItemFlow;
-import org.example.service.OrderService;
-import org.example.service.ProductService;
+import org.example.api.OrderApi;
+import org.example.api.ProductApi;
 import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Base64;
+import java.util.Objects;
 import jakarta.validation.Valid;
 import org.example.util.TimeUtil;
-import java.time.LocalDateTime;
 
 @Component
 public class OrderItemDto {
@@ -24,10 +23,10 @@ public class OrderItemDto {
     private OrderItemFlow orderItemFlow;
 
     @Autowired
-    private OrderService orderService;
+    private OrderApi orderApi;
 
     @Autowired
-    private ProductService productService;
+    private ProductApi productApi;
 
     public OrderItemData add(@Valid OrderItemForm orderItemForm) {
         preprocess(orderItemForm);
@@ -37,7 +36,7 @@ public class OrderItemDto {
     }
 
     public OrderItemData get(Integer id) {
-        if (id == null) {
+        if (Objects.isNull(id)) {
             throw new ApiException("Order Item ID cannot be null");
         }
         return convert(orderItemFlow.get(id));
@@ -53,7 +52,7 @@ public class OrderItemDto {
     }
 
     public List<OrderItemData> getByOrderId(Integer orderId) {
-        if (orderId == null) {
+        if (Objects.isNull(orderId)) {
             throw new ApiException("Order ID cannot be null");
         }
         List<OrderItemPojo> orderItemPojoList = orderItemFlow.getByOrderId(orderId);
@@ -65,7 +64,7 @@ public class OrderItemDto {
     }
 
     public OrderItemData update(@Valid OrderItemForm orderItemForm, Integer id) {
-        if (id == null) {
+        if (Objects.isNull(id)) {
             throw new ApiException("Order Item ID cannot be null");
         }
         preprocess(orderItemForm);
@@ -73,7 +72,7 @@ public class OrderItemDto {
     }
 
     public void delete(Integer id) {
-        if (id == null) {
+        if (Objects.isNull(id)) {
             throw new ApiException("Order Item ID cannot be null");
         }
         orderItemFlow.delete(id);
@@ -81,25 +80,25 @@ public class OrderItemDto {
 
     private void preprocess(OrderItemForm orderItemForm) {
         // Cross-field/entity logic: orderId lookup, productId/productName/barcode lookup, base64 image validation
-        if (orderItemForm.getOrderId() == null) {
+        if (Objects.isNull(orderItemForm.getOrderId())) {
             throw new ApiException("Order ID cannot be null");
         }
         // No need to setDateTime here; handled in convert
-        if (orderItemForm.getProductId() == null) {
+        if (Objects.isNull(orderItemForm.getProductId())) {
             if (orderItemForm.getBarcode() == null || orderItemForm.getBarcode().trim().isEmpty()) {
                 if (orderItemForm.getProductName() == null || orderItemForm.getProductName().trim().isEmpty()) {
                     throw new ApiException("One of the three (product id, name, barcode) must be present");
                 } else {
-                    orderItemForm.setProductId(productService.getByName(orderItemForm.getProductName()).getId());
-                    orderItemForm.setBarcode(productService.getByName(orderItemForm.getProductName()).getBarcode());
+                    orderItemForm.setProductId(productApi.getByName(orderItemForm.getProductName()).getId());
+                    orderItemForm.setBarcode(productApi.getByName(orderItemForm.getProductName()).getBarcode());
                 }
             } else {
-                orderItemForm.setProductId(productService.getByBarcode(orderItemForm.getBarcode()).getId());
-                orderItemForm.setProductName(productService.getByBarcode(orderItemForm.getBarcode()).getName());
+                orderItemForm.setProductId(productApi.getByBarcode(orderItemForm.getBarcode()).getId());
+                orderItemForm.setProductName(productApi.getByBarcode(orderItemForm.getBarcode()).getName());
             }
         } else {
-            orderItemForm.setBarcode(productService.get(orderItemForm.getProductId()).getBarcode());
-            orderItemForm.setProductName(productService.get(orderItemForm.getProductId()).getName());
+            orderItemForm.setBarcode(productApi.get(orderItemForm.getProductId()).getBarcode());
+            orderItemForm.setProductName(productApi.get(orderItemForm.getProductId()).getName());
         }
         // Validate base64 image if provided
         if (orderItemForm.getImage() != null && !orderItemForm.getImage().trim().isEmpty()) {
@@ -111,10 +110,10 @@ public class OrderItemDto {
 
     private OrderItemPojo convert(OrderItemForm orderItemForm) {
         OrderItemPojo orderItemPojo = new OrderItemPojo();
-        orderItemPojo.setOrder(orderService.get(orderItemForm.getOrderId()));
-        orderItemPojo.setProduct(productService.get(orderItemForm.getProductId()));
+        orderItemPojo.setOrder(orderApi.get(orderItemForm.getOrderId()));
+        orderItemPojo.setProduct(productApi.get(orderItemForm.getProductId()));
         orderItemPojo.setQuantity(orderItemForm.getQuantity());
-        orderItemPojo.setSellingPrice(productService.get(orderItemForm.getProductId()).getMrp());
+        orderItemPojo.setSellingPrice(productApi.get(orderItemForm.getProductId()).getMrp());
         // Convert LocalDateTime (IST) to Instant (UTC) for DB if dateTime is present
         if (orderItemForm.getDateTime() != null) {
             orderItemPojo.getOrder().setDate(TimeUtil.toUTC(orderItemForm.getDateTime()));

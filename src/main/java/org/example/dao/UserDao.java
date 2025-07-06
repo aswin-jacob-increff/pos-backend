@@ -1,8 +1,7 @@
 package org.example.dao;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.TypedQuery;
+import jakarta.persistence.*;
+import jakarta.persistence.criteria.*;
 import org.example.pojo.UserPojo;
 import org.springframework.stereotype.Repository;
 
@@ -17,9 +16,13 @@ public class UserDao {
     }
 
     public UserPojo getByEmail(String email) {
-        String jpql = "SELECT u FROM UserPojo u WHERE LOWER(u.email) = :email";
-        TypedQuery<UserPojo> query = em.createQuery(jpql, UserPojo.class);
-        query.setParameter("email", email.toLowerCase().trim());
-        return query.getResultList().stream().findFirst().orElse(null);
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<UserPojo> query = cb.createQuery(UserPojo.class);
+        Root<UserPojo> root = query.from(UserPojo.class);
+        
+        query.select(root)
+             .where(cb.equal(cb.lower(root.get("email")), email.toLowerCase().trim()));
+        
+        return em.createQuery(query).getResultList().stream().findFirst().orElse(null);
     }
 }

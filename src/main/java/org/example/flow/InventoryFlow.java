@@ -1,64 +1,63 @@
 package org.example.flow;
 
 import org.example.pojo.InventoryPojo;
-import org.example.service.InventoryService;
-import org.example.exception.ApiException;
+import org.example.api.InventoryApi;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Component
+@Service
 @Transactional
 public class InventoryFlow {
 
     @Autowired
-    private InventoryService inventoryService;
+    private InventoryApi api;
 
     public InventoryPojo add(InventoryPojo inventoryPojo) {
-        inventoryService.add(inventoryPojo);
+        api.add(inventoryPojo);
         return inventoryPojo;
     }
 
     public InventoryPojo get(Integer id) {
-        return inventoryService.get(id);
+        return api.get(id);
     }
 
     public List<InventoryPojo> getAll() {
-        return inventoryService.getAll();
+        return api.getAll();
     }
 
     public InventoryPojo getByProductId(Integer productId) {
-        return inventoryService.getByProductId(productId);
+        return api.getByProductId(productId);
     }
 
     public InventoryPojo getByProductName(String productName) {
-        return inventoryService.getByProductName(productName);
+        return api.getByProductName(productName);
     }
 
     public InventoryPojo getByProductBarcode(String barcode) {
-        return inventoryService.getByProductBarcode(barcode);
+        return api.getByProductBarcode(barcode);
     }
 
     public InventoryPojo update(Integer id, InventoryPojo inventoryPojo) {
-        inventoryService.update(id, inventoryPojo);
-        return inventoryService.get(id);
+        api.update(id, inventoryPojo);
+        return api.get(id);
     }
 
     public void delete(Integer id) {
-        inventoryService.delete(id);
+        api.delete(id);
     }
 
     public void addStock(Integer productId, Integer quantity) {
-        inventoryService.addStock(productId, quantity);
+        api.addStock(productId, quantity);
     }
 
     public void removeStock(Integer productId, Integer quantity) {
-        inventoryService.removeStock(productId, quantity);
+        api.removeStock(productId, quantity);
     }
 
     public void setStock(Integer productId, Integer quantity) {
-        inventoryService.setStock(productId, quantity);
+        api.setStock(productId, quantity);
     }
 }

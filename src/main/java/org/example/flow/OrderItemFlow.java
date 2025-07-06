@@ -1,42 +1,41 @@
 package org.example.flow;
 
 import org.example.pojo.OrderItemPojo;
-import org.example.service.OrderItemService;
+import org.example.api.OrderItemApi;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
+import org.springframework.stereotype.Service;
 import java.util.List;
 
-@Component
+@Service
 public class OrderItemFlow {
 
     @Autowired
-    private OrderItemService orderItemService;
+    private OrderItemApi api;
 
     public OrderItemPojo add(OrderItemPojo orderItemPojo) {
         calculateAmount(orderItemPojo);
-        return orderItemService.add(orderItemPojo);
+        return api.add(orderItemPojo);
     }
 
     public OrderItemPojo get(Integer id) {
-        return orderItemService.get(id);
+        return api.get(id);
     }
 
     public List<OrderItemPojo> getAll() {
-        return orderItemService.getAll();
+        return api.getAll();
     }
 
     public List<OrderItemPojo> getByOrderId(Integer orderId) {
-        return orderItemService.getByOrderId(orderId);
+        return api.getByOrderId(orderId);
     }
 
     public OrderItemPojo update(OrderItemPojo orderItemPojo, Integer id) {
         calculateAmount(orderItemPojo);
-        return orderItemService.update(id, orderItemPojo);
+        return api.update(id, orderItemPojo);
     }
 
     public void delete(Integer id) {
-        orderItemService.delete(id);
+        api.delete(id);
     }
 
     private void calculateAmount(OrderItemPojo item) {

@@ -4,15 +4,14 @@ import org.example.model.ProductForm;
 import org.example.model.ProductData;
 import org.example.pojo.ProductPojo;
 import org.example.flow.ProductFlow;
-import org.example.service.ClientService;
+import org.example.api.ClientApi;
 import org.example.exception.ApiException;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Base64;
+import java.util.Objects;
 import jakarta.validation.Valid;
 
 @Component
@@ -22,7 +21,7 @@ public class ProductDto {
     private ProductFlow productFlow;
 
     @Autowired
-    private ClientService clientService;
+    private ClientApi clientApi;
 
     public ProductData add(@Valid ProductForm productForm) {
         preprocess(productForm);
@@ -71,14 +70,14 @@ public class ProductDto {
 
     private void preprocess(ProductForm productForm) {
         // Cross-field/entity logic: clientId/clientName lookup, base64 image validation
-        if (productForm.getClientId() == null) {
+        if (Objects.isNull(productForm.getClientId())) {
             if (productForm.getClientName() == null || productForm.getClientName().trim().isEmpty()) {
                 throw new ApiException("Both client id and name cannot be null");
             } else {
-                productForm.setClientId(clientService.getByName(productForm.getClientName()).getId());
+                productForm.setClientId(clientApi.getByName(productForm.getClientName()).getId());
             }
         } else {
-            productForm.setClientName(clientService.get(productForm.getClientId()).getClientName());
+            productForm.setClientName(clientApi.get(productForm.getClientId()).getClientName());
         }
         // Validate base64 image if provided
         if (productForm.getImage() != null && !productForm.getImage().trim().isEmpty()) {
@@ -90,7 +89,7 @@ public class ProductDto {
 
     private ProductPojo convert(ProductForm productForm) {
         ProductPojo productPojo = new ProductPojo();
-        productPojo.setClient(clientService.get(productForm.getClientId()));
+        productPojo.setClient(clientApi.get(productForm.getClientId()));
         productPojo.setName(productForm.getName());
         productPojo.setMrp(productForm.getMrp());
         productPojo.setBarcode(productForm.getBarcode());
