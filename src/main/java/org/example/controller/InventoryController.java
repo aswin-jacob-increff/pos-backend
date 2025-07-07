@@ -32,9 +32,6 @@ public class InventoryController {
 
     @GetMapping("/{id}")
     public InventoryData get(@PathVariable Integer id) {
-        if (id == null) {
-            throw new ApiException("Inventory ID cannot be null");
-        }
         return inventoryDto.get(id);
     }
 
@@ -70,9 +67,6 @@ public class InventoryController {
 
     @PutMapping("/{id}")
     public InventoryData update(@PathVariable Integer id, @RequestBody InventoryForm form) {
-        if (id == null) {
-            throw new ApiException("Inventory ID cannot be null");
-        }
         return inventoryDto.update(id, form);
     }
     
@@ -81,12 +75,6 @@ public class InventoryController {
             @PathVariable Integer productId,
             @RequestParam Integer quantity
     ) {
-        if (productId == null) {
-            throw new ApiException("Product ID cannot be null");
-        }
-        if (quantity == null || quantity <= 0) {
-            throw new ApiException("Quantity must be positive");
-        }
         return inventoryDto.addStock(productId, quantity);
     }
     
@@ -95,12 +83,6 @@ public class InventoryController {
             @PathVariable Integer productId,
             @RequestParam Integer quantity
     ) {
-        if (productId == null) {
-            throw new ApiException("Product ID cannot be null");
-        }
-        if (quantity == null || quantity <= 0) {
-            throw new ApiException("Quantity must be positive");
-        }
         return inventoryDto.removeStock(productId, quantity);
     }
     
@@ -109,20 +91,11 @@ public class InventoryController {
             @PathVariable Integer productId,
             @RequestParam Integer quantity
     ) {
-        if (productId == null) {
-            throw new ApiException("Product ID cannot be null");
-        }
-        if (quantity == null || quantity < 0) {
-            throw new ApiException("Quantity cannot be negative");
-        }
         return inventoryDto.setStock(productId, quantity);
     }
     
     @GetMapping("/{productId}/image")
     public ResponseEntity<ByteArrayResource> getProductImage(@PathVariable Integer productId) {
-        if (productId == null) {
-            return ResponseEntity.badRequest().build();
-        }
         
         try {
             InventoryData inventory = inventoryDto.getByProductId(productId);

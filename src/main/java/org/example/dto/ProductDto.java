@@ -6,8 +6,11 @@ import org.example.pojo.ProductPojo;
 import org.example.flow.ProductFlow;
 import org.example.api.ClientApi;
 import org.example.exception.ApiException;
+import org.example.util.FileValidationUtil;
+import org.example.util.ProductTsvParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Base64;
@@ -68,21 +71,61 @@ public class ProductDto {
         productFlow.deleteByBarcode(barcode);
     }
 
+    public void deleteProduct(Integer id, String name, String barcode) {
+        if (id != null) {
+            delete(id);
+        } else if (name != null) {
+            deleteByName(name);
+        } else if (barcode != null) {
+            deleteByBarcode(barcode);
+        } else {
+            throw new ApiException("You must provide either 'id', 'name', or 'barcode' to delete a product.");
+        }
+    }
+
+    public String uploadProductsFromTsv(MultipartFile file) {
+        // Validate file
+        FileValidationUtil.validateTsvFile(file);
+        
+        try {
+            List<ProductForm> productForms = ProductTsvParser.parse(file.getInputStream());
+            FileValidationUtil.validateFileSize(productForms.size());
+            
+            int count = 0;
+            for (ProductForm form : productForms) {
+                add(form);
+                count++;
+            }
+            return "Successfully uploaded " + count + " products.";
+        } catch (Exception e) {
+            throw new ApiException("Error while processing file: " + e.getMessage());
+        }
+    }
+
+    public String getProductImageUrl(Integer id) {
+        ProductData product = get(id);
+        if (product.getImageUrl() == null || product.getImageUrl().trim().isEmpty()) {
+            throw new ApiException("Product image not found");
+        }
+        return product.getImageUrl();
+    }
+
     private void preprocess(ProductForm productForm) {
-        // Cross-field/entity logic: clientId/clientName lookup, base64 image validation
-        if (Objects.isNull(productForm.getClientId())) {
+        // Cross-field/entity logic: clientId/clientName lookup, image URL validation
+        if (Objects.isNull(productForm.getClientId()) || productForm.getClientId() == 0) {
             if (productForm.getClientName() == null || productForm.getClientName().trim().isEmpty()) {
-                throw new ApiException("Both client id and name cannot be null");
+                throw new ApiException("Both client id and name cannot be null or zero");
             } else {
                 productForm.setClientId(clientApi.getByName(productForm.getClientName()).getId());
             }
         } else {
             productForm.setClientName(clientApi.get(productForm.getClientId()).getClientName());
         }
-        // Validate base64 image if provided
+        // Validate image URL if provided
         if (productForm.getImage() != null && !productForm.getImage().trim().isEmpty()) {
-            if (!isValidBase64(productForm.getImage())) {
-                throw new ApiException("Image must be a valid base64 string");
+            String imageUrl = productForm.getImage().trim();
+            if (!isValidUrl(imageUrl)) {
+                throw new ApiException("Image must be a valid URL");
             }
         }
     }
@@ -94,7 +137,7 @@ public class ProductDto {
         productPojo.setMrp(productForm.getMrp());
         productPojo.setBarcode(productForm.getBarcode());
         
-        // Store base64 image string in imageUrl field
+        // Store image URL in imageUrl field
         productPojo.setImageUrl(productForm.getImage());
         
         return productPojo;
@@ -109,19 +152,19 @@ public class ProductDto {
         productData.setBarcode(productPojo.getBarcode());
         productData.setMrp(productPojo.getMrp());
         
-        // Set imageUrl as reference to image endpoint
+        // Set imageUrl directly from stored URL
         if (productPojo.getImageUrl() != null && !productPojo.getImageUrl().trim().isEmpty()) {
-            productData.setImageUrl("/api/products/" + productPojo.getId() + "/image");
+            productData.setImageUrl(productPojo.getImageUrl());
         }
         
         return productData;
     }
     
-    private boolean isValidBase64(String str) {
+    private boolean isValidUrl(String url) {
         try {
-            Base64.getDecoder().decode(str);
-            return true;
-        } catch (IllegalArgumentException e) {
+            new java.net.URL(url);
+            return url.startsWith("http://") || url.startsWith("https://");
+        } catch (Exception e) {
             return false;
         }
     }

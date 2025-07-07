@@ -25,9 +25,6 @@ public class OrderController {
 
     @GetMapping("/{id}")
     public OrderData get(@PathVariable Integer id) {
-        if (id == null) {
-            throw new ApiException("Order ID cannot be null");
-        }
         return orderDto.get(id);
     }
 
@@ -38,37 +35,23 @@ public class OrderController {
 
     @PutMapping("/{id}")
     public OrderData update(@PathVariable Integer id, @RequestBody OrderForm form) {
-        if (id == null) {
-            throw new ApiException("Order ID cannot be null");
-        }
         return orderDto.update(id, form);
     }
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Integer id) {
-        if (id == null) {
-            throw new ApiException("Order ID cannot be null");
-        }
         orderDto.delete(id);
     }
     
     @DeleteMapping("/{id}/cancel")
     public void cancelOrder(@PathVariable Integer id) {
-        if (id == null) {
-            throw new ApiException("Order ID cannot be null");
-        }
         orderDto.cancelOrder(id);
     }
 
-    @GetMapping("/{id}/generate-and-download-invoice")
-    public ResponseEntity<org.springframework.core.io.Resource> generateAndDownloadInvoice(@PathVariable Integer id) {
+    @GetMapping("/{id}/download-invoice")
+    public ResponseEntity<org.springframework.core.io.Resource> downloadInvoice(@PathVariable Integer id) {
         try {
-            if (id == null) {
-                throw new ApiException("Order ID cannot be null");
-            }
-            
-            // Generate the PDF and get it as a resource
-            org.springframework.core.io.Resource pdfResource = orderDto.generateAndGetInvoiceResource(id);
+            org.springframework.core.io.Resource pdfResource = orderDto.downloadInvoice(id);
             String fileName = "order-" + id + ".pdf";
             
             return ResponseEntity.ok()
@@ -76,7 +59,7 @@ public class OrderController {
                 .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
                 .body(pdfResource);
         } catch (Exception e) {
-            throw new ApiException("Failed to generate and download invoice: " + e.getMessage());
+            throw new ApiException("Failed to download invoice: " + e.getMessage());
         }
     }
 

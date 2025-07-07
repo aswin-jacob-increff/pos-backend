@@ -56,7 +56,8 @@ public class OrderFlow {
     }
 
     public String generateInvoice(Integer orderId) throws Exception {
-        return api.generateInvoice(orderId);
+        // This method is now handled by OrderDto.downloadInvoice()
+        throw new ApiException("Use OrderDto.downloadInvoice() instead");
     }
 
     public org.springframework.core.io.Resource getInvoiceFile(Integer orderId) {
@@ -70,5 +71,9 @@ public class OrderFlow {
         } catch (Exception e) {
             throw new ApiException("Failed to load invoice PDF: " + e.getMessage());
         }
+    }
+
+    public void updateStatus(Integer id, org.example.pojo.OrderStatus status) {
+        api.updateStatus(id, status);
     }
 }

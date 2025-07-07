@@ -6,6 +6,7 @@ import lombok.Setter;
 
 import java.time.Instant;
 import java.util.List;
+import org.example.pojo.OrderStatus;
 
 @Getter
 @Setter
@@ -20,6 +21,10 @@ public class OrderPojo extends AbstractPojo {
     private Instant date;
 
     private double total;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrderStatus status = OrderStatus.CREATED;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItemPojo> orderItems;

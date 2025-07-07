@@ -114,7 +114,7 @@ public class OrderItemDto {
         orderItemPojo.setProduct(productApi.get(orderItemForm.getProductId()));
         orderItemPojo.setQuantity(orderItemForm.getQuantity());
         orderItemPojo.setSellingPrice(productApi.get(orderItemForm.getProductId()).getMrp());
-        // Convert LocalDateTime (IST) to Instant (UTC) for DB if dateTime is present
+        // Convert LocalDateTime (IST from frontend) to Instant (UTC) for DB if dateTime is present
         if (orderItemForm.getDateTime() != null) {
             orderItemPojo.getOrder().setDate(TimeUtil.toUTC(orderItemForm.getDateTime()));
         }
@@ -134,7 +134,7 @@ public class OrderItemDto {
         orderItemData.setProductName(orderItemPojo.getProduct().getName());
         orderItemData.setQuantity(orderItemPojo.getQuantity());
         orderItemData.setSellingPrice(orderItemPojo.getSellingPrice());
-        // Convert UTC Instant to IST LocalDateTime for frontend
+        // Convert UTC Instant from DB to IST LocalDateTime for frontend
         orderItemData.setDateTime(TimeUtil.toIST(orderItemPojo.getOrder().getDate()));
         // Set imageUrl as reference to product image endpoint
         if (orderItemPojo.getProduct().getImageUrl() != null && !orderItemPojo.getProduct().getImageUrl().trim().isEmpty()) {

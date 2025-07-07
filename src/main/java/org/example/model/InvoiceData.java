@@ -14,4 +14,6 @@ public class InvoiceData {
     private Double total;
     private Integer orderId;
     private Integer totalQuantity;
+    // Add date field for invoice (as String in IST format)
+    private String date;
 }

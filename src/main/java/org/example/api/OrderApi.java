@@ -4,18 +4,14 @@ import org.example.dao.OrderDao;
 import org.example.exception.ApiException;
 import org.example.pojo.OrderItemPojo;
 import org.example.pojo.OrderPojo;
+import org.example.api.InvoiceApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import org.example.model.InvoiceData;
-import org.example.model.InvoiceItemData;
-import org.example.util.Base64ToPdfUtil;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
+
+
 import org.example.util.TimeUtil;
 
 @Service
@@ -30,8 +26,10 @@ public class OrderApi {
     @Autowired
     private InventoryApi inventoryApi;
 
+
+
     @Autowired
-    private RestTemplate restTemplate;
+    private InvoiceApi invoiceApi;
 
     public OrderPojo add(OrderPojo orderPojo) {
         if (Objects.isNull(orderPojo)) {
@@ -40,7 +38,10 @@ public class OrderApi {
         if (Objects.isNull(orderPojo.getOrderItems()) || orderPojo.getOrderItems().isEmpty()) {
             throw new ApiException("Order must contain at least one item");
         }
+        // Set default date to current UTC time if not provided
         orderPojo.setDate(Objects.nonNull(orderPojo.getDate()) ? orderPojo.getDate() : Instant.now());
+        // Set status to CREATED when order is created
+        orderPojo.setStatus(org.example.pojo.OrderStatus.CREATED);
         
         // Insert order first to get the ID
         orderDao.insert(orderPojo);
@@ -61,6 +62,10 @@ public class OrderApi {
         }
         orderPojo.setTotal(totalAmount);
         orderDao.update(orderPojo.getId(), orderPojo);
+        
+        // Note: Invoice generation is now handled separately, not automatically on order creation
+        // Order status remains CREATED until invoice is explicitly generated
+        
         return orderPojo;
     }
 
@@ -81,9 +86,14 @@ public class OrderApi {
         if (Objects.isNull(existingOrder)) {
             throw new ApiException("Order with ID " + id + " not found");
         }
+        // Preserve date conversion - assume incoming date is already in UTC (from DTO conversion)
         existingOrder.setDate(updatedOrder.getDate());
         existingOrder.setTotal(updatedOrder.getTotal());
         existingOrder.setOrderItems(updatedOrder.getOrderItems());
+        // Update status if provided
+        if (updatedOrder.getStatus() != null) {
+            existingOrder.setStatus(updatedOrder.getStatus());
+        }
 
         orderDao.update(id, existingOrder);
         return orderDao.select(id);
@@ -118,48 +128,8 @@ public class OrderApi {
     }
 
     public String generateInvoice(Integer orderId) throws Exception {
-        OrderPojo order = get(orderId);
-        List<OrderItemPojo> orderItems = orderItemApi.getByOrderId(orderId);
-        InvoiceData invoiceData = new InvoiceData();
-        invoiceData.setOrderId(orderId);
-        invoiceData.setTotal(order.getTotal());
-        invoiceData.setTotalQuantity(orderItems.stream().mapToInt(OrderItemPojo::getQuantity).sum());
-        invoiceData.setId(order.getId());
-        List<InvoiceItemData> itemDataList = orderItems.stream().map(item -> {
-            InvoiceItemData itemData = new InvoiceItemData();
-            itemData.setId(item.getId());
-            itemData.setProductId(item.getProduct().getId());
-            itemData.setProductName(item.getProduct().getName());
-            itemData.setProductBarcode(item.getProduct().getBarcode());
-            itemData.setClientId(item.getProduct().getClient().getId());
-            itemData.setClientName(item.getProduct().getClient().getClientName());
-            itemData.setPrice(item.getSellingPrice());
-            itemData.setQuantity(item.getQuantity());
-            itemData.setAmount(item.getAmount());
-            return itemData;
-        }).toList();
-        invoiceData.setInvoiceItemPojoList(itemDataList);
-        String invoiceAppUrl = "http://localhost:8081/api/invoice";
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Content-Type", "application/json");
-        HttpEntity<InvoiceData> entity = new HttpEntity<>(invoiceData, headers);
-        ResponseEntity<String> response;
-        try {
-            response = restTemplate.postForEntity(invoiceAppUrl, entity, String.class);
-        } catch (Exception e) {
-            throw new ApiException("Failed to connect to invoice service: " + e.getMessage());
-        }
-        if (Objects.isNull(response) || !response.getStatusCode().is2xxSuccessful() || Objects.isNull(response.getBody())) {
-            throw new ApiException("Failed to generate invoice for order ID: " + orderId);
-        }
-        String fileName = "order-" + orderId + ".pdf";
-        String savePath = "src/main/resources/invoice/" + fileName;
-        try {
-            Base64ToPdfUtil.saveBase64AsPdf(response.getBody(), savePath);
-        } catch (Exception e) {
-            throw new ApiException("Failed to save invoice PDF: " + e.getMessage());
-        }
-        return "/invoice/" + fileName;
+        // This method is now handled by OrderDto.downloadInvoice()
+        throw new ApiException("Use OrderDto.downloadInvoice() instead");
     }
 
     /**
@@ -183,5 +153,12 @@ public class OrderApi {
         }
         
         return new java.util.ArrayList<>(combinedMap.values());
+    }
+
+    public void updateStatus(Integer id, org.example.pojo.OrderStatus status) {
+        OrderPojo order = orderDao.select(id);
+        if (order == null) throw new ApiException("Order not found");
+        order.setStatus(status);
+        orderDao.update(id, order);
     }
 } 

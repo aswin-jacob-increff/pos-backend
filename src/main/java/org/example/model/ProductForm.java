@@ -14,7 +14,7 @@ public class ProductForm {
     @NotBlank(message = "Barcode is required")
     @Size(max = 255, message = "Barcode must be at most 255 characters")
     private String barcode;
-    @NotBlank(message = "Client name is required")
+//    @NotBlank(message = "Client name is required")
     @Size(max = 255, message = "Client name must be at most 255 characters")
     private String clientName;
     private Integer clientId;
@@ -24,6 +24,6 @@ public class ProductForm {
     @NotNull(message = "MRP is required")
     @Positive(message = "MRP must be positive")
     private Double mrp;
-    private String image; // Base64 string from frontend
+    private String image; // Image URL string from frontend
 
 }

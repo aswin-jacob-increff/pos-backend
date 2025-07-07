@@ -21,8 +21,10 @@ public class OrderItemDao {
         CriteriaQuery<OrderItemPojo> query = cb.createQuery(OrderItemPojo.class);
         Root<OrderItemPojo> root = query.from(OrderItemPojo.class);
         
-        // Fetch product eagerly to avoid lazy loading issues
-        root.fetch("product", JoinType.LEFT);
+        // Fetch all necessary relationships eagerly to avoid lazy loading issues
+        Fetch<Object, Object> productFetch = root.fetch("product", JoinType.LEFT);
+        productFetch.fetch("client", JoinType.LEFT);
+        root.fetch("order", JoinType.LEFT);
         
         query.select(root)
              .where(cb.equal(root.get("id"), id));
@@ -39,8 +41,10 @@ public class OrderItemDao {
         CriteriaQuery<OrderItemPojo> query = cb.createQuery(OrderItemPojo.class);
         Root<OrderItemPojo> root = query.from(OrderItemPojo.class);
         
-        // Fetch product eagerly to avoid lazy loading issues
-        root.fetch("product", JoinType.LEFT);
+        // Fetch all necessary relationships eagerly to avoid lazy loading issues
+        Fetch<Object, Object> productFetch = root.fetch("product", JoinType.LEFT);
+        productFetch.fetch("client", JoinType.LEFT);
+        root.fetch("order", JoinType.LEFT);
         
         query.select(root);
         return em.createQuery(query).getResultList();

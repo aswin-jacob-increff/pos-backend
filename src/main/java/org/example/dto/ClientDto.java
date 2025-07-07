@@ -6,8 +6,11 @@ import org.example.model.ClientData;
 import org.example.pojo.ClientPojo;
 import org.example.flow.ClientFlow;
 import org.example.util.StringUtil;
+import org.example.util.FileValidationUtil;
+import org.example.util.ClientTsvParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -117,6 +120,33 @@ public class ClientDto {
             return convert(clientFlow.get(id));
         } else {
             return convert(clientFlow.getByName(name));
+        }
+    }
+
+    public String uploadClientsFromTsv(MultipartFile file) {
+        // Validate file
+        FileValidationUtil.validateTsvFile(file);
+        
+        try {
+            List<ClientForm> clientForms = ClientTsvParser.parse(file.getInputStream());
+            FileValidationUtil.validateFileSize(clientForms.size());
+            
+            for (ClientForm form : clientForms) {
+                add(form);
+            }
+            return "Uploaded " + clientForms.size() + " clients";
+        } catch (Exception e) {
+            throw new ApiException("Error while processing file: " + e.getMessage());
+        }
+    }
+
+    public void toggleStatus(Integer id, String name) {
+        if (id != null) {
+            toggleStatus(id);
+        } else if (name != null) {
+            toggleStatusByName(name);
+        } else {
+            throw new ApiException("Either 'id' or 'name' must be provided for status toggle");
         }
     }
 }

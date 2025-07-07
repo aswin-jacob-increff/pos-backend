@@ -5,6 +5,10 @@ import jakarta.persistence.criteria.*;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import org.example.pojo.OrderPojo;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 
 @Repository
 public class OrderDao {
@@ -21,8 +25,10 @@ public class OrderDao {
         CriteriaQuery<OrderPojo> query = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = query.from(OrderPojo.class);
         
-        // Fetch order items eagerly to avoid lazy loading issues
-        root.fetch("orderItems", JoinType.LEFT);
+        // Fetch order items and their relationships eagerly to avoid lazy loading issues
+        Join<OrderPojo, org.example.pojo.OrderItemPojo> orderItems = root.join("orderItems", JoinType.LEFT);
+        Fetch<Object, Object> productFetch = orderItems.fetch("product", JoinType.LEFT);
+        productFetch.fetch("client", JoinType.LEFT);
         
         query.select(root)
              .where(cb.equal(root.get("id"), id));
@@ -39,20 +45,22 @@ public class OrderDao {
         CriteriaQuery<OrderPojo> query = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = query.from(OrderPojo.class);
         
-        // Fetch order items eagerly to avoid lazy loading issues
-        root.fetch("orderItems", JoinType.LEFT);
+        // Fetch order items and their relationships eagerly to avoid lazy loading issues
+        Join<OrderPojo, org.example.pojo.OrderItemPojo> orderItems = root.join("orderItems", JoinType.LEFT);
+        Fetch<Object, Object> productFetch = orderItems.fetch("product", JoinType.LEFT);
+        productFetch.fetch("client", JoinType.LEFT);
         
         query.select(root);
         return em.createQuery(query).getResultList();
     }
 
     public void update(Integer id, OrderPojo order) {
-        // Preserve the version field to avoid optimistic locking conflicts
         OrderPojo existing = select(id);
         if (existing != null) {
             existing.setDate(order.getDate());
             existing.setTotal(order.getTotal());
             existing.setOrderItems(order.getOrderItems());
+            existing.setStatus(order.getStatus());
             em.merge(existing);
         }
     }
@@ -69,14 +77,26 @@ public class OrderDao {
         CriteriaQuery<OrderPojo> cq = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = cq.from(OrderPojo.class);
         
-        // Fetch order items eagerly to avoid lazy loading issues
-        root.fetch("orderItems", JoinType.LEFT);
+        // Fetch order items and their relationships eagerly to avoid lazy loading issues
+        Join<OrderPojo, org.example.pojo.OrderItemPojo> orderItems = root.join("orderItems", JoinType.LEFT);
+        Fetch<Object, Object> productFetch = orderItems.fetch("product", JoinType.LEFT);
+        productFetch.fetch("client", JoinType.LEFT);
         
-        // Convert LocalDate to UTC start/end instants
+        // Convert UTC LocalDate to UTC start/end instants
         java.time.Instant start = date.atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
         java.time.Instant end = date.plusDays(1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
         Predicate dateBetween = cb.between(root.get("date"), start, end);
         cq.select(root).where(dateBetween);
         return em.createQuery(cq).getResultList();
+    }
+
+    public LocalDate findEarliestOrderDate() {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Instant> cq = cb.createQuery(Instant.class);
+        Root<OrderPojo> root = cq.from(OrderPojo.class);
+        cq.select(root.get("date")).orderBy(cb.asc(root.get("date")));
+        List<Instant> results = em.createQuery(cq).setMaxResults(1).getResultList();
+        if (results.isEmpty() || results.get(0) == null) return LocalDate.now(ZoneOffset.UTC);
+        return results.get(0).atZone(ZoneOffset.UTC).toLocalDate();
     }
 }

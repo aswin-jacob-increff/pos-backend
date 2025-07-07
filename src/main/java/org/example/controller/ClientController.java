@@ -1,14 +1,11 @@
 package org.example.controller;
 
 import java.util.List;
-import java.util.Objects;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.example.util.ClientTsvParser;
-import org.springframework.beans.factory.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.multipart.MultipartFile;
@@ -53,39 +50,18 @@ public class ClientController {
     @PutMapping("/toggle")
     public void toggleStatus(@RequestParam(required = false) Integer id,
                             @RequestParam(required = false) String name) {
-        if (id != null) {
-            clientDto.toggleStatus(id);
-        } else if (name != null) {
-            clientDto.toggleStatusByName(name);
-        } else {
-            throw new IllegalArgumentException("Either 'id' or 'name' must be provided for status toggle");
-        }
+        clientDto.toggleStatus(id, name);
     }
 
-    //TODO refactor this
     @Operation(summary = "Upload clients via TSV file")
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> uploadClientsFromTsv(
-            @RequestParam("file") MultipartFile file) {
-
-        if (file == null || file.isEmpty() || !file.getOriginalFilename().endsWith(".tsv")) {
-            throw new ApiException("Please upload a valid non-empty .tsv file.");
-        }
+    public ResponseEntity<String> uploadClientsFromTsv(@RequestParam("file") MultipartFile file) {
         try {
-            List<ClientForm> clientForms = ClientTsvParser.parse(file.getInputStream());
-            if (clientForms.size() > 5000) {
-                throw new ApiException("File upload limit exceeded: Maximum 5000 rows allowed.");
-            }
-            for (ClientForm form : clientForms) {
-                clientDto.add(form);
-            }
-            return ResponseEntity.ok("Uploaded " + clientForms.size() + " clients");
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("Invalid input: " + e.getMessage());
+            String result = clientDto.uploadClientsFromTsv(file);
+            return ResponseEntity.ok(result);
         } catch (ApiException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Failed to process file: " + e.getMessage());
         }
