@@ -13,6 +13,7 @@ public class ClientTsvParser {
 
     public static List<ClientForm> parse(InputStream inputStream) throws Exception {
         List<ClientForm> clients = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             String header = reader.readLine(); // Expecting: clientName
@@ -21,20 +22,32 @@ public class ClientTsvParser {
             }
 
             String line;
+            int rowNum = 2;
             while ((line = reader.readLine()) != null) {
                 String[] cols = line.split("\t");
                 if (cols.length != 1) {
-                    throw new ApiException("Client file doesnt match criteria for upload");
+                    errors.add("Row " + rowNum + ": Wrong format. Expected 1 column: clientName");
+                    rowNum++;
+                    continue;
                 }
-                if (cols[0].trim().isEmpty()) continue;
-
-                ClientForm form = new ClientForm();
-                form.setClientName(cols[0].trim().toLowerCase());
-
-                clients.add(form);
+                if (cols[0].trim().isEmpty()) {
+                    rowNum++;
+                    continue;
+                }
+                try {
+                    ClientForm form = new ClientForm();
+                    form.setClientName(cols[0].trim().toLowerCase());
+                    clients.add(form);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    errors.add("Row " + rowNum + ": " + e.getMessage());
+                }
+                rowNum++;
             }
         }
-
+        if (!errors.isEmpty()) {
+            throw new ApiException("TSV validation errors: " + String.join(", ", errors));
+        }
         return clients;
     }
 }

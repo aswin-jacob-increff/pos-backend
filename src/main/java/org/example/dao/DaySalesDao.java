@@ -24,7 +24,6 @@ public class DaySalesDao {
             // Flush to ensure the operation is executed immediately
             em.flush();
         } catch (Exception e) {
-            System.err.println("Error in saveOrUpdate: " + e.getMessage());
             e.printStackTrace();
             throw e;
         }

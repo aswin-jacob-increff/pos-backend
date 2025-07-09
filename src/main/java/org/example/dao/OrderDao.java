@@ -24,18 +24,14 @@ public class OrderDao {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderPojo> query = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = query.from(OrderPojo.class);
-        
-        // Fetch order items and their relationships eagerly to avoid lazy loading issues
-        Join<OrderPojo, org.example.pojo.OrderItemPojo> orderItems = root.join("orderItems", JoinType.LEFT);
-        Fetch<Object, Object> productFetch = orderItems.fetch("product", JoinType.LEFT);
-        productFetch.fetch("client", JoinType.LEFT);
-        
+        // Fetch order items eagerly (without nested fetch)
+        root.fetch("orderItems", JoinType.LEFT);
         query.select(root)
              .where(cb.equal(root.get("id"), id));
-        
         try {
             return em.createQuery(query).getSingleResult();
-        } catch (NoResultException e) {
+        } catch (Exception e) {
+            e.printStackTrace();
             return null;
         }
     }
@@ -44,12 +40,8 @@ public class OrderDao {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderPojo> query = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = query.from(OrderPojo.class);
-        
-        // Fetch order items and their relationships eagerly to avoid lazy loading issues
-        Join<OrderPojo, org.example.pojo.OrderItemPojo> orderItems = root.join("orderItems", JoinType.LEFT);
-        Fetch<Object, Object> productFetch = orderItems.fetch("product", JoinType.LEFT);
-        productFetch.fetch("client", JoinType.LEFT);
-        
+        // Fetch order items eagerly (without nested fetch)
+        root.fetch("orderItems", JoinType.LEFT);
         query.select(root);
         return em.createQuery(query).getResultList();
     }
@@ -76,12 +68,8 @@ public class OrderDao {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderPojo> cq = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = cq.from(OrderPojo.class);
-        
-        // Fetch order items and their relationships eagerly to avoid lazy loading issues
-        Join<OrderPojo, org.example.pojo.OrderItemPojo> orderItems = root.join("orderItems", JoinType.LEFT);
-        Fetch<Object, Object> productFetch = orderItems.fetch("product", JoinType.LEFT);
-        productFetch.fetch("client", JoinType.LEFT);
-        
+        // Fetch order items eagerly (without nested fetch)
+        root.fetch("orderItems", JoinType.LEFT);
         // Convert UTC LocalDate to UTC start/end instants
         java.time.Instant start = date.atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
         java.time.Instant end = date.plusDays(1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant();

@@ -126,16 +126,19 @@ public class ClientDto {
     public String uploadClientsFromTsv(MultipartFile file) {
         // Validate file
         FileValidationUtil.validateTsvFile(file);
-        
         try {
             List<ClientForm> clientForms = ClientTsvParser.parse(file.getInputStream());
             FileValidationUtil.validateFileSize(clientForms.size());
-            
+            // Only add if all are valid
             for (ClientForm form : clientForms) {
                 add(form);
             }
             return "Uploaded " + clientForms.size() + " clients";
+        } catch (ApiException e) {
+            // Propagate parser validation errors
+            throw e;
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ApiException("Error while processing file: " + e.getMessage());
         }
     }

@@ -69,6 +69,7 @@ public class OrderFlow {
         try {
             return new org.springframework.core.io.UrlResource(filePath.toUri());
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ApiException("Failed to load invoice PDF: " + e.getMessage());
         }
     }

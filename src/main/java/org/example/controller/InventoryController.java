@@ -112,6 +112,7 @@ public class InventoryController {
                     .build();
                     
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(500).build();
         }
     }
@@ -126,15 +127,17 @@ public class InventoryController {
             if (forms.size() > 5000) {
                 throw new ApiException("File upload limit exceeded: Maximum 5000 rows allowed.");
             }
+            // Only add if all are valid
             int count = 0;
             for (InventoryForm form : forms) {
-                inventoryDto.update(form.getProductId(), form); // Assuming update() handles existing productId
+                inventoryDto.add(form); // Use add(form) which uses barcode-based logic
                 count++;
             }
             return ResponseEntity.ok("Successfully uploaded " + count + " inventory records.");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("Invalid TSV format: " + e.getMessage());
         } catch (ApiException e) {
+            // Propagate parser validation errors
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();

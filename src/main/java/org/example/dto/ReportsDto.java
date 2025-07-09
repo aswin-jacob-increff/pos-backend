@@ -73,6 +73,21 @@ public class ReportsDto {
                 }).collect(Collectors.toList());
             }
             
+            // Filter by category (product name) if provided
+            if (Objects.nonNull(form.getCategory()) && !form.getCategory().isEmpty()) {
+                System.out.println("Filtering by category: " + form.getCategory());
+                filtered = filtered.stream().filter(item -> {
+                    ProductPojo product = item.getProduct();
+                    if (Objects.isNull(product) || Objects.isNull(product.getName())) return false;
+                    boolean matches = form.getCategory().equalsIgnoreCase(product.getName());
+                    if (matches) {
+                        System.out.println("Found matching product: " + product.getName());
+                    }
+                    return matches;
+                }).collect(Collectors.toList());
+                System.out.println("After category filtering: " + filtered.size() + " items");
+            }
+            
             // Aggregate by SKU (barcode) and product name
             Map<String, SalesReportData> resultMap = new HashMap<>();
             for (OrderItemPojo item : filtered) {
@@ -96,6 +111,7 @@ public class ReportsDto {
             }
             return resultMap.values().stream().collect(Collectors.toList());
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ApiException("Failed to generate sales report: " + e.getMessage());
         }
     }
@@ -126,6 +142,16 @@ public class ReportsDto {
                                                 Objects.nonNull(item.getProduct().getClient()) &&
                                                 form.getBrand().equalsIgnoreCase(item.getProduct().getClient().getClientName()));
                             if (!hasBrand) continue;
+                        }
+                        
+                        // Filter by category (product name) if provided
+                        if (Objects.nonNull(form.getCategory()) && !form.getCategory().isEmpty()) {
+                            System.out.println("CustomDateRange filtering by category: " + form.getCategory());
+                            boolean hasCategory = order.getOrderItems().stream()
+                                .anyMatch(item -> Objects.nonNull(item.getProduct()) && 
+                                                Objects.nonNull(item.getProduct().getName()) &&
+                                                form.getCategory().equalsIgnoreCase(item.getProduct().getName()));
+                            if (!hasCategory) continue;
                         }
                         
                         // Aggregate by brand
@@ -170,6 +196,7 @@ public class ReportsDto {
             
             return resultMap.values().stream().collect(Collectors.toList());
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ApiException("Failed to generate custom date range sales report: " + e.getMessage());
         }
     }
@@ -195,6 +222,7 @@ public class ReportsDto {
                 })
                 .collect(Collectors.toList());
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ApiException("Failed to generate day-on-day sales report: " + e.getMessage());
         }
     }
@@ -213,6 +241,7 @@ public class ReportsDto {
                 })
                 .collect(Collectors.toList());
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ApiException("Failed to fetch all day sales: " + e.getMessage());
         }
     }
@@ -239,6 +268,7 @@ public class ReportsDto {
                 })
                 .collect(Collectors.toList());
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ApiException("Failed to fetch day sales for date range: " + e.getMessage());
         }
     }

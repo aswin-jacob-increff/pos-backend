@@ -77,7 +77,6 @@ public class DaySalesScheduler {
         try {
             daySalesRepo.saveOrUpdate(daySales);
         } catch (Exception e) {
-            System.err.println("Error saving day sales for date " + date + " (UTC): " + e.getMessage());
             e.printStackTrace();
         }
     }

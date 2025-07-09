@@ -202,6 +202,7 @@ public class OrderDto {
                 response = restTemplate.postForEntity(invoiceAppUrl, entity, String.class);
                 System.out.println("Invoice service response status: " + response.getStatusCode());
             } catch (Exception e) {
+                e.printStackTrace();
                 System.out.println("Error calling invoice service: " + e.getMessage());
                 throw new ApiException("Failed to connect to invoice service at " + invoiceAppUrl + ": " + e.getMessage());
             }
@@ -248,6 +249,7 @@ public class OrderDto {
                 throw new ApiException("Failed to fetch invoice from invoice service. Status: " + (response != null ? response.getStatusCode() : "null"));
             }
         } catch (Exception e) {
+            e.printStackTrace();
             System.out.println("Error in downloadInvoice: " + e.getMessage());
             throw new ApiException("Failed to download invoice: " + e.getMessage());
         }

@@ -24,6 +24,10 @@ public class InventoryDto {
     private ProductApi productApi;
 
     public InventoryData add(@Valid InventoryForm inventoryForm) {
+        // Expect barcode, not productId
+        if (inventoryForm.getBarcode() == null || inventoryForm.getBarcode().trim().isEmpty()) {
+            throw new ApiException("Product barcode is required");
+        }
         preprocess(inventoryForm);
         InventoryPojo inventoryPojo = convert(inventoryForm);
         inventoryFlow.add(inventoryPojo);
@@ -45,7 +49,10 @@ public class InventoryDto {
     }
 
     public InventoryData update(Integer id, @Valid InventoryForm inventoryForm) {
-        validateInventoryId(id);
+        // Expect barcode, not productId
+        if (inventoryForm.getBarcode() == null || inventoryForm.getBarcode().trim().isEmpty()) {
+            throw new ApiException("Product barcode is required");
+        }
         preprocess(inventoryForm);
         inventoryFlow.update(id, convert(inventoryForm));
         return get(id);
@@ -144,35 +151,11 @@ public class InventoryDto {
     }
 
     private void preprocess(InventoryForm inventoryForm) {
-        // Cross-field/entity logic: productId/productName/barcode lookup, base64 image validation
-        if (Objects.isNull(inventoryForm.getProductId())) {
-            if (inventoryForm.getBarcode() == null || inventoryForm.getBarcode().trim().isEmpty()) {
-                if (inventoryForm.getProductName() == null || inventoryForm.getProductName().trim().isEmpty()) {
-                    throw new ApiException("One of product ID, name or barcode is required");
-                } else {
-                    try {
-                        inventoryForm.setProductId(productApi.getByName(inventoryForm.getProductName()).getId());
-                        inventoryForm.setBarcode(productApi.getByName(inventoryForm.getProductName()).getBarcode());
-                    } catch (ApiException e) {
-                        throw new ApiException("Product with name '" + inventoryForm.getProductName() + "' not found");
-                    }
-                }
-            } else {
-                try {
-                    inventoryForm.setProductId(productApi.getByBarcode(inventoryForm.getBarcode()).getId());
-                    inventoryForm.setProductName(productApi.getByBarcode(inventoryForm.getBarcode()).getName());
-                } catch (ApiException e) {
-                    throw new ApiException("Product with barcode '" + inventoryForm.getBarcode() + "' not found");
-                }
-            }
-        } else {
-            try {
-                inventoryForm.setProductName(productApi.get(inventoryForm.getProductId()).getName());
-                inventoryForm.setBarcode(productApi.get(inventoryForm.getProductId()).getBarcode());
-            } catch (ApiException e) {
-                throw new ApiException("Product with ID " + inventoryForm.getProductId() + " not found");
-            }
+        // Lookup productId from barcode
+        if (inventoryForm.getBarcode() == null || inventoryForm.getBarcode().trim().isEmpty()) {
+            throw new ApiException("Product barcode is required");
         }
+        inventoryForm.setProductId(productApi.getByBarcode(inventoryForm.getBarcode()).getId());
         // Validate base64 image if provided
         if (inventoryForm.getImage() != null && !inventoryForm.getImage().trim().isEmpty()) {
             if (!isValidBase64(inventoryForm.getImage())) {
@@ -185,13 +168,12 @@ public class InventoryDto {
         InventoryPojo inventoryPojo = new InventoryPojo();
         inventoryPojo.setProduct(productApi.get(inventoryForm.getProductId()));
         inventoryPojo.setQuantity(inventoryForm.getQuantity());
-        
+        // No mrp field in InventoryPojo anymore
         // Handle base64 image if provided (this would update the product's image)
         if (inventoryForm.getImage() != null && !inventoryForm.getImage().trim().isEmpty()) {
             // For now, we'll just validate the image
             // In a real implementation, you might want to update the product's image
         }
-        
         return inventoryPojo;
     }
 
@@ -202,13 +184,9 @@ public class InventoryDto {
         inventoryData.setBarcode(inventoryPojo.getProduct().getBarcode());
         inventoryData.setProductId(inventoryPojo.getProduct().getId());
         inventoryData.setQuantity(inventoryPojo.getQuantity());
-        inventoryData.setMrp(inventoryPojo.getProduct().getMrp());
-        
-        // Set imageUrl as reference to product image endpoint
-        if (inventoryPojo.getProduct().getImageUrl() != null && !inventoryPojo.getProduct().getImageUrl().trim().isEmpty()) {
-            inventoryData.setImageUrl("/api/products/" + inventoryPojo.getProduct().getId() + "/image");
-        }
-        
+        inventoryData.setMrp(inventoryPojo.getProduct().getMrp()); // Use product's mrp
+        // Set imageUrl directly from product
+        inventoryData.setImageUrl(inventoryPojo.getProduct().getImageUrl());
         return inventoryData;
     }
     

@@ -39,6 +39,10 @@ public class ReportsController {
 
     @PostMapping("/sales")
     public List<SalesReportData> getSalesReport(@RequestBody SalesReportForm form) {
+        System.out.println("Received sales report request - StartDate: " + form.getStartDate() + 
+                          ", EndDate: " + form.getEndDate() + 
+                          ", Brand: '" + form.getBrand() + "'" + 
+                          ", Category: '" + form.getCategory() + "'");
         if (form.getStartDate().isAfter(form.getEndDate())) {
             throw new ApiException("Start date cannot be after end date.");
         }
@@ -47,6 +51,10 @@ public class ReportsController {
     
     @PostMapping("/custom-date-range-sales")
     public List<CustomDateRangeSalesData> getCustomDateRangeSalesReport(@RequestBody CustomDateRangeSalesForm form) {
+        System.out.println("Received custom date range sales report request - StartDate: " + form.getStartDate() + 
+                          ", EndDate: " + form.getEndDate() + 
+                          ", Brand: '" + form.getBrand() + "'" + 
+                          ", Category: '" + form.getCategory() + "'");
         if (form.getStartDate().isAfter(form.getEndDate())) {
             throw new ApiException("Start date cannot be after end date.");
         }

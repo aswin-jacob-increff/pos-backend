@@ -27,6 +27,10 @@ public class ProductDto {
     private ClientApi clientApi;
 
     public ProductData add(@Valid ProductForm productForm) {
+        // Expect clientName, not clientId
+        if (productForm.getClientName() == null || productForm.getClientName().trim().isEmpty()) {
+            throw new ApiException("Client name is required");
+        }
         preprocess(productForm);
         ProductPojo productPojo = productFlow.add(convert(productForm));
         return convert(productPojo);
@@ -54,6 +58,10 @@ public class ProductDto {
     }
 
     public ProductData update(int id, @Valid ProductForm productForm) {
+        // Expect clientName, not clientId
+        if (productForm.getClientName() == null || productForm.getClientName().trim().isEmpty()) {
+            throw new ApiException("Client name is required");
+        }
         preprocess(productForm);
         productFlow.update(id, convert(productForm));
         return get(id);
@@ -86,18 +94,21 @@ public class ProductDto {
     public String uploadProductsFromTsv(MultipartFile file) {
         // Validate file
         FileValidationUtil.validateTsvFile(file);
-        
         try {
             List<ProductForm> productForms = ProductTsvParser.parse(file.getInputStream());
             FileValidationUtil.validateFileSize(productForms.size());
-            
+            // Only add if all are valid
             int count = 0;
             for (ProductForm form : productForms) {
                 add(form);
                 count++;
             }
             return "Successfully uploaded " + count + " products.";
+        } catch (ApiException e) {
+            // Propagate parser validation errors
+            throw e;
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ApiException("Error while processing file: " + e.getMessage());
         }
     }
@@ -111,16 +122,11 @@ public class ProductDto {
     }
 
     private void preprocess(ProductForm productForm) {
-        // Cross-field/entity logic: clientId/clientName lookup, image URL validation
-        if (Objects.isNull(productForm.getClientId()) || productForm.getClientId() == 0) {
-            if (productForm.getClientName() == null || productForm.getClientName().trim().isEmpty()) {
-                throw new ApiException("Both client id and name cannot be null or zero");
-            } else {
-                productForm.setClientId(clientApi.getByName(productForm.getClientName()).getId());
-            }
-        } else {
-            productForm.setClientName(clientApi.get(productForm.getClientId()).getClientName());
+        // Lookup clientId from clientName
+        if (productForm.getClientName() == null || productForm.getClientName().trim().isEmpty()) {
+            throw new ApiException("Client name is required");
         }
+        productForm.setClientId(clientApi.getByName(productForm.getClientName()).getId());
         // Validate image URL if provided
         if (productForm.getImage() != null && !productForm.getImage().trim().isEmpty()) {
             String imageUrl = productForm.getImage().trim();

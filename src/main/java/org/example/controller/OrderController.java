@@ -59,6 +59,7 @@ public class OrderController {
                 .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
                 .body(pdfResource);
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ApiException("Failed to download invoice: " + e.getMessage());
         }
     }
