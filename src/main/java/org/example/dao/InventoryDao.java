@@ -34,8 +34,6 @@ public class InventoryDao {
             CriteriaBuilder cb = em.getCriteriaBuilder();
             CriteriaQuery<InventoryPojo> query = cb.createQuery(InventoryPojo.class);
             Root<InventoryPojo> root = query.from(InventoryPojo.class);
-            // Fetch product eagerly
-            root.fetch("product", JoinType.LEFT);
             query.select(root);
             return em.createQuery(query).getResultList();
         } catch (Exception e) {
@@ -50,7 +48,11 @@ public class InventoryDao {
             InventoryPojo existing = select(id);
             if (existing != null) {
                 existing.setQuantity(inventory.getQuantity());
-                existing.setProduct(inventory.getProduct());
+                existing.setProductBarcode(inventory.getProductBarcode());
+                existing.setProductName(inventory.getProductName());
+                existing.setClientName(inventory.getClientName());
+                existing.setProductMrp(inventory.getProductMrp());
+                existing.setProductImageUrl(inventory.getProductImageUrl());
                 em.merge(existing);
             }
         } catch (Exception e) {
@@ -69,14 +71,14 @@ public class InventoryDao {
         }
     }
 
-    public InventoryPojo getByProductId(Integer product_id) {
+    public InventoryPojo getByProductBarcode(String barcode) {
         try {
             CriteriaBuilder cb = em.getCriteriaBuilder();
             CriteriaQuery<InventoryPojo> query = cb.createQuery(InventoryPojo.class);
             Root<InventoryPojo> root = query.from(InventoryPojo.class);
             
             query.select(root)
-                 .where(cb.equal(root.get("product").get("id"), product_id));
+                 .where(cb.equal(root.get("productBarcode"), barcode));
             
             return em.createQuery(query).getResultStream().findFirst().orElse(null);
         } catch (Exception e) {
@@ -92,23 +94,7 @@ public class InventoryDao {
             Root<InventoryPojo> root = query.from(InventoryPojo.class);
             
             query.select(root)
-                 .where(cb.equal(cb.lower(root.get("product").get("name")), name.trim().toLowerCase()));
-            
-            return em.createQuery(query).getResultStream().findFirst().orElse(null);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    public InventoryPojo getByProductBarcode(String barcode) {
-        try {
-            CriteriaBuilder cb = em.getCriteriaBuilder();
-            CriteriaQuery<InventoryPojo> query = cb.createQuery(InventoryPojo.class);
-            Root<InventoryPojo> root = query.from(InventoryPojo.class);
-            
-            query.select(root)
-                 .where(cb.equal(cb.lower(root.get("product").get("barcode")), barcode.trim().toLowerCase()));
+                 .where(cb.equal(cb.lower(root.get("productName")), name.trim().toLowerCase()));
             
             return em.createQuery(query).getResultStream().findFirst().orElse(null);
         } catch (Exception e) {

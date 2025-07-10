@@ -111,9 +111,17 @@ public class OrderItemDto {
     private OrderItemPojo convert(OrderItemForm orderItemForm) {
         OrderItemPojo orderItemPojo = new OrderItemPojo();
         orderItemPojo.setOrder(orderApi.get(orderItemForm.getOrderId()));
-        orderItemPojo.setProduct(productApi.get(orderItemForm.getProductId()));
+        
+        // Get product details and set denormalized fields
+        var product = productApi.get(orderItemForm.getProductId());
+        orderItemPojo.setProductBarcode(product.getBarcode());
+        orderItemPojo.setProductName(product.getName());
+        orderItemPojo.setClientName(product.getClientName());
+        orderItemPojo.setProductMrp(product.getMrp());
+        orderItemPojo.setProductImageUrl(product.getImageUrl());
+        
         orderItemPojo.setQuantity(orderItemForm.getQuantity());
-        orderItemPojo.setSellingPrice(productApi.get(orderItemForm.getProductId()).getMrp());
+        orderItemPojo.setSellingPrice(product.getMrp());
         // Convert LocalDateTime (IST from frontend) to Instant (UTC) for DB if dateTime is present
         if (orderItemForm.getDateTime() != null) {
             orderItemPojo.getOrder().setDate(TimeUtil.toUTC(orderItemForm.getDateTime()));
@@ -129,16 +137,28 @@ public class OrderItemDto {
     private OrderItemData convert(OrderItemPojo orderItemPojo) {
         OrderItemData orderItemData = new OrderItemData();
         orderItemData.setId(orderItemPojo.getId());
-        orderItemData.setProductId(orderItemPojo.getProduct().getId());
-        orderItemData.setBarcode(orderItemPojo.getProduct().getBarcode());
-        orderItemData.setProductName(orderItemPojo.getProduct().getName());
+        // Since we don't have productId in OrderItemPojo anymore, we need to look it up by barcode
+        try {
+            var product = productApi.getByBarcode(orderItemPojo.getProductBarcode());
+            orderItemData.setProductId(product.getId());
+        } catch (Exception e) {
+            // If product not found, set to null
+            orderItemData.setProductId(null);
+        }
+        orderItemData.setBarcode(orderItemPojo.getProductBarcode());
+        orderItemData.setProductName(orderItemPojo.getProductName());
         orderItemData.setQuantity(orderItemPojo.getQuantity());
         orderItemData.setSellingPrice(orderItemPojo.getSellingPrice());
         // Convert UTC Instant from DB to IST LocalDateTime for frontend
         orderItemData.setDateTime(TimeUtil.toIST(orderItemPojo.getOrder().getDate()));
         // Set imageUrl as reference to product image endpoint
-        if (orderItemPojo.getProduct().getImageUrl() != null && !orderItemPojo.getProduct().getImageUrl().trim().isEmpty()) {
-            orderItemData.setImageUrl("/api/products/" + orderItemPojo.getProduct().getId() + "/image");
+        if (orderItemPojo.getProductImageUrl() != null && !orderItemPojo.getProductImageUrl().trim().isEmpty()) {
+            try {
+                var product = productApi.getByBarcode(orderItemPojo.getProductBarcode());
+                orderItemData.setImageUrl("/api/products/" + product.getId() + "/image");
+            } catch (Exception e) {
+                orderItemData.setImageUrl(orderItemPojo.getProductImageUrl());
+            }
         }
         return orderItemData;
     }

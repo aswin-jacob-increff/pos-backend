@@ -18,9 +18,17 @@ public class OrderItemPojo extends AbstractPojo {
     @JoinColumn (name = "order_id")
     private OrderPojo order;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn (name = "product_id")
-    private ProductPojo product;
+    @Column(nullable = false)
+    private String productBarcode;
+
+    @Column(nullable = false)
+    private String productName;
+
+    @Column(nullable = false)
+    private String clientName;
+
+    private Double productMrp;
+    private String productImageUrl;
 
     private Integer quantity;
     private Double sellingPrice;

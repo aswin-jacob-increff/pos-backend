@@ -67,9 +67,7 @@ public class ReportsDto {
             // Filter by brand (clientName) if provided
             if (Objects.nonNull(form.getBrand()) && !form.getBrand().isEmpty()) {
                 filtered = filtered.stream().filter(item -> {
-                    ProductPojo product = item.getProduct();
-                    if (Objects.isNull(product) || Objects.isNull(product.getClient())) return false;
-                    return form.getBrand().equalsIgnoreCase(product.getClient().getClientName());
+                    return form.getBrand().equalsIgnoreCase(item.getClientName());
                 }).collect(Collectors.toList());
             }
             
@@ -77,11 +75,10 @@ public class ReportsDto {
             if (Objects.nonNull(form.getCategory()) && !form.getCategory().isEmpty()) {
                 System.out.println("Filtering by category: " + form.getCategory());
                 filtered = filtered.stream().filter(item -> {
-                    ProductPojo product = item.getProduct();
-                    if (Objects.isNull(product) || Objects.isNull(product.getName())) return false;
-                    boolean matches = form.getCategory().equalsIgnoreCase(product.getName());
+                    if (Objects.isNull(item.getProductName())) return false;
+                    boolean matches = form.getCategory().equalsIgnoreCase(item.getProductName());
                     if (matches) {
-                        System.out.println("Found matching product: " + product.getName());
+                        System.out.println("Found matching product: " + item.getProductName());
                     }
                     return matches;
                 }).collect(Collectors.toList());
@@ -91,10 +88,9 @@ public class ReportsDto {
             // Aggregate by SKU (barcode) and product name
             Map<String, SalesReportData> resultMap = new HashMap<>();
             for (OrderItemPojo item : filtered) {
-                ProductPojo product = item.getProduct();
-                String brand = (Objects.nonNull(product) && Objects.nonNull(product.getClient())) ? product.getClient().getClientName() : "Unknown";
-                String productName = (product != null) ? product.getName() : "Unknown";
-                String sku = (product != null) ? product.getBarcode() : "Unknown";
+                String brand = item.getClientName() != null ? item.getClientName() : "Unknown";
+                String productName = item.getProductName() != null ? item.getProductName() : "Unknown";
+                String sku = item.getProductBarcode() != null ? item.getProductBarcode() : "Unknown";
                 String key = brand + "|" + sku;
                 SalesReportData resp = resultMap.getOrDefault(key, new SalesReportData());
                 if (resp.getBrand() == null) {
@@ -138,9 +134,8 @@ public class ReportsDto {
                         // Filter by brand if provided
                         if (Objects.nonNull(form.getBrand()) && !form.getBrand().isEmpty()) {
                             boolean hasBrand = order.getOrderItems().stream()
-                                .anyMatch(item -> Objects.nonNull(item.getProduct()) && 
-                                                Objects.nonNull(item.getProduct().getClient()) &&
-                                                form.getBrand().equalsIgnoreCase(item.getProduct().getClient().getClientName()));
+                                .anyMatch(item -> Objects.nonNull(item.getClientName()) &&
+                                                form.getBrand().equalsIgnoreCase(item.getClientName()));
                             if (!hasBrand) continue;
                         }
                         
@@ -148,16 +143,14 @@ public class ReportsDto {
                         if (Objects.nonNull(form.getCategory()) && !form.getCategory().isEmpty()) {
                             System.out.println("CustomDateRange filtering by category: " + form.getCategory());
                             boolean hasCategory = order.getOrderItems().stream()
-                                .anyMatch(item -> Objects.nonNull(item.getProduct()) && 
-                                                Objects.nonNull(item.getProduct().getName()) &&
-                                                form.getCategory().equalsIgnoreCase(item.getProduct().getName()));
+                                .anyMatch(item -> Objects.nonNull(item.getProductName()) &&
+                                                form.getCategory().equalsIgnoreCase(item.getProductName()));
                             if (!hasCategory) continue;
                         }
                         
                         // Aggregate by brand
                         for (OrderItemPojo item : order.getOrderItems()) {
-                            String brand = (Objects.nonNull(item.getProduct()) && Objects.nonNull(item.getProduct().getClient())) 
-                                ? item.getProduct().getClient().getClientName() : "Unknown";
+                            String brand = item.getClientName() != null ? item.getClientName() : "Unknown";
                             
                             CustomDateRangeSalesData data = resultMap.getOrDefault(brand, 
                                 new CustomDateRangeSalesData());
@@ -175,8 +168,8 @@ public class ReportsDto {
                         
                         // Count unique orders per brand
                         String brand = order.getOrderItems().stream()
-                            .filter(item -> Objects.nonNull(item.getProduct()) && Objects.nonNull(item.getProduct().getClient()))
-                            .map(item -> item.getProduct().getClient().getClientName())
+                            .filter(item -> Objects.nonNull(item.getClientName()))
+                            .map(OrderItemPojo::getClientName)
                             .findFirst()
                             .orElse("Unknown");
                         

@@ -100,7 +100,12 @@ public class OrderDto {
                 if (product == null) {
                     throw new ApiException("Product with ID " + itemForm.getProductId() + " not found");
                 }
-                itemPojo.setProduct(product);
+                // Set product details directly in order item
+                itemPojo.setProductBarcode(product.getBarcode());
+                itemPojo.setProductName(product.getName());
+                itemPojo.setClientName(product.getClientName());
+                itemPojo.setProductMrp(product.getMrp());
+                itemPojo.setProductImageUrl(product.getImageUrl());
                 itemPojoList.add(itemPojo);
             }
             orderPojo.setOrderItems(itemPojoList);
@@ -124,12 +129,12 @@ public class OrderDto {
                 itemData.setQuantity(itemPojo.getQuantity());
                 itemData.setSellingPrice(itemPojo.getSellingPrice());
                 itemData.setAmount(itemPojo.getAmount());
-                itemData.setProductId(itemPojo.getProduct().getId());
-                itemData.setProductName(itemPojo.getProduct().getName());
+                itemData.setProductId(null); // No longer have product ID reference
+                itemData.setProductName(itemPojo.getProductName());
                 // Convert UTC Instant from DB to IST LocalDateTime for frontend
                 itemData.setDateTime(TimeUtil.toIST(orderPojo.getDate()));
-                if (itemPojo.getProduct().getImageUrl() != null && !itemPojo.getProduct().getImageUrl().trim().isEmpty()) {
-                    itemData.setImageUrl(itemPojo.getProduct().getImageUrl());
+                if (itemPojo.getProductImageUrl() != null && !itemPojo.getProductImageUrl().trim().isEmpty()) {
+                    itemData.setImageUrl(itemPojo.getProductImageUrl());
                 }
                 orderItemDataList.add(itemData);
             }
@@ -178,11 +183,11 @@ public class OrderDto {
             for (OrderItemPojo itemPojo : orderPojo.getOrderItems()) {
                 InvoiceItemData itemData = new InvoiceItemData();
                 itemData.setId(itemPojo.getId());
-                itemData.setProductId(itemPojo.getProduct().getId());
-                itemData.setProductName(itemPojo.getProduct().getName());
-                itemData.setProductBarcode(itemPojo.getProduct().getBarcode());
-                itemData.setClientId(itemPojo.getProduct().getClient().getId());
-                itemData.setClientName(itemPojo.getProduct().getClient().getClientName());
+                itemData.setProductId(null); // No longer have product ID reference
+                itemData.setProductName(itemPojo.getProductName());
+                itemData.setProductBarcode(itemPojo.getProductBarcode());
+                itemData.setClientId(null); // No longer have client ID reference
+                itemData.setClientName(itemPojo.getClientName());
                 itemData.setPrice(itemPojo.getSellingPrice());
                 itemData.setQuantity(itemPojo.getQuantity());
                 itemData.setAmount(itemPojo.getAmount());

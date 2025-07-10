@@ -30,9 +30,7 @@ public class InventoryApi {
         return inventoryDao.selectAll();
     }
 
-    public InventoryPojo getByProductId(Integer productId) {
-        return inventoryDao.getByProductId(productId);
-    }
+
 
     public InventoryPojo getByProductName(String productName) {
         return inventoryDao.getByProductName(productName);
@@ -54,18 +52,22 @@ public class InventoryApi {
     /**
      * Add stock to existing inventory
      */
-    public void addStock(Integer productId, Integer quantityToAdd) {
+    public void addStock(String barcode, Integer quantityToAdd) {
         if (quantityToAdd <= 0) {
             throw new ApiException("Quantity to add must be positive");
         }
         
-        InventoryPojo inventory = getByProductId(productId);
+        InventoryPojo inventory = getByProductBarcode(barcode);
         if (Objects.isNull(inventory)) {
-            throw new ApiException("No inventory found for product ID: " + productId);
+            throw new ApiException("No inventory found for product barcode: " + barcode);
         }
         
         InventoryPojo updatedInventory = new InventoryPojo();
-        updatedInventory.setProduct(inventory.getProduct());
+        updatedInventory.setProductBarcode(inventory.getProductBarcode());
+        updatedInventory.setProductName(inventory.getProductName());
+        updatedInventory.setClientName(inventory.getClientName());
+        updatedInventory.setProductMrp(inventory.getProductMrp());
+        updatedInventory.setProductImageUrl(inventory.getProductImageUrl());
         updatedInventory.setQuantity(inventory.getQuantity() + quantityToAdd);
         inventoryDao.update(inventory.getId(), updatedInventory);
     }
@@ -73,14 +75,14 @@ public class InventoryApi {
     /**
      * Remove stock from existing inventory
      */
-    public void removeStock(Integer productId, Integer quantityToRemove) {
+    public void removeStock(String barcode, Integer quantityToRemove) {
         if (quantityToRemove <= 0) {
             throw new ApiException("Quantity to remove must be positive");
         }
         
-        InventoryPojo inventory = getByProductId(productId);
+        InventoryPojo inventory = getByProductBarcode(barcode);
         if (Objects.isNull(inventory)) {
-            throw new ApiException("No inventory found for product ID: " + productId);
+            throw new ApiException("No inventory found for product barcode: " + barcode);
         }
         
         if (inventory.getQuantity() < quantityToRemove) {
@@ -88,7 +90,11 @@ public class InventoryApi {
         }
         
         InventoryPojo updatedInventory = new InventoryPojo();
-        updatedInventory.setProduct(inventory.getProduct());
+        updatedInventory.setProductBarcode(inventory.getProductBarcode());
+        updatedInventory.setProductName(inventory.getProductName());
+        updatedInventory.setClientName(inventory.getClientName());
+        updatedInventory.setProductMrp(inventory.getProductMrp());
+        updatedInventory.setProductImageUrl(inventory.getProductImageUrl());
         updatedInventory.setQuantity(inventory.getQuantity() - quantityToRemove);
         inventoryDao.update(inventory.getId(), updatedInventory);
     }
@@ -96,18 +102,22 @@ public class InventoryApi {
     /**
      * Set stock to a specific quantity
      */
-    public void setStock(Integer productId, Integer newQuantity) {
+    public void setStock(String barcode, Integer newQuantity) {
         if (newQuantity < 0) {
             throw new ApiException("Stock quantity cannot be negative");
         }
         
-        InventoryPojo inventory = getByProductId(productId);
+        InventoryPojo inventory = getByProductBarcode(barcode);
         if (Objects.isNull(inventory)) {
-            throw new ApiException("No inventory found for product ID: " + productId);
+            throw new ApiException("No inventory found for product barcode: " + barcode);
         }
         
         InventoryPojo updatedInventory = new InventoryPojo();
-        updatedInventory.setProduct(inventory.getProduct());
+        updatedInventory.setProductBarcode(inventory.getProductBarcode());
+        updatedInventory.setProductName(inventory.getProductName());
+        updatedInventory.setClientName(inventory.getClientName());
+        updatedInventory.setProductMrp(inventory.getProductMrp());
+        updatedInventory.setProductImageUrl(inventory.getProductImageUrl());
         updatedInventory.setQuantity(newQuantity);
         inventoryDao.update(inventory.getId(), updatedInventory);
     }

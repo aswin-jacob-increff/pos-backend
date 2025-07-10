@@ -28,9 +28,7 @@ public class InventoryFlow {
         return api.getAll();
     }
 
-    public InventoryPojo getByProductId(Integer productId) {
-        return api.getByProductId(productId);
-    }
+
 
     public InventoryPojo getByProductName(String productName) {
         return api.getByProductName(productName);
@@ -49,15 +47,15 @@ public class InventoryFlow {
         api.delete(id);
     }
 
-    public void addStock(Integer productId, Integer quantity) {
-        api.addStock(productId, quantity);
+    public void addStock(String barcode, Integer quantity) {
+        api.addStock(barcode, quantity);
     }
 
-    public void removeStock(Integer productId, Integer quantity) {
-        api.removeStock(productId, quantity);
+    public void removeStock(String barcode, Integer quantity) {
+        api.removeStock(barcode, quantity);
     }
 
-    public void setStock(Integer productId, Integer quantity) {
-        api.setStock(productId, quantity);
+    public void setStock(String barcode, Integer quantity) {
+        api.setStock(barcode, quantity);
     }
 }

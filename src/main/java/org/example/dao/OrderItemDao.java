@@ -20,8 +20,7 @@ public class OrderItemDao {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderItemPojo> query = cb.createQuery(OrderItemPojo.class);
         Root<OrderItemPojo> root = query.from(OrderItemPojo.class);
-        // Fetch product and order directly
-        root.fetch("product", JoinType.LEFT);
+        // Fetch order directly
         root.fetch("order", JoinType.LEFT);
         query.select(root)
              .where(cb.equal(root.get("id"), id));
@@ -39,8 +38,7 @@ public class OrderItemDao {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderItemPojo> query = cb.createQuery(OrderItemPojo.class);
         Root<OrderItemPojo> root = query.from(OrderItemPojo.class);
-        // Fetch product and order directly
-        root.fetch("product", JoinType.LEFT);
+        // Fetch order directly
         root.fetch("order", JoinType.LEFT);
         query.select(root);
         return em.createQuery(query).getResultList();
@@ -51,7 +49,11 @@ public class OrderItemDao {
         OrderItemPojo existing = select(id);
         if (existing != null) {
             existing.setOrder(item.getOrder());
-            existing.setProduct(item.getProduct());
+            existing.setProductBarcode(item.getProductBarcode());
+            existing.setProductName(item.getProductName());
+            existing.setClientName(item.getClientName());
+            existing.setProductMrp(item.getProductMrp());
+            existing.setProductImageUrl(item.getProductImageUrl());
             existing.setQuantity(item.getQuantity());
             existing.setSellingPrice(item.getSellingPrice());
             existing.setAmount(item.getAmount());
@@ -77,13 +79,13 @@ public class OrderItemDao {
         return em.createQuery(query).getResultList();
     }
 
-    public List<OrderItemPojo> selectByProductId(Integer productId) {
+    public List<OrderItemPojo> selectByProductBarcode(String barcode) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderItemPojo> query = cb.createQuery(OrderItemPojo.class);
         Root<OrderItemPojo> root = query.from(OrderItemPojo.class);
         
         query.select(root)
-             .where(cb.equal(root.get("product").get("id"), productId));
+             .where(cb.equal(root.get("productBarcode"), barcode));
         
         return em.createQuery(query).getResultList();
     }
@@ -110,8 +112,6 @@ public class OrderItemDao {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Object[]> cq = cb.createQuery(Object[].class);
         Root<OrderItemPojo> item = cq.from(OrderItemPojo.class);
-        Join<Object, org.example.pojo.ProductPojo> product = item.join("product");
-        Join<Object, org.example.pojo.ClientPojo> client = product.join("client");
         Join<Object, org.example.pojo.OrderPojo> order = item.join("order");
         List<Predicate> predicates = new java.util.ArrayList<>();
         // Order date is Instant, so filter between start and end (as UTC instants)
@@ -119,20 +119,19 @@ public class OrderItemDao {
         java.time.Instant endInstant = end.plusDays(1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
         predicates.add(cb.between(order.get("date"), startInstant, endInstant));
         if (brand != null && !brand.isEmpty()) {
-            predicates.add(cb.equal(client.get("clientName"), brand));
+            predicates.add(cb.equal(item.get("clientName"), brand));
         }
-        // If you add category to ProductPojo, use it here
         if (category != null && !category.isEmpty()) {
-            predicates.add(cb.equal(product.get("name"), category)); // Adjust if you have a category field
+            predicates.add(cb.equal(item.get("productName"), category));
         }
         cq.multiselect(
-            client.get("clientName"),
-            product.get("name"), // Adjust if you have a category field
+            item.get("clientName"),
+            item.get("productName"),
             cb.sum(item.get("quantity")),
             cb.sum(item.get("amount"))
         )
         .where(predicates.toArray(new Predicate[0]))
-        .groupBy(client.get("clientName"), product.get("name")); // Adjust if you have a category field
+        .groupBy(item.get("clientName"), item.get("productName"));
         List<Object[]> results = em.createQuery(cq).getResultList();
         List<SalesReportRow> rows = new java.util.ArrayList<>();
         for (Object[] row : results) {

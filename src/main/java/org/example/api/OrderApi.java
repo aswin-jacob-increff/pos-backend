@@ -116,11 +116,11 @@ public class OrderApi {
         // Restore inventory quantities for all order items
         List<OrderItemPojo> orderItems = orderItemApi.getByOrderId(orderId);
         for (OrderItemPojo orderItem : orderItems) {
-            Integer productId = orderItem.getProduct().getId();
+            String productBarcode = orderItem.getProductBarcode();
             Integer quantityToRestore = orderItem.getQuantity();
             
             // Add the quantity back to inventory
-            inventoryApi.addStock(productId, quantityToRestore);
+            inventoryApi.addStock(productBarcode, quantityToRestore);
         }
         
         // Delete the order (this will cascade to order items)
@@ -133,22 +133,22 @@ public class OrderApi {
     }
 
     /**
-     * Combines order items with the same product ID by adding their quantities
+     * Combines order items with the same product barcode by adding their quantities
      * and using the selling price from the first occurrence
      */
     private List<OrderItemPojo> combineOrderItems(List<OrderItemPojo> orderItems) {
-        java.util.Map<Integer, OrderItemPojo> combinedMap = new java.util.HashMap<>();
+        java.util.Map<String, OrderItemPojo> combinedMap = new java.util.HashMap<>();
         
         for (OrderItemPojo item : orderItems) {
-            Integer productId = item.getProduct().getId();
+            String productBarcode = item.getProductBarcode();
             
-            if (combinedMap.containsKey(productId)) {
+            if (combinedMap.containsKey(productBarcode)) {
                 // Product already exists, add quantities
-                OrderItemPojo existingItem = combinedMap.get(productId);
+                OrderItemPojo existingItem = combinedMap.get(productBarcode);
                 existingItem.setQuantity(existingItem.getQuantity() + item.getQuantity());
             } else {
                 // New product, add to map
-                combinedMap.put(productId, item);
+                combinedMap.put(productBarcode, item);
             }
         }
         

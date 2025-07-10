@@ -17,9 +17,8 @@ public class ProductPojo extends AbstractPojo {
     @Column(unique = true)
     private String barcode;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "client_id", nullable = false)
-    private ClientPojo client;
+    @Column(nullable = false)
+    private String clientName;
 
     @Column(unique = true)
     private String name;

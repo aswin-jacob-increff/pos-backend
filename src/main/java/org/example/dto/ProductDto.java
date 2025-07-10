@@ -122,11 +122,10 @@ public class ProductDto {
     }
 
     private void preprocess(ProductForm productForm) {
-        // Lookup clientId from clientName
+        // Validate clientName is provided
         if (productForm.getClientName() == null || productForm.getClientName().trim().isEmpty()) {
             throw new ApiException("Client name is required");
         }
-        productForm.setClientId(clientApi.getByName(productForm.getClientName()).getId());
         // Validate image URL if provided
         if (productForm.getImage() != null && !productForm.getImage().trim().isEmpty()) {
             String imageUrl = productForm.getImage().trim();
@@ -138,7 +137,7 @@ public class ProductDto {
 
     private ProductPojo convert(ProductForm productForm) {
         ProductPojo productPojo = new ProductPojo();
-        productPojo.setClient(clientApi.get(productForm.getClientId()));
+        productPojo.setClientName(productForm.getClientName());
         productPojo.setName(productForm.getName());
         productPojo.setMrp(productForm.getMrp());
         productPojo.setBarcode(productForm.getBarcode());
@@ -153,8 +152,8 @@ public class ProductDto {
         ProductData productData = new ProductData();
         productData.setId(productPojo.getId());
         productData.setName(productPojo.getName());
-        productData.setClientName(productPojo.getClient().getClientName());
-        productData.setClientId(productPojo.getClient().getId());
+        productData.setClientName(productPojo.getClientName());
+        productData.setClientId(null); // No longer have client ID reference
         productData.setBarcode(productPojo.getBarcode());
         productData.setMrp(productPojo.getMrp());
         

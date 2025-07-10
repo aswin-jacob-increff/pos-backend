@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 import java.util.Objects;
-import org.example.api.ProductApi;
 
 @Service
 public class OrderItemApi {
@@ -19,15 +18,12 @@ public class OrderItemApi {
     @Autowired
     private InventoryApi inventoryApi;
 
-    @Autowired
-    private ProductApi productApi;
-
     public OrderItemPojo add(OrderItemPojo orderItemPojo) {
-        Integer productId = orderItemPojo.getProduct().getId();
-        InventoryPojo inventoryPojo = inventoryApi.getByProductId(productId);
+        String productBarcode = orderItemPojo.getProductBarcode();
+        InventoryPojo inventoryPojo = inventoryApi.getByProductBarcode(productBarcode);
 
         if (Objects.isNull(inventoryPojo)) {
-            throw new ApiException("No inventory found for product ID: " + productId);
+            throw new ApiException("No inventory found for product barcode: " + productBarcode);
         }
 
         if (orderItemPojo.getQuantity() > inventoryPojo.getQuantity()) {
@@ -39,7 +35,7 @@ public class OrderItemApi {
         orderItemPojo.setAmount(amount);
 
         // ✅ Update inventory
-        inventoryApi.removeStock(productId, orderItemPojo.getQuantity());
+        inventoryApi.removeStock(productBarcode, orderItemPojo.getQuantity());
 
         orderItemDao.insert(orderItemPojo);
         return orderItemPojo;
@@ -61,8 +57,8 @@ public class OrderItemApi {
         return orderItemDao.selectByOrderId(orderId);
     }
 
-    public List<OrderItemPojo> getByProductId(Integer productId) {
-        return orderItemDao.selectByProductId(productId);
+    public List<OrderItemPojo> getByProductBarcode(String barcode) {
+        return orderItemDao.selectByProductBarcode(barcode);
     }
 
     public OrderItemPojo update(Integer id, OrderItemPojo updatedOrderItem) {
@@ -71,9 +67,9 @@ public class OrderItemApi {
             throw new ApiException("Order item with ID " + id + " not found");
         }
 
-        InventoryPojo inventoryPojo = inventoryApi.getByProductId(existingOrderItem.getProduct().getId());
+        InventoryPojo inventoryPojo = inventoryApi.getByProductBarcode(existingOrderItem.getProductBarcode());
         if (Objects.isNull(inventoryPojo)) {
-            throw new ApiException("No inventory found for product ID: " + existingOrderItem.getProduct().getId());
+            throw new ApiException("No inventory found for product barcode: " + existingOrderItem.getProductBarcode());
         }
 
         // ✅ Revert old quantity to inventory before check
@@ -86,12 +82,16 @@ public class OrderItemApi {
         }
 
         // ✅ Update inventory - first restore old quantity, then remove new quantity
-        inventoryApi.addStock(existingOrderItem.getProduct().getId(), oldQty);
-        inventoryApi.removeStock(existingOrderItem.getProduct().getId(), newQty);
+        inventoryApi.addStock(existingOrderItem.getProductBarcode(), oldQty);
+        inventoryApi.removeStock(existingOrderItem.getProductBarcode(), newQty);
 
         // ✅ Update item and recalculate amount
         existingOrderItem.setOrder(updatedOrderItem.getOrder());
-        existingOrderItem.setProduct(updatedOrderItem.getProduct());
+        existingOrderItem.setProductBarcode(updatedOrderItem.getProductBarcode());
+        existingOrderItem.setProductName(updatedOrderItem.getProductName());
+        existingOrderItem.setClientName(updatedOrderItem.getClientName());
+        existingOrderItem.setProductMrp(updatedOrderItem.getProductMrp());
+        existingOrderItem.setProductImageUrl(updatedOrderItem.getProductImageUrl());
         existingOrderItem.setQuantity(newQty);
         existingOrderItem.setSellingPrice(updatedOrderItem.getSellingPrice());
 
@@ -104,10 +104,10 @@ public class OrderItemApi {
 
     public void delete(Integer id) {
         OrderItemPojo orderItem = get(id);
-        InventoryPojo inventoryPojo = inventoryApi.getByProductId(orderItem.getProduct().getId());
+        InventoryPojo inventoryPojo = inventoryApi.getByProductBarcode(orderItem.getProductBarcode());
 
         // ✅ Restore inventory
-        inventoryApi.addStock(orderItem.getProduct().getId(), orderItem.getQuantity());
+        inventoryApi.addStock(orderItem.getProductBarcode(), orderItem.getQuantity());
 
         orderItemDao.delete(id);
     }

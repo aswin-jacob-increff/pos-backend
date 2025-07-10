@@ -49,7 +49,8 @@ public class InventoryController {
         InventoryData inventoryData = new InventoryData();
 
         if (id != null) {
-            inventoryData = inventoryDto.getByProductId(id);
+            // For now, we'll require barcode instead of product ID
+            throw new ApiException("Please use product barcode instead of product ID for inventory lookup");
         } else if (barcode != null && !barcode.trim().isEmpty()) {
             inventoryData = inventoryDto.getByProductBarcode(barcode.trim());
         } else if (name != null && !name.trim().isEmpty()) {
@@ -72,7 +73,7 @@ public class InventoryController {
     
     @PutMapping("/{productId}/addStock")
     public InventoryData addStock(
-            @PathVariable Integer productId,
+            @PathVariable String productId,
             @RequestParam Integer quantity
     ) {
         return inventoryDto.addStock(productId, quantity);
@@ -80,7 +81,7 @@ public class InventoryController {
     
     @PutMapping("/{productId}/removeStock")
     public InventoryData removeStock(
-            @PathVariable Integer productId,
+            @PathVariable String productId,
             @RequestParam Integer quantity
     ) {
         return inventoryDto.removeStock(productId, quantity);
@@ -88,17 +89,17 @@ public class InventoryController {
     
     @PutMapping("/{productId}/setStock")
     public InventoryData setStock(
-            @PathVariable Integer productId,
+            @PathVariable String productId,
             @RequestParam Integer quantity
     ) {
         return inventoryDto.setStock(productId, quantity);
     }
     
     @GetMapping("/{productId}/image")
-    public ResponseEntity<ByteArrayResource> getProductImage(@PathVariable Integer productId) {
+    public ResponseEntity<ByteArrayResource> getProductImage(@PathVariable String productId) {
         
         try {
-            InventoryData inventory = inventoryDto.getByProductId(productId);
+            InventoryData inventory = inventoryDto.getByProductBarcode(productId);
             if (inventory.getImageUrl() == null || inventory.getImageUrl().trim().isEmpty()) {
                 return ResponseEntity.notFound().build();
             }

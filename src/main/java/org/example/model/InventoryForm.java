@@ -13,10 +13,12 @@ public class InventoryForm {
     private Integer productId;
     private String productName;
     private String barcode;
+    private String clientName;
     @NotNull(message = "Quantity is required")
     @Positive(message = "Quantity must be positive")
     private Integer quantity;
     private Double mrp;
+    private String imageUrl;
     private String image; // Base64 string from frontend
 
 }

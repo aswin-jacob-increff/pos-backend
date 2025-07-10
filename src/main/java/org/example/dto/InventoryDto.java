@@ -58,9 +58,9 @@ public class InventoryDto {
         return get(id);
     }
 
-    public InventoryData getByProductId(Integer productId) {
-        validateProductId(productId);
-        return convert(inventoryFlow.getByProductId(productId));
+    public InventoryData getByProductBarcode(String barcode) {
+        validateBarcode(barcode);
+        return convert(inventoryFlow.getByProductBarcode(barcode));
     }
 
     public InventoryData getByProductName(String productName) {
@@ -68,38 +68,33 @@ public class InventoryDto {
         return convert(inventoryFlow.getByProductName(productName));
     }
 
-    public InventoryData getByProductBarcode(String barcode) {
-        validateBarcode(barcode);
-        return convert(inventoryFlow.getByProductBarcode(barcode));
-    }
-
     public void delete(Integer id) {
         validateInventoryId(id);
         inventoryFlow.delete(id);
     }
     
-    public InventoryData addStock(Integer productId, Integer quantity) {
-        validateProductId(productId);
+    public InventoryData addStock(String barcode, Integer quantity) {
+        validateBarcode(barcode);
         validateQuantity(quantity, "Quantity to add");
         
-        inventoryFlow.addStock(productId, quantity);
-        return getByProductId(productId);
+        inventoryFlow.addStock(barcode, quantity);
+        return getByProductBarcode(barcode);
     }
     
-    public InventoryData removeStock(Integer productId, Integer quantity) {
-        validateProductId(productId);
+    public InventoryData removeStock(String barcode, Integer quantity) {
+        validateBarcode(barcode);
         validateQuantity(quantity, "Quantity to remove");
         
-        inventoryFlow.removeStock(productId, quantity);
-        return getByProductId(productId);
+        inventoryFlow.removeStock(barcode, quantity);
+        return getByProductBarcode(barcode);
     }
     
-    public InventoryData setStock(Integer productId, Integer quantity) {
-        validateProductId(productId);
+    public InventoryData setStock(String barcode, Integer quantity) {
+        validateBarcode(barcode);
         validateSetStockQuantity(quantity);
         
-        inventoryFlow.setStock(productId, quantity);
-        return getByProductId(productId);
+        inventoryFlow.setStock(barcode, quantity);
+        return getByProductBarcode(barcode);
     }
     
     private void validateInventoryId(Integer id) {
@@ -151,11 +146,20 @@ public class InventoryDto {
     }
 
     private void preprocess(InventoryForm inventoryForm) {
-        // Lookup productId from barcode
+        // Validate barcode is provided
         if (inventoryForm.getBarcode() == null || inventoryForm.getBarcode().trim().isEmpty()) {
             throw new ApiException("Product barcode is required");
         }
-        inventoryForm.setProductId(productApi.getByBarcode(inventoryForm.getBarcode()).getId());
+        // Get product details to populate inventory fields
+        try {
+            var product = productApi.getByBarcode(inventoryForm.getBarcode());
+            inventoryForm.setProductName(product.getName());
+            inventoryForm.setClientName(product.getClientName());
+            inventoryForm.setMrp(product.getMrp());
+            inventoryForm.setImageUrl(product.getImageUrl());
+        } catch (Exception e) {
+            throw new ApiException("Product with barcode '" + inventoryForm.getBarcode() + "' not found");
+        }
         // Validate base64 image if provided
         if (inventoryForm.getImage() != null && !inventoryForm.getImage().trim().isEmpty()) {
             if (!isValidBase64(inventoryForm.getImage())) {
@@ -166,27 +170,24 @@ public class InventoryDto {
 
     private InventoryPojo convert(InventoryForm inventoryForm) {
         InventoryPojo inventoryPojo = new InventoryPojo();
-        inventoryPojo.setProduct(productApi.get(inventoryForm.getProductId()));
+        inventoryPojo.setProductBarcode(inventoryForm.getBarcode());
+        inventoryPojo.setProductName(inventoryForm.getProductName());
+        inventoryPojo.setClientName(inventoryForm.getClientName());
+        inventoryPojo.setProductMrp(inventoryForm.getMrp());
+        inventoryPojo.setProductImageUrl(inventoryForm.getImageUrl());
         inventoryPojo.setQuantity(inventoryForm.getQuantity());
-        // No mrp field in InventoryPojo anymore
-        // Handle base64 image if provided (this would update the product's image)
-        if (inventoryForm.getImage() != null && !inventoryForm.getImage().trim().isEmpty()) {
-            // For now, we'll just validate the image
-            // In a real implementation, you might want to update the product's image
-        }
         return inventoryPojo;
     }
 
     private InventoryData convert(InventoryPojo inventoryPojo) {
         InventoryData inventoryData = new InventoryData();
         inventoryData.setId(inventoryPojo.getId());
-        inventoryData.setProductName(inventoryPojo.getProduct().getName());
-        inventoryData.setBarcode(inventoryPojo.getProduct().getBarcode());
-        inventoryData.setProductId(inventoryPojo.getProduct().getId());
+        inventoryData.setProductName(inventoryPojo.getProductName());
+        inventoryData.setBarcode(inventoryPojo.getProductBarcode());
+        inventoryData.setProductId(null); // No longer have product ID reference
         inventoryData.setQuantity(inventoryPojo.getQuantity());
-        inventoryData.setMrp(inventoryPojo.getProduct().getMrp()); // Use product's mrp
-        // Set imageUrl directly from product
-        inventoryData.setImageUrl(inventoryPojo.getProduct().getImageUrl());
+        inventoryData.setMrp(inventoryPojo.getProductMrp());
+        inventoryData.setImageUrl(inventoryPojo.getProductImageUrl());
         return inventoryData;
     }
     

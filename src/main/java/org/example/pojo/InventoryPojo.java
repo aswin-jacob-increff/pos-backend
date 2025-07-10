@@ -14,9 +14,17 @@ public class InventoryPojo extends AbstractPojo {
     @GeneratedValue(strategy = GenerationType.TABLE)
     private Integer id;
 
-    @ManyToOne (fetch = FetchType.EAGER)
-    @JoinColumn (name = "product_id", unique = true)
-    private ProductPojo product;
+    @Column(unique = true)
+    private String productBarcode;
+
+    @Column(nullable = false)
+    private String productName;
+
+    @Column(nullable = false)
+    private String clientName;
+
+    private Double productMrp;
+    private String productImageUrl;
 
     private Integer quantity;
 

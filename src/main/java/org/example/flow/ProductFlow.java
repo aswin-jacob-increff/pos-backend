@@ -62,14 +62,20 @@ public class ProductFlow {
     }
 
     public void delete(Integer id) {
+        // Get product details first
+        ProductPojo productPojo = api.get(id);
+        if (productPojo == null) {
+            throw new ApiException("Product with ID " + id + " not found");
+        }
+        
         // Check if product is used in any active orders
-        List<OrderItemPojo> orderItems = orderItemApi.getByProductId(id);
+        List<OrderItemPojo> orderItems = orderItemApi.getByProductBarcode(productPojo.getBarcode());
         if (!orderItems.isEmpty()) {
             throw new ApiException("Cannot delete product with ID " + id + " as it is used in " + orderItems.size() + " order items");
         }
         
         // Delete inventory first (due to foreign key constraint)
-        InventoryPojo inventoryPojo = inventoryApi.getByProductId(id);
+        InventoryPojo inventoryPojo = inventoryApi.getByProductBarcode(productPojo.getBarcode());
         if (inventoryPojo != null) {
             inventoryApi.delete(inventoryPojo.getId());
         }
@@ -98,7 +104,11 @@ public class ProductFlow {
      * Check if a product can be safely deleted
      */
     public boolean canDeleteProduct(Integer productId) {
-        List<OrderItemPojo> orderItems = orderItemApi.getByProductId(productId);
+        ProductPojo productPojo = api.get(productId);
+        if (productPojo == null) {
+            return true; // Product doesn't exist, so it can be "deleted"
+        }
+        List<OrderItemPojo> orderItems = orderItemApi.getByProductBarcode(productPojo.getBarcode());
         return orderItems.isEmpty();
     }
     
@@ -106,7 +116,11 @@ public class ProductFlow {
      * Get the number of order items using this product
      */
     public int getOrderItemCountForProduct(Integer productId) {
-        List<OrderItemPojo> orderItems = orderItemApi.getByProductId(productId);
+        ProductPojo productPojo = api.get(productId);
+        if (productPojo == null) {
+            return 0;
+        }
+        List<OrderItemPojo> orderItems = orderItemApi.getByProductBarcode(productPojo.getBarcode());
         return orderItems.size();
     }
 }

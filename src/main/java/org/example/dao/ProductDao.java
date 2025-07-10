@@ -55,8 +55,6 @@ public class ProductDao {
         CriteriaQuery<ProductPojo> query = cb.createQuery(ProductPojo.class);
         Root<ProductPojo> root = query.from(ProductPojo.class);
         
-        // Join with client to fetch eagerly
-        root.fetch("client", JoinType.LEFT);
         query.select(root);
         
         return em.createQuery(query).getResultList();
@@ -69,7 +67,7 @@ public class ProductDao {
             existing.setName(product.getName());
             existing.setMrp(product.getMrp());
             existing.setImageUrl(product.getImageUrl());
-            existing.setClient(product.getClient());
+            existing.setClientName(product.getClientName());
             em.merge(existing);
         }
     }
