@@ -11,14 +11,18 @@ import java.util.Objects;
 
 @Service
 @Transactional
-public class InvoiceApi {
+public class InvoiceApi extends AbstractApi<InvoicePojo> {
 
     @Autowired
     private InvoiceDao invoiceDao;
 
+    @Override
+    protected String getEntityName() {
+        return "Invoice";
+    }
 
-
-    public InvoicePojo add(InvoicePojo invoice) {
+    @Override
+    public void add(InvoicePojo invoice) {
         if (Objects.isNull(invoice)) {
             throw new ApiException("Invoice cannot be null");
         }
@@ -28,41 +32,11 @@ public class InvoiceApi {
         if (Objects.isNull(invoice.getFilePath()) || invoice.getFilePath().trim().isEmpty()) {
             throw new ApiException("File path cannot be null or empty");
         }
-        
         invoiceDao.insert(invoice);
-        return invoice;
-    }
-
-    public InvoicePojo get(Integer id) {
-        InvoicePojo invoice = invoiceDao.select(id);
-        if (Objects.isNull(invoice)) {
-            throw new ApiException("Invoice with ID " + id + " not found");
-        }
-        return invoice;
     }
 
     public InvoicePojo getByOrderId(Integer orderId) {
         return invoiceDao.selectByOrderId(orderId);
-    }
-
-    public List<InvoicePojo> getAll() {
-        return invoiceDao.selectAll();
-    }
-
-    public void update(Integer id, InvoicePojo updatedInvoice) {
-        InvoicePojo existingInvoice = invoiceDao.select(id);
-        if (Objects.isNull(existingInvoice)) {
-            throw new ApiException("Invoice with ID " + id + " not found");
-        }
-        invoiceDao.update(id, updatedInvoice);
-    }
-
-    public void delete(Integer id) {
-        InvoicePojo invoice = invoiceDao.select(id);
-        if (Objects.isNull(invoice)) {
-            throw new ApiException("Invoice with ID " + id + " not found");
-        }
-        invoiceDao.delete(id);
     }
 
     /**
@@ -72,6 +46,4 @@ public class InvoiceApi {
     public String generateInvoice(Object order) {
         throw new ApiException("Use OrderDto.downloadInvoice() instead");
     }
-
-
 } 

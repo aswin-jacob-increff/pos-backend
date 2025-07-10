@@ -23,4 +23,16 @@ public class OrderItemData {
     private Double amount;
     private String imageUrl; // Reference to image endpoint: /api/products/{productId}/image
 
+    public void setSellingPrice(Double sellingPrice) {
+        this.sellingPrice = sellingPrice == null ? null : org.example.util.TimeUtil.round2(sellingPrice);
+    }
+    public Double getSellingPrice() {
+        return sellingPrice == null ? null : org.example.util.TimeUtil.round2(sellingPrice);
+    }
+    public void setAmount(Double amount) {
+        this.amount = amount == null ? null : org.example.util.TimeUtil.round2(amount);
+    }
+    public Double getAmount() {
+        return amount == null ? null : org.example.util.TimeUtil.round2(amount);
+    }
 }

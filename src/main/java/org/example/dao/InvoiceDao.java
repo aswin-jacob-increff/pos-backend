@@ -7,69 +7,20 @@ import java.util.List;
 import org.example.pojo.InvoicePojo;
 
 @Repository
-public class InvoiceDao {
+public class InvoiceDao extends AbstractDao<InvoicePojo> {
 
-    @PersistenceContext
-    private EntityManager em;
-
-    public void insert(InvoicePojo invoice) {
-        em.persist(invoice);
-    }
-
-    public InvoicePojo select(Integer id) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<InvoicePojo> query = cb.createQuery(InvoicePojo.class);
-        Root<InvoicePojo> root = query.from(InvoicePojo.class);
-        
-        query.select(root)
-             .where(cb.equal(root.get("id"), id));
-        
-        try {
-            return em.createQuery(query).getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        }
+    public InvoiceDao() {
+        super(InvoicePojo.class);
     }
 
     public InvoicePojo selectByOrderId(Integer orderId) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<InvoicePojo> query = cb.createQuery(InvoicePojo.class);
-        Root<InvoicePojo> root = query.from(InvoicePojo.class);
-        
-        query.select(root)
-             .where(cb.equal(root.get("orderId"), orderId));
-        
-        try {
-            return em.createQuery(query).getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        }
+        return selectByField("orderId", orderId);
     }
 
-    public List<InvoicePojo> selectAll() {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<InvoicePojo> query = cb.createQuery(InvoicePojo.class);
-        Root<InvoicePojo> root = query.from(InvoicePojo.class);
-        
-        query.select(root);
-        return em.createQuery(query).getResultList();
-    }
-
-    public void update(Integer id, InvoicePojo invoice) {
-        // Preserve the version field to avoid optimistic locking conflicts
-        InvoicePojo existing = select(id);
-        if (existing != null) {
-            existing.setOrderId(invoice.getOrderId());
-            existing.setFilePath(invoice.getFilePath());
-            existing.setInvoiceId(invoice.getInvoiceId());
-            em.merge(existing);
-        }
-    }
-
-    public void delete(Integer id) {
-        InvoicePojo invoice = select(id);
-        if(invoice != null) {
-            em.remove(invoice);
-        }
+    @Override
+    protected void updateEntity(InvoicePojo existing, InvoicePojo updated) {
+        existing.setOrderId(updated.getOrderId());
+        existing.setFilePath(updated.getFilePath());
+        existing.setInvoiceId(updated.getInvoiceId());
     }
 } 

@@ -7,35 +7,39 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-public class OrderItemFlow {
+public class OrderItemFlow extends AbstractFlow<OrderItemPojo> {
 
     @Autowired
     private OrderItemApi api;
 
+    @Override
+    protected Integer getEntityId(OrderItemPojo entity) {
+        return entity.getId();
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "OrderItem";
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
     public OrderItemPojo add(OrderItemPojo orderItemPojo) {
         calculateAmount(orderItemPojo);
-        return api.add(orderItemPojo);
+        api.add(orderItemPojo);
+        return orderItemPojo;
     }
 
-    public OrderItemPojo get(Integer id) {
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public OrderItemPojo update(Integer id, OrderItemPojo orderItemPojo) {
+        calculateAmount(orderItemPojo);
+        api.update(id, orderItemPojo);
         return api.get(id);
-    }
-
-    public List<OrderItemPojo> getAll() {
-        return api.getAll();
     }
 
     public List<OrderItemPojo> getByOrderId(Integer orderId) {
         return api.getByOrderId(orderId);
-    }
-
-    public OrderItemPojo update(OrderItemPojo orderItemPojo, Integer id) {
-        calculateAmount(orderItemPojo);
-        return api.update(id, orderItemPojo);
-    }
-
-    public void delete(Integer id) {
-        api.delete(id);
     }
 
     private void calculateAmount(OrderItemPojo item) {

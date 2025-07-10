@@ -11,14 +11,11 @@ import org.example.util.ProductTsvParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Base64;
-import java.util.Objects;
 import jakarta.validation.Valid;
 
 @Component
-public class ProductDto {
+public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductData> {
 
     @Autowired
     private ProductFlow productFlow;
@@ -26,49 +23,74 @@ public class ProductDto {
     @Autowired
     private ClientApi clientApi;
 
-    public ProductData add(@Valid ProductForm productForm) {
-        // Expect clientName, not clientId
+    @Override
+    protected String getEntityName() {
+        return "Product";
+    }
+
+    @Override
+    protected ProductPojo convertFormToEntity(ProductForm productForm) {
+        ProductPojo productPojo = new ProductPojo();
+        productPojo.setClientName(productForm.getClientName());
+        productPojo.setName(productForm.getName());
+        productPojo.setMrp(productForm.getMrp());
+        productPojo.setBarcode(productForm.getBarcode());
+        
+        // Store image URL in imageUrl field
+        productPojo.setImageUrl(productForm.getImage());
+        
+        return productPojo;
+    }
+
+    @Override
+    protected ProductData convertEntityToData(ProductPojo productPojo) {
+        ProductData productData = new ProductData();
+        productData.setId(productPojo.getId());
+        productData.setName(productPojo.getName());
+        productData.setClientName(productPojo.getClientName());
+        productData.setClientId(null); // No longer have client ID reference
+        productData.setBarcode(productPojo.getBarcode());
+        productData.setMrp(productPojo.getMrp());
+        
+        // Set imageUrl directly from stored URL
+        if (productPojo.getImageUrl() != null && !productPojo.getImageUrl().trim().isEmpty()) {
+            productData.setImageUrl(productPojo.getImageUrl());
+        }
+        
+        return productData;
+    }
+
+    @Override
+    protected void preprocess(ProductForm productForm) {
+        // Validate clientName is provided
         if (productForm.getClientName() == null || productForm.getClientName().trim().isEmpty()) {
             throw new ApiException("Client name is required");
         }
-        preprocess(productForm);
-        ProductPojo productPojo = productFlow.add(convert(productForm));
-        return convert(productPojo);
+        // Validate image URL if provided
+        if (productForm.getImage() != null && !productForm.getImage().trim().isEmpty()) {
+            String imageUrl = productForm.getImage().trim();
+            if (!isValidUrl(imageUrl)) {
+                throw new ApiException("Image must be a valid URL");
+            }
+        }
     }
 
-    public ProductData get(int id) {
-        return convert(productFlow.get(id));
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public ProductData update(Integer id, @Valid ProductForm form) {
+        preprocess(form);
+        ProductPojo updatedProduct = convertFormToEntity(form);
+        ProductPojo result = productFlow.update(id, updatedProduct);
+        return convertEntityToData(result);
     }
 
+    // Custom methods that don't fit the generic pattern
     public ProductData getByBarcode(String barcode) {
-        return convert(productFlow.getByBarcode(barcode));
+        return convertEntityToData(productFlow.getByBarcode(barcode));
     }
 
     public ProductData getByName(String name) {
-        return convert(productFlow.getByName(name));
-    }
-
-    public List<ProductData> getAll() {
-        List<ProductPojo> productPojoList = productFlow.getAll();
-        List<ProductData> productDataList = new ArrayList<>();
-        for(ProductPojo productPojo : productPojoList) {
-            productDataList.add(convert(productPojo));
-        }
-        return productDataList;
-    }
-
-    public ProductData update(int id, @Valid ProductForm productForm) {
-        // Expect clientName, not clientId
-        if (productForm.getClientName() == null || productForm.getClientName().trim().isEmpty()) {
-            throw new ApiException("Client name is required");
-        }
-        preprocess(productForm);
-        productFlow.update(id, convert(productForm));
-        return get(id);
-    }
-
-    public void delete(int id) {
-        productFlow.delete(id);
+        return convertEntityToData(productFlow.getByName(name));
     }
 
     public void deleteByName(String name) {
@@ -119,50 +141,6 @@ public class ProductDto {
             throw new ApiException("Product image not found");
         }
         return product.getImageUrl();
-    }
-
-    private void preprocess(ProductForm productForm) {
-        // Validate clientName is provided
-        if (productForm.getClientName() == null || productForm.getClientName().trim().isEmpty()) {
-            throw new ApiException("Client name is required");
-        }
-        // Validate image URL if provided
-        if (productForm.getImage() != null && !productForm.getImage().trim().isEmpty()) {
-            String imageUrl = productForm.getImage().trim();
-            if (!isValidUrl(imageUrl)) {
-                throw new ApiException("Image must be a valid URL");
-            }
-        }
-    }
-
-    private ProductPojo convert(ProductForm productForm) {
-        ProductPojo productPojo = new ProductPojo();
-        productPojo.setClientName(productForm.getClientName());
-        productPojo.setName(productForm.getName());
-        productPojo.setMrp(productForm.getMrp());
-        productPojo.setBarcode(productForm.getBarcode());
-        
-        // Store image URL in imageUrl field
-        productPojo.setImageUrl(productForm.getImage());
-        
-        return productPojo;
-    }
-
-    private ProductData convert(ProductPojo productPojo) {
-        ProductData productData = new ProductData();
-        productData.setId(productPojo.getId());
-        productData.setName(productPojo.getName());
-        productData.setClientName(productPojo.getClientName());
-        productData.setClientId(null); // No longer have client ID reference
-        productData.setBarcode(productPojo.getBarcode());
-        productData.setMrp(productPojo.getMrp());
-        
-        // Set imageUrl directly from stored URL
-        if (productPojo.getImageUrl() != null && !productPojo.getImageUrl().trim().isEmpty()) {
-            productData.setImageUrl(productPojo.getImageUrl());
-        }
-        
-        return productData;
     }
     
     private boolean isValidUrl(String url) {

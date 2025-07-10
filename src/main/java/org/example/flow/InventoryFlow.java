@@ -4,31 +4,23 @@ import org.example.pojo.InventoryPojo;
 import org.example.api.InventoryApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 
 @Service
-@Transactional
-public class InventoryFlow {
+public class InventoryFlow extends AbstractFlow<InventoryPojo> {
 
     @Autowired
     private InventoryApi api;
 
-    public InventoryPojo add(InventoryPojo inventoryPojo) {
-        api.add(inventoryPojo);
-        return inventoryPojo;
+    @Override
+    protected Integer getEntityId(InventoryPojo entity) {
+        return entity.getId();
     }
 
-    public InventoryPojo get(Integer id) {
-        return api.get(id);
+    @Override
+    protected String getEntityName() {
+        return "Inventory";
     }
-
-    public List<InventoryPojo> getAll() {
-        return api.getAll();
-    }
-
-
 
     public InventoryPojo getByProductName(String productName) {
         return api.getByProductName(productName);
@@ -36,15 +28,6 @@ public class InventoryFlow {
 
     public InventoryPojo getByProductBarcode(String barcode) {
         return api.getByProductBarcode(barcode);
-    }
-
-    public InventoryPojo update(Integer id, InventoryPojo inventoryPojo) {
-        api.update(id, inventoryPojo);
-        return api.get(id);
-    }
-
-    public void delete(Integer id) {
-        api.delete(id);
     }
 
     public void addStock(String barcode, Integer quantity) {

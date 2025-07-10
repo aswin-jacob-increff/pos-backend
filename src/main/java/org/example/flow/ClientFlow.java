@@ -7,35 +7,23 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-public class ClientFlow {
+public class ClientFlow extends AbstractFlow<ClientPojo> {
 
     @Autowired
     private ClientApi api;
 
-    public ClientPojo add(ClientPojo clientPojo) {
-        api.add(clientPojo);
-        return clientPojo;
+    @Override
+    protected Integer getEntityId(ClientPojo entity) {
+        return entity.getId();
     }
 
-    public ClientPojo update(Integer id, ClientPojo clientPojo) {
-        api.update(id, clientPojo);
-        return api.get(id);
-    }
-
-    public ClientPojo get(Integer id) {
-        return api.get(id);
-    }
-
-    public List<ClientPojo> getAll() {
-        return api.getAll();
+    @Override
+    protected String getEntityName() {
+        return "Client";
     }
 
     public ClientPojo getByName(String name) {
         return api.getByName(name);
-    }
-
-    public void delete(Integer id) {
-        api.delete(id);
     }
 
     public void deleteClientByName(String name) {

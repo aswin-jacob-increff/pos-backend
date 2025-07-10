@@ -3,34 +3,20 @@ package org.example.api;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.example.exception.ApiException;
-import java.util.List;
 import java.util.Objects;
 import org.example.dao.InventoryDao;
 import org.example.pojo.InventoryPojo;
 
 @Service
-public class InventoryApi {
+public class InventoryApi extends AbstractApi<InventoryPojo> {
 
     @Autowired
     private InventoryDao inventoryDao;
 
-    public void add(InventoryPojo inventoryPojo) {
-        inventoryDao.insert(inventoryPojo);
+    @Override
+    protected String getEntityName() {
+        return "Inventory";
     }
-
-    public InventoryPojo get(Integer id) {
-        InventoryPojo inventory = inventoryDao.select(id);
-        if (Objects.isNull(inventory)) {
-            throw new ApiException("Inventory with ID " + id + " not found");
-        }
-        return inventory;
-    }
-
-    public List<InventoryPojo> getAll() {
-        return inventoryDao.selectAll();
-    }
-
-
 
     public InventoryPojo getByProductName(String productName) {
         return inventoryDao.getByProductName(productName);
@@ -40,15 +26,6 @@ public class InventoryApi {
         return inventoryDao.getByProductBarcode(barcode);
     }
 
-    public void update(Integer id, InventoryPojo updatedInventory) {
-        InventoryPojo existingInventory = inventoryDao.select(id);
-        if (Objects.isNull(existingInventory)) {
-            throw new ApiException("Inventory with ID " + id + " not found");
-        }
-        
-        inventoryDao.update(id, updatedInventory);
-    }
-    
     /**
      * Add stock to existing inventory
      */
@@ -56,12 +33,10 @@ public class InventoryApi {
         if (quantityToAdd <= 0) {
             throw new ApiException("Quantity to add must be positive");
         }
-        
         InventoryPojo inventory = getByProductBarcode(barcode);
         if (Objects.isNull(inventory)) {
             throw new ApiException("No inventory found for product barcode: " + barcode);
         }
-        
         InventoryPojo updatedInventory = new InventoryPojo();
         updatedInventory.setProductBarcode(inventory.getProductBarcode());
         updatedInventory.setProductName(inventory.getProductName());
@@ -71,7 +46,7 @@ public class InventoryApi {
         updatedInventory.setQuantity(inventory.getQuantity() + quantityToAdd);
         inventoryDao.update(inventory.getId(), updatedInventory);
     }
-    
+
     /**
      * Remove stock from existing inventory
      */
@@ -79,16 +54,13 @@ public class InventoryApi {
         if (quantityToRemove <= 0) {
             throw new ApiException("Quantity to remove must be positive");
         }
-        
         InventoryPojo inventory = getByProductBarcode(barcode);
         if (Objects.isNull(inventory)) {
             throw new ApiException("No inventory found for product barcode: " + barcode);
         }
-        
         if (inventory.getQuantity() < quantityToRemove) {
             throw new ApiException("Insufficient stock. Available: " + inventory.getQuantity() + ", Requested: " + quantityToRemove);
         }
-        
         InventoryPojo updatedInventory = new InventoryPojo();
         updatedInventory.setProductBarcode(inventory.getProductBarcode());
         updatedInventory.setProductName(inventory.getProductName());
@@ -98,7 +70,7 @@ public class InventoryApi {
         updatedInventory.setQuantity(inventory.getQuantity() - quantityToRemove);
         inventoryDao.update(inventory.getId(), updatedInventory);
     }
-    
+
     /**
      * Set stock to a specific quantity
      */
@@ -106,12 +78,10 @@ public class InventoryApi {
         if (newQuantity < 0) {
             throw new ApiException("Stock quantity cannot be negative");
         }
-        
         InventoryPojo inventory = getByProductBarcode(barcode);
         if (Objects.isNull(inventory)) {
             throw new ApiException("No inventory found for product barcode: " + barcode);
         }
-        
         InventoryPojo updatedInventory = new InventoryPojo();
         updatedInventory.setProductBarcode(inventory.getProductBarcode());
         updatedInventory.setProductName(inventory.getProductName());
@@ -120,13 +90,5 @@ public class InventoryApi {
         updatedInventory.setProductImageUrl(inventory.getProductImageUrl());
         updatedInventory.setQuantity(newQuantity);
         inventoryDao.update(inventory.getId(), updatedInventory);
-    }
-
-    public void delete(Integer id) {
-        InventoryPojo inventory = inventoryDao.select(id);
-        if (Objects.isNull(inventory)) {
-            throw new ApiException("Inventory with ID " + id + " not found");
-        }
-        inventoryDao.delete(id);
     }
 } 

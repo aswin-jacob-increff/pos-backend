@@ -14,7 +14,7 @@ import java.util.List;
 
 @Service
 @Transactional
-public class ProductFlow {
+public class ProductFlow extends AbstractFlow<ProductPojo> {
 
     @Autowired
     private ProductApi api;
@@ -25,17 +25,14 @@ public class ProductFlow {
     @Autowired
     private OrderItemApi orderItemApi;
 
-    public ProductPojo add(ProductPojo productPojo) {
-        productPojo = api.add(productPojo);
-//        InventoryPojo inventoryPojo = new InventoryPojo();
-//        inventoryPojo.setProduct(productPojo);
-//        inventoryPojo.setQuantity(0);
-//        inventoryApi.add(inventoryPojo);
-        return productPojo;
+    @Override
+    protected Integer getEntityId(ProductPojo entity) {
+        return entity.getId();
     }
 
-    public ProductPojo get(Integer id) {
-        return api.get(id);
+    @Override
+    protected String getEntityName() {
+        return "Product";
     }
 
     public ProductPojo getByBarcode(String barcode) {
@@ -44,44 +41,6 @@ public class ProductFlow {
 
     public ProductPojo getByName(String name) {
         return api.getByName(name);
-    }
-
-    public List<ProductPojo> getAll() {
-        return api.getAll();
-    }
-
-    public ProductPojo update(Integer id, ProductPojo productPojo) {
-        // Update the product
-        api.update(id, productPojo);
-        
-        // Note: Inventory product reference doesn't need to be updated
-        // as it's a foreign key relationship that should remain stable
-        // The inventory will automatically reference the updated product
-        
-        return api.get(id);
-    }
-
-    public void delete(Integer id) {
-        // Get product details first
-        ProductPojo productPojo = api.get(id);
-        if (productPojo == null) {
-            throw new ApiException("Product with ID " + id + " not found");
-        }
-        
-        // Check if product is used in any active orders
-        List<OrderItemPojo> orderItems = orderItemApi.getByProductBarcode(productPojo.getBarcode());
-        if (!orderItems.isEmpty()) {
-            throw new ApiException("Cannot delete product with ID " + id + " as it is used in " + orderItems.size() + " order items");
-        }
-        
-        // Delete inventory first (due to foreign key constraint)
-        InventoryPojo inventoryPojo = inventoryApi.getByProductBarcode(productPojo.getBarcode());
-        if (inventoryPojo != null) {
-            inventoryApi.delete(inventoryPojo.getId());
-        }
-        
-        // Then delete the product
-        api.delete(id);
     }
 
     public void deleteByName(String name) {
@@ -122,5 +81,121 @@ public class ProductFlow {
         }
         List<OrderItemPojo> orderItems = orderItemApi.getByProductBarcode(productPojo.getBarcode());
         return orderItems.size();
+    }
+
+    @Override
+    public void delete(Integer id) {
+        // Get product details first
+        ProductPojo productPojo = api.get(id);
+        if (productPojo == null) {
+            throw new ApiException("Product with ID " + id + " not found");
+        }
+        // Check if product is used in any active orders
+        List<OrderItemPojo> orderItems = orderItemApi.getByProductBarcode(productPojo.getBarcode());
+        if (!orderItems.isEmpty()) {
+            throw new ApiException("Cannot delete product with ID " + id + " as it is used in " + orderItems.size() + " order items");
+        }
+        // Delete inventory first (due to foreign key constraint)
+        InventoryPojo inventoryPojo = inventoryApi.getByProductBarcode(productPojo.getBarcode());
+        if (inventoryPojo != null) {
+            inventoryApi.delete(inventoryPojo.getId());
+        }
+        // Then delete the product
+        api.delete(id);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public ProductPojo update(Integer id, ProductPojo updatedProduct) {
+        // Get the existing product to check if barcode is changing
+        ProductPojo existingProduct = api.get(id);
+        if (existingProduct == null) {
+            throw new ApiException("Product with ID " + id + " not found");
+        }
+
+        // Check if barcode is being changed
+        boolean barcodeChanged = !existingProduct.getBarcode().equals(updatedProduct.getBarcode());
+        
+        System.out.println("Updating product: " + existingProduct.getBarcode() + " -> " + updatedProduct.getBarcode());
+        
+        // Update the product first
+        api.update(id, updatedProduct);
+        
+        // Now update the corresponding inventory
+        try {
+            InventoryPojo inventory = inventoryApi.getByProductBarcode(existingProduct.getBarcode());
+            if (inventory != null) {
+                // Create updated inventory with new product details
+                InventoryPojo updatedInventory = new InventoryPojo();
+                updatedInventory.setProductBarcode(updatedProduct.getBarcode());
+                updatedInventory.setProductName(updatedProduct.getName());
+                updatedInventory.setClientName(updatedProduct.getClientName());
+                updatedInventory.setProductMrp(updatedProduct.getMrp());
+                updatedInventory.setProductImageUrl(updatedProduct.getImageUrl());
+                updatedInventory.setQuantity(inventory.getQuantity()); // Preserve existing quantity
+                
+                // If barcode changed, we need to handle it carefully
+                if (barcodeChanged) {
+                    // Check if new barcode already has inventory
+                    InventoryPojo existingInventoryWithNewBarcode = inventoryApi.getByProductBarcode(updatedProduct.getBarcode());
+                    if (existingInventoryWithNewBarcode != null && !existingInventoryWithNewBarcode.getId().equals(inventory.getId())) {
+                        throw new ApiException("Cannot update product barcode: inventory already exists for barcode '" + updatedProduct.getBarcode() + "'");
+                    }
+                }
+                
+                // Update the inventory
+                inventoryApi.update(inventory.getId(), updatedInventory);
+                System.out.println("Updated inventory for product: " + updatedProduct.getBarcode());
+            } else {
+                System.out.println("No inventory found for product: " + existingProduct.getBarcode() + ", creating new inventory");
+                // Create inventory for the product if it doesn't exist
+                InventoryPojo newInventory = new InventoryPojo();
+                newInventory.setProductBarcode(updatedProduct.getBarcode());
+                newInventory.setProductName(updatedProduct.getName());
+                newInventory.setClientName(updatedProduct.getClientName());
+                newInventory.setProductMrp(updatedProduct.getMrp());
+                newInventory.setProductImageUrl(updatedProduct.getImageUrl());
+                newInventory.setQuantity(0); // Start with 0 quantity
+                
+                inventoryApi.add(newInventory);
+            }
+        } catch (Exception e) {
+            // If inventory update fails, we should rollback the product update
+            throw new ApiException("Failed to update inventory for product: " + e.getMessage());
+        }
+        
+        return api.get(id);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public ProductPojo add(ProductPojo productPojo) {
+        // Add the product first
+        api.add(productPojo);
+        
+        // Check if inventory exists for this product
+        try {
+            InventoryPojo existingInventory = inventoryApi.getByProductBarcode(productPojo.getBarcode());
+            if (existingInventory == null) {
+                // Create inventory for the new product
+                InventoryPojo newInventory = new InventoryPojo();
+                newInventory.setProductBarcode(productPojo.getBarcode());
+                newInventory.setProductName(productPojo.getName());
+                newInventory.setClientName(productPojo.getClientName());
+                newInventory.setProductMrp(productPojo.getMrp());
+                newInventory.setProductImageUrl(productPojo.getImageUrl());
+                newInventory.setQuantity(0); // Start with 0 quantity
+                
+                inventoryApi.add(newInventory);
+                System.out.println("Created inventory for new product: " + productPojo.getBarcode());
+            } else {
+                System.out.println("Inventory already exists for product: " + productPojo.getBarcode());
+            }
+        } catch (Exception e) {
+            // If inventory creation fails, we should rollback the product creation
+            throw new ApiException("Failed to create inventory for product: " + e.getMessage());
+        }
+        
+        return productPojo;
     }
 }

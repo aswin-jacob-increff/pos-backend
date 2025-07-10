@@ -21,6 +21,7 @@ public class ProductController {
     private ProductDto productDto;
 
     @PostMapping
+    @org.springframework.transaction.annotation.Transactional
     public ProductData add(@RequestBody ProductForm form) {
         return productDto.add(form);
     }
@@ -41,11 +42,13 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional
     public ProductData update(@PathVariable Integer id, @RequestBody ProductForm form) {
         return productDto.update(id, form);
     }
 
     @DeleteMapping
+    @org.springframework.transaction.annotation.Transactional
     public void deleteProduct(@RequestParam(required = false) Integer id,
                               @RequestParam(required = false) String name,
                               @RequestParam(required = false) String barcode) {
@@ -69,6 +72,7 @@ public class ProductController {
 
     @Operation(summary = "Upload products via TSV file")
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<String> uploadProductsFromTsv(@RequestParam("file") MultipartFile file) {
         try {
             String result = productDto.uploadProductsFromTsv(file);

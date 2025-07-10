@@ -19,6 +19,7 @@ public class OrderController {
     private OrderDto orderDto;
 
     @PostMapping("/add")
+    @org.springframework.transaction.annotation.Transactional
     public OrderData add(@RequestBody OrderForm form) {
         return orderDto.add(form);
     }
@@ -29,21 +30,31 @@ public class OrderController {
     }
 
     @GetMapping
-    public List<OrderData> getAll() {
-        return orderDto.getAll();
+    public List<OrderData> getAll(org.springframework.security.core.Authentication authentication) {
+        String email = authentication.getName();
+        boolean isSupervisor = authentication.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERVISOR"));
+        if (isSupervisor) {
+            return orderDto.getAll();
+        } else {
+            return orderDto.getOrdersByUserId(email);
+        }
     }
 
     @PutMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional
     public OrderData update(@PathVariable Integer id, @RequestBody OrderForm form) {
         return orderDto.update(id, form);
     }
 
     @DeleteMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional
     public void delete(@PathVariable Integer id) {
         orderDto.delete(id);
     }
     
     @DeleteMapping("/{id}/cancel")
+    @org.springframework.transaction.annotation.Transactional
     public void cancelOrder(@PathVariable Integer id) {
         orderDto.cancelOrder(id);
     }
@@ -62,6 +73,33 @@ public class OrderController {
             e.printStackTrace();
             throw new ApiException("Failed to download invoice: " + e.getMessage());
         }
+    }
+
+    /**
+     * Get orders within a date range
+     * @param startDate Start date in yyyy-MM-dd format (inclusive)
+     * @param endDate End date in yyyy-MM-dd format (inclusive)
+     * @return List of orders within the date range
+     */
+    @GetMapping("/by-date-range")
+    public List<OrderData> getOrdersByDateRange(
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            java.time.LocalDate start = java.time.LocalDate.parse(startDate);
+            java.time.LocalDate end = java.time.LocalDate.parse(endDate);
+            return orderDto.getOrdersByDateRange(start, end);
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new ApiException("Invalid date format. Please use yyyy-MM-dd format (e.g., 2024-01-15)");
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ApiException("Failed to get orders by date range: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/by-user")
+    public List<OrderData> getOrdersByUserId(@RequestParam String userId) {
+        return orderDto.getOrdersByUserId(userId);
     }
 
 }

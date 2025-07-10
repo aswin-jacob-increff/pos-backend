@@ -17,6 +17,7 @@ public class OrderItemController {
     private OrderItemDto orderItemDto;
 
     @PostMapping
+    @org.springframework.transaction.annotation.Transactional
     public OrderItemData add(@RequestBody OrderItemForm form) {
         return orderItemDto.add(form);
     }
@@ -43,14 +44,16 @@ public class OrderItemController {
     }
 
     @PutMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional
     public void update(@PathVariable Integer id, @RequestBody OrderItemForm form) {
         if (id == null) {
             throw new IllegalArgumentException("Order Item ID cannot be null");
         }
-        orderItemDto.update(form, id);
+        orderItemDto.update(id, form);
     }
 
     @DeleteMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional
     public void delete(@PathVariable Integer id) {
         if (id == null) {
             throw new IllegalArgumentException("Order Item ID cannot be null");

@@ -3,9 +3,7 @@ package org.example.pojo;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDate;
-import java.util.List;
 
 @Entity
 @Table(name = "pos_day_sales")
@@ -24,9 +22,6 @@ public class DaySalesPojo {
     @Column(nullable = false)
     private double totalRevenue;
     
-    // Store all orders for this day to enable filtering by brand
-    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "day_date", referencedColumnName = "date")
-    @JsonIgnore
-    private List<OrderPojo> orders;
+    // Orders are now denormalized and stored separately
+    // No direct reference needed - orders are queried by date when needed
 } 

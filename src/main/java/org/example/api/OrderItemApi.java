@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
-public class OrderItemApi {
+public class OrderItemApi extends AbstractApi<OrderItemPojo> {
 
     @Autowired
     private OrderItemDao orderItemDao;
@@ -18,75 +18,53 @@ public class OrderItemApi {
     @Autowired
     private InventoryApi inventoryApi;
 
-    public OrderItemPojo add(OrderItemPojo orderItemPojo) {
+    @Override
+    protected String getEntityName() {
+        return "OrderItem";
+    }
+
+    // Unique add logic with inventory validation
+    @Override
+    public void add(OrderItemPojo orderItemPojo) {
         String productBarcode = orderItemPojo.getProductBarcode();
         InventoryPojo inventoryPojo = inventoryApi.getByProductBarcode(productBarcode);
-
         if (Objects.isNull(inventoryPojo)) {
             throw new ApiException("No inventory found for product barcode: " + productBarcode);
         }
-
         if (orderItemPojo.getQuantity() > inventoryPojo.getQuantity()) {
             throw new ApiException("Quantity must be less than available stock in inventory. Available: " + inventoryPojo.getQuantity() + ", Requested: " + orderItemPojo.getQuantity());
         }
-
-        // ✅ Calculate amount
+        // Calculate amount
         double amount = orderItemPojo.getSellingPrice() * orderItemPojo.getQuantity();
         orderItemPojo.setAmount(amount);
-
-        // ✅ Update inventory
+        // Update inventory
         inventoryApi.removeStock(productBarcode, orderItemPojo.getQuantity());
-
         orderItemDao.insert(orderItemPojo);
-        return orderItemPojo;
     }
 
-    public OrderItemPojo get(Integer id) {
-        OrderItemPojo orderItem = orderItemDao.select(id);
-        if (Objects.isNull(orderItem)) {
-            throw new ApiException("Order item with ID " + id + " not found");
-        }
-        return orderItem;
-    }
-
-    public List<OrderItemPojo> getAll() {
-        return orderItemDao.selectAll();
-    }
-
-    public List<OrderItemPojo> getByOrderId(Integer orderId) {
-        return orderItemDao.selectByOrderId(orderId);
-    }
-
-    public List<OrderItemPojo> getByProductBarcode(String barcode) {
-        return orderItemDao.selectByProductBarcode(barcode);
-    }
-
-    public OrderItemPojo update(Integer id, OrderItemPojo updatedOrderItem) {
+    // Unique update logic with inventory management
+    @Override
+    public void update(Integer id, OrderItemPojo updatedOrderItem) {
         OrderItemPojo existingOrderItem = orderItemDao.select(id);
         if (Objects.isNull(existingOrderItem)) {
             throw new ApiException("Order item with ID " + id + " not found");
         }
-
         InventoryPojo inventoryPojo = inventoryApi.getByProductBarcode(existingOrderItem.getProductBarcode());
         if (Objects.isNull(inventoryPojo)) {
             throw new ApiException("No inventory found for product barcode: " + existingOrderItem.getProductBarcode());
         }
-
-        // ✅ Revert old quantity to inventory before check
+        // Revert old quantity to inventory before check
         int oldQty = existingOrderItem.getQuantity();
         int newQty = updatedOrderItem.getQuantity();
         int available = inventoryPojo.getQuantity() + oldQty;
-
         if (newQty > available) {
             throw new ApiException("Quantity must be less than available stock in inventory. Available: " + available + ", Requested: " + newQty);
         }
-
-        // ✅ Update inventory - first restore old quantity, then remove new quantity
+        // Update inventory - first restore old quantity, then remove new quantity
         inventoryApi.addStock(existingOrderItem.getProductBarcode(), oldQty);
         inventoryApi.removeStock(existingOrderItem.getProductBarcode(), newQty);
-
-        // ✅ Update item and recalculate amount
-        existingOrderItem.setOrder(updatedOrderItem.getOrder());
+        // Update item and recalculate amount
+        existingOrderItem.setOrderId(updatedOrderItem.getOrderId());
         existingOrderItem.setProductBarcode(updatedOrderItem.getProductBarcode());
         existingOrderItem.setProductName(updatedOrderItem.getProductName());
         existingOrderItem.setClientName(updatedOrderItem.getClientName());
@@ -94,21 +72,29 @@ public class OrderItemApi {
         existingOrderItem.setProductImageUrl(updatedOrderItem.getProductImageUrl());
         existingOrderItem.setQuantity(newQty);
         existingOrderItem.setSellingPrice(updatedOrderItem.getSellingPrice());
-
         double amount = updatedOrderItem.getSellingPrice() * newQty;
         existingOrderItem.setAmount(amount);
-
         orderItemDao.update(id, existingOrderItem);
-        return orderItemDao.select(id);
     }
 
+    // Unique delete logic with inventory restoration
+    @Override
     public void delete(Integer id) {
         OrderItemPojo orderItem = get(id);
         InventoryPojo inventoryPojo = inventoryApi.getByProductBarcode(orderItem.getProductBarcode());
-
-        // ✅ Restore inventory
+        // Restore inventory
         inventoryApi.addStock(orderItem.getProductBarcode(), orderItem.getQuantity());
-
         orderItemDao.delete(id);
+    }
+
+    public List<OrderItemPojo> getByOrderId(Integer orderId) {
+        System.out.println("OrderItemApi: Getting order items for order ID: " + orderId);
+        List<OrderItemPojo> result = orderItemDao.selectByOrderId(orderId);
+        System.out.println("OrderItemApi: Found " + result.size() + " order items from DAO for order " + orderId);
+        return result;
+    }
+
+    public List<OrderItemPojo> getByProductBarcode(String barcode) {
+        return orderItemDao.selectByProductBarcode(barcode);
     }
 } 

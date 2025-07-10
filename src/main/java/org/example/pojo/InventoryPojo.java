@@ -11,7 +11,15 @@ import lombok.Setter;
 public class InventoryPojo extends AbstractPojo {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.TABLE)
+    @GeneratedValue(strategy = GenerationType.TABLE, generator = "inventory_id_generator")
+    @TableGenerator(
+        name = "inventory_id_generator",
+        table = "id_generators",
+        pkColumnName = "gen_name",
+        valueColumnName = "gen_val",
+        pkColumnValue = "inventory_id",
+        allocationSize = 1
+    )
     private Integer id;
 
     @Column(unique = true)
@@ -28,4 +36,10 @@ public class InventoryPojo extends AbstractPojo {
 
     private Integer quantity;
 
+    public void setProductMrp(Double productMrp) {
+        this.productMrp = productMrp == null ? null : org.example.util.TimeUtil.round2(productMrp);
+    }
+    public Double getProductMrp() {
+        return productMrp == null ? null : org.example.util.TimeUtil.round2(productMrp);
+    }
 }

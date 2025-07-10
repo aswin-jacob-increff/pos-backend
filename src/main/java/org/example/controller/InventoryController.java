@@ -26,6 +26,7 @@ public class InventoryController {
     private InventoryDto inventoryDto;
 
     @PostMapping
+    @org.springframework.transaction.annotation.Transactional
     public InventoryData add(@RequestBody InventoryForm form) {
         return inventoryDto.add(form);
     }
@@ -67,32 +68,69 @@ public class InventoryController {
     }
 
     @PutMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional
     public InventoryData update(@PathVariable Integer id, @RequestBody InventoryForm form) {
         return inventoryDto.update(id, form);
     }
     
     @PutMapping("/{productId}/addStock")
+    @org.springframework.transaction.annotation.Transactional
     public InventoryData addStock(
             @PathVariable String productId,
             @RequestParam Integer quantity
     ) {
-        return inventoryDto.addStock(productId, quantity);
+        // Add validation and logging
+        if (productId == null || productId.trim().isEmpty() || "null".equalsIgnoreCase(productId)) {
+            throw new ApiException("Product barcode cannot be null or empty. Received: '" + productId + "'");
+        }
+        
+        if (quantity == null) {
+            throw new ApiException("Quantity cannot be null");
+        }
+        
+        System.out.println("Adding stock for barcode: '" + productId + "', quantity: " + quantity);
+        
+        return inventoryDto.addStock(productId.trim(), quantity);
     }
     
     @PutMapping("/{productId}/removeStock")
+    @org.springframework.transaction.annotation.Transactional
     public InventoryData removeStock(
             @PathVariable String productId,
             @RequestParam Integer quantity
     ) {
-        return inventoryDto.removeStock(productId, quantity);
+        // Add validation and logging
+        if (productId == null || productId.trim().isEmpty() || "null".equalsIgnoreCase(productId)) {
+            throw new ApiException("Product barcode cannot be null or empty. Received: '" + productId + "'");
+        }
+        
+        if (quantity == null) {
+            throw new ApiException("Quantity cannot be null");
+        }
+        
+        System.out.println("Removing stock for barcode: '" + productId + "', quantity: " + quantity);
+        
+        return inventoryDto.removeStock(productId.trim(), quantity);
     }
     
     @PutMapping("/{productId}/setStock")
+    @org.springframework.transaction.annotation.Transactional
     public InventoryData setStock(
             @PathVariable String productId,
             @RequestParam Integer quantity
     ) {
-        return inventoryDto.setStock(productId, quantity);
+        // Add validation and logging
+        if (productId == null || productId.trim().isEmpty() || "null".equalsIgnoreCase(productId)) {
+            throw new ApiException("Product barcode cannot be null or empty. Received: '" + productId + "'");
+        }
+        
+        if (quantity == null) {
+            throw new ApiException("Quantity cannot be null");
+        }
+        
+        System.out.println("Setting stock for barcode: '" + productId + "', quantity: " + quantity);
+        
+        return inventoryDto.setStock(productId.trim(), quantity);
     }
     
     @GetMapping("/{productId}/image")
@@ -119,6 +157,7 @@ public class InventoryController {
     }
 
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<String> uploadInventoryFromTsv(@RequestParam("file") MultipartFile file) {
         if (file == null || file.isEmpty() || !file.getOriginalFilename().endsWith(".tsv")) {
             throw new ApiException("Please upload a valid non-empty .tsv file.");

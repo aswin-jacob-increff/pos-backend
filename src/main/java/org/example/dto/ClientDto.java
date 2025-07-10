@@ -11,57 +11,51 @@ import org.example.util.ClientTsvParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 import jakarta.validation.Valid;
 
 @Component
-public class ClientDto {
+public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
 
     @Autowired
     private ClientFlow clientFlow;
 
-    public ClientData add(@Valid ClientForm clientForm) {
-        preprocess(clientForm);
-        ClientPojo clientPojo = convert(clientForm);
-        clientFlow.add(clientPojo);
-        return convert(clientPojo);
+    @Override
+    protected String getEntityName() {
+        return "Client";
     }
 
-    public ClientData get(Integer id) {
-        if (Objects.isNull(id)) {
-            throw new ApiException("Integer ID cannot be null.");
+    @Override
+    protected ClientPojo convertFormToEntity(ClientForm clientForm) {
+        ClientPojo clientPojo = new ClientPojo();
+        clientPojo.setClientName(clientForm.getClientName());
+        return clientPojo;
+    }
+
+    @Override
+    protected ClientData convertEntityToData(ClientPojo clientPojo) {
+        ClientData clientData = new ClientData();
+        clientData.setId(clientPojo.getId());
+        clientData.setClientName(clientPojo.getClientName());
+        return clientData;
+    }
+
+    @Override
+    protected void preprocess(ClientForm clientForm) {
+        if (clientForm.getClientName() != null) {
+            clientForm.setClientName(StringUtil.format(clientForm.getClientName()));
         }
-        ClientPojo clientPojo = clientFlow.get(id);
-        return convert(clientPojo);
     }
 
-    public List<ClientData> getAll() {
-        List<ClientPojo> clientPojoList = clientFlow.getAll();
-        List<ClientData> clientDataList = new ArrayList<>();
-        for (ClientPojo clientPojo : clientPojoList) {
-            clientDataList.add(convert(clientPojo));
-        }
-        return clientDataList;
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public ClientData update(Integer id, @Valid ClientForm form) {
+        return super.update(id, form);
     }
 
-    public ClientData update(Integer id, @Valid ClientForm clientForm) {
-        if (Objects.isNull(id)) {
-            throw new ApiException("Client ID cannot be null.");
-        }
-        preprocess(clientForm);
-        return convert(clientFlow.update(id, convert(clientForm)));
-    }
-
-    public void delete(Integer id) {
-        if (Objects.isNull(id)) {
-            throw new IllegalArgumentException("Client ID cannot be null");
-        }
-        clientFlow.delete(id);
-    }
-
+    // Custom methods that don't fit the generic pattern
     public void deleteByName(String name) {
         if (name.trim().isEmpty()) {
             throw new IllegalArgumentException("Client name cannot be null");
@@ -83,25 +77,6 @@ public class ClientDto {
         clientFlow.toggleStatusByName(StringUtil.format(name));
     }
 
-    private void preprocess(ClientForm clientForm) {
-        if (clientForm.getClientName() != null) {
-            clientForm.setClientName(StringUtil.format(clientForm.getClientName()));
-        }
-    }
-
-    private ClientPojo convert(ClientForm clientForm) {
-        ClientPojo clientPojo = new ClientPojo();
-        clientPojo.setClientName(clientForm.getClientName());
-        return clientPojo;
-    }
-
-    private ClientData convert(ClientPojo clientPojo) {
-        ClientData clientData = new ClientData();
-        clientData.setId(clientPojo.getId());
-        clientData.setClientName(clientPojo.getClientName());
-        return clientData;
-    }
-
     public ClientData getByNameOrId(Integer id, String name) {
         name = StringUtil.format(name);
         if (Objects.nonNull(id) && Objects.nonNull(name)) {
@@ -109,7 +84,7 @@ public class ClientDto {
                 ClientPojo idPojo = clientFlow.get(id);
                 ClientPojo namePojo = clientFlow.getByName(name);
                 if (idPojo.equals(namePojo)) {
-                    return convert(idPojo);
+                    return convertEntityToData(idPojo);
                 } else {
                     throw new ApiException("Client Name and Client ID does not match");
                 }
@@ -117,9 +92,9 @@ public class ClientDto {
                 throw new ApiException(e.getMessage());
             }
         } else if (Objects.nonNull(id)) {
-            return convert(clientFlow.get(id));
+            return convertEntityToData(clientFlow.get(id));
         } else {
-            return convert(clientFlow.getByName(name));
+            return convertEntityToData(clientFlow.getByName(name));
         }
     }
 

@@ -11,7 +11,15 @@ import lombok.Setter;
 public class ClientPojo extends AbstractPojo {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.TABLE)
+    @GeneratedValue(strategy = GenerationType.TABLE, generator = "client_id_generator")
+    @TableGenerator(
+        name = "client_id_generator",
+        table = "id_generators",
+        pkColumnName = "gen_name",
+        valueColumnName = "gen_val",
+        pkColumnValue = "client_id",
+        allocationSize = 1
+    )
     private Integer id;
 
     @Column(unique = true)

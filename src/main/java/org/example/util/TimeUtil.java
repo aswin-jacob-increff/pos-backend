@@ -57,4 +57,8 @@ public class TimeUtil {
         if (utcDateTime == null) return null;
         return utcDateTime.atZone(UTC_ZONE).toInstant();
     }
+
+    public static double round2(double value) {
+        return new java.math.BigDecimal(value).setScale(2, java.math.RoundingMode.HALF_UP).doubleValue();
+    }
 } 

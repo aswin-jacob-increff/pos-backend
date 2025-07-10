@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Objects;
+import java.util.ArrayList;
 
 @Component
 public class ReportsDto {
@@ -32,6 +33,8 @@ public class ReportsDto {
     private OrderItemFlow orderItemFlow;
     @Autowired
     private ProductFlow productFlow;
+    @Autowired
+    private org.example.flow.OrderFlow orderFlow;
     
     @Autowired
     private DaySalesDao daySalesRepo;
@@ -56,13 +59,17 @@ public class ReportsDto {
             // Use direct DAO call with proper eager fetching
             List<OrderItemPojo> allItems = orderItemDao.selectAll();
             
-            // Filter by date range
-            List<OrderItemPojo> filtered = allItems.stream().filter(item -> {
-                OrderPojo order = item.getOrder();
-                if (Objects.isNull(order) || Objects.isNull(order.getDate())) return false;
-                Instant orderDate = order.getDate();
-                return !orderDate.isBefore(start) && orderDate.isBefore(end);
-            }).collect(Collectors.toList());
+            // Filter by date range - need to get orders for each item
+            List<OrderItemPojo> filtered = new ArrayList<>();
+            for (OrderItemPojo item : allItems) {
+                OrderPojo order = orderFlow.get(item.getOrderId());
+                if (Objects.nonNull(order) && Objects.nonNull(order.getDate())) {
+                    Instant orderDate = order.getDate();
+                    if (!orderDate.isBefore(start) && orderDate.isBefore(end)) {
+                        filtered.add(item);
+                    }
+                }
+            }
             
             // Filter by brand (clientName) if provided
             if (Objects.nonNull(form.getBrand()) && !form.getBrand().isEmpty()) {
@@ -122,69 +129,55 @@ public class ReportsDto {
         }
         
         try {
-            // Get all day sales within the date range
-            List<DaySalesPojo> daySalesList = daySalesRepo.findByDateRange(form.getStartDate(), form.getEndDate());
+            // Convert LocalDate to UTC Instants for filtering
+            Instant start = form.getStartDate().atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
+            Instant end = form.getEndDate().plusDays(1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
             
-            // Aggregate data by brand
+            // Get all order items and filter by date range
+            List<OrderItemPojo> allItems = orderItemDao.selectAll();
             Map<String, CustomDateRangeSalesData> resultMap = new HashMap<>();
+            Map<Integer, Boolean> processedOrders = new HashMap<>(); // Track processed orders for counting
             
-            for (DaySalesPojo daySales : daySalesList) {
-                if (daySales.getOrders() != null) {
-                    for (OrderPojo order : daySales.getOrders()) {
-                        // Filter by brand if provided
-                        if (Objects.nonNull(form.getBrand()) && !form.getBrand().isEmpty()) {
-                            boolean hasBrand = order.getOrderItems().stream()
-                                .anyMatch(item -> Objects.nonNull(item.getClientName()) &&
-                                                form.getBrand().equalsIgnoreCase(item.getClientName()));
-                            if (!hasBrand) continue;
-                        }
-                        
-                        // Filter by category (product name) if provided
-                        if (Objects.nonNull(form.getCategory()) && !form.getCategory().isEmpty()) {
-                            System.out.println("CustomDateRange filtering by category: " + form.getCategory());
-                            boolean hasCategory = order.getOrderItems().stream()
-                                .anyMatch(item -> Objects.nonNull(item.getProductName()) &&
-                                                form.getCategory().equalsIgnoreCase(item.getProductName()));
-                            if (!hasCategory) continue;
-                        }
-                        
-                        // Aggregate by brand
-                        for (OrderItemPojo item : order.getOrderItems()) {
-                            String brand = item.getClientName() != null ? item.getClientName() : "Unknown";
-                            
-                            CustomDateRangeSalesData data = resultMap.getOrDefault(brand, 
-                                new CustomDateRangeSalesData());
-                            if (data.getBrand() == null) {
-                                data.setBrand(brand);
-                                data.setTotalAmount(0.0);
-                                data.setTotalOrders(0);
-                                data.setTotalItems(0);
-                            }
-                            
-                            data.setTotalAmount(data.getTotalAmount() + (Objects.nonNull(item.getAmount()) ? item.getAmount() : 0.0));
-                            data.setTotalItems(data.getTotalItems() + (Objects.nonNull(item.getQuantity()) ? item.getQuantity() : 0));
-                            resultMap.put(brand, data);
-                        }
-                        
-                        // Count unique orders per brand
-                        String brand = order.getOrderItems().stream()
-                            .filter(item -> Objects.nonNull(item.getClientName()))
-                            .map(OrderItemPojo::getClientName)
-                            .findFirst()
-                            .orElse("Unknown");
-                        
-                        CustomDateRangeSalesData data = resultMap.getOrDefault(brand, 
-                            new CustomDateRangeSalesData());
-                        if (data.getBrand() == null) {
-                            data.setBrand(brand);
-                            data.setTotalAmount(0.0);
-                            data.setTotalOrders(0);
-                            data.setTotalItems(0);
-                        }
-                        data.setTotalOrders(data.getTotalOrders() + 1);
-                        resultMap.put(brand, data);
-                    }
+            for (OrderItemPojo item : allItems) {
+                // Get the order for this item
+                OrderPojo order = orderFlow.get(item.getOrderId());
+                if (Objects.isNull(order) || Objects.isNull(order.getDate())) continue;
+                
+                Instant orderDate = order.getDate();
+                if (orderDate.isBefore(start) || orderDate.isAfter(end)) continue;
+                
+                // Filter by brand if provided
+                if (Objects.nonNull(form.getBrand()) && !form.getBrand().isEmpty()) {
+                    if (!form.getBrand().equalsIgnoreCase(item.getClientName())) continue;
                 }
+                
+                // Filter by category (product name) if provided
+                if (Objects.nonNull(form.getCategory()) && !form.getCategory().isEmpty()) {
+                    System.out.println("CustomDateRange filtering by category: " + form.getCategory());
+                    if (!form.getCategory().equalsIgnoreCase(item.getProductName())) continue;
+                }
+                
+                // Aggregate by brand
+                String brand = item.getClientName() != null ? item.getClientName() : "Unknown";
+                
+                CustomDateRangeSalesData data = resultMap.getOrDefault(brand, new CustomDateRangeSalesData());
+                if (data.getBrand() == null) {
+                    data.setBrand(brand);
+                    data.setTotalAmount(0.0);
+                    data.setTotalOrders(0);
+                    data.setTotalItems(0);
+                }
+                
+                data.setTotalAmount(data.getTotalAmount() + (Objects.nonNull(item.getAmount()) ? item.getAmount() : 0.0));
+                data.setTotalItems(data.getTotalItems() + (Objects.nonNull(item.getQuantity()) ? item.getQuantity() : 0));
+                
+                // Count unique orders per brand
+                if (!processedOrders.containsKey(order.getId())) {
+                    data.setTotalOrders(data.getTotalOrders() + 1);
+                    processedOrders.put(order.getId(), true);
+                }
+                
+                resultMap.put(brand, data);
             }
             
             return resultMap.values().stream().collect(Collectors.toList());
@@ -222,7 +215,7 @@ public class ReportsDto {
     
     public List<DaySalesForm> getAllDaySales() {
         try {
-            List<DaySalesPojo> daySalesList = daySalesRepo.findAll();
+            List<DaySalesPojo> daySalesList = daySalesRepo.selectAll();
             return daySalesList.stream()
                 .map(daySales -> {
                     DaySalesForm form = new DaySalesForm();

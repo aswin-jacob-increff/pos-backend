@@ -1,10 +1,10 @@
 package org.example.flow;
 
-import org.example.exception.ApiException;
-import org.example.pojo.OrderItemPojo;
 import org.example.pojo.OrderPojo;
-import org.example.api.OrderItemApi;
+import org.example.pojo.OrderItemPojo;
 import org.example.api.OrderApi;
+import org.example.api.OrderItemApi;
+import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,7 +12,7 @@ import java.util.List;
 
 @Service
 @Transactional
-public class OrderFlow {
+public class OrderFlow extends AbstractFlow<OrderPojo> {
 
     @Autowired
     private OrderApi api;
@@ -20,29 +20,27 @@ public class OrderFlow {
     @Autowired
     private OrderItemApi orderItemApi;
 
+    @Override
+    protected Integer getEntityId(OrderPojo entity) {
+        return entity.getId();
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "Order";
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
     public OrderPojo add(OrderPojo orderPojo) {
-        List<OrderItemPojo> orderItems = orderPojo.getOrderItems();
-
-        if (orderItems == null || orderItems.isEmpty()) {
-            throw new ApiException("Order must contain at least one item");
-        }
-
-        // Create the order with all items - OrderApi handles the complete creation
-        return api.add(orderPojo);
+        // Order items are now managed separately in OrderApi
+        // The order itself is created first, then items are added
+        api.add(orderPojo);
+        return orderPojo;
     }
 
-    public OrderPojo get(Integer id) {
-        return api.get(id);
-    }
-
-    public List<OrderPojo> getAll() {
-        return api.getAll();
-    }
-
-    public OrderPojo update(Integer id, OrderPojo form) {
-        return api.update(id, form);
-    }
-
+    @Override
+    @org.springframework.transaction.annotation.Transactional
     public void delete(Integer id) {
         List<OrderItemPojo> orderItemPojoList = orderItemApi.getByOrderId(id);
         for (OrderItemPojo orderItemPojo : orderItemPojoList) {
@@ -76,5 +74,19 @@ public class OrderFlow {
 
     public void updateStatus(Integer id, org.example.pojo.OrderStatus status) {
         api.updateStatus(id, status);
+    }
+
+    /**
+     * Get orders within a date range
+     * @param startDate Start date (inclusive)
+     * @param endDate End date (inclusive)
+     * @return List of orders within the date range
+     */
+    public List<OrderPojo> getOrdersByDateRange(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        return api.getOrdersByDateRange(startDate, endDate);
+    }
+
+    public List<OrderPojo> getOrdersByUserId(String userId) {
+        return api.findByUserId(userId);
     }
 }

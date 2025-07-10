@@ -17,7 +17,7 @@ import jakarta.validation.Valid;
 import org.example.util.TimeUtil;
 
 @Component
-public class OrderItemDto {
+public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, OrderItemData> {
 
     @Autowired
     private OrderItemFlow orderItemFlow;
@@ -28,57 +28,13 @@ public class OrderItemDto {
     @Autowired
     private ProductApi productApi;
 
-    public OrderItemData add(@Valid OrderItemForm orderItemForm) {
-        preprocess(orderItemForm);
-        OrderItemPojo orderItemPojo = convert(orderItemForm);
-        orderItemFlow.add(orderItemPojo);
-        return convert(orderItemPojo);
+    @Override
+    protected String getEntityName() {
+        return "OrderItem";
     }
 
-    public OrderItemData get(Integer id) {
-        if (Objects.isNull(id)) {
-            throw new ApiException("Order Item ID cannot be null");
-        }
-        return convert(orderItemFlow.get(id));
-    }
-
-    public List<OrderItemData> getAll() {
-        List<OrderItemPojo> orderItemPojoList = orderItemFlow.getAll();
-        List<OrderItemData> orderItemDataList = new ArrayList<>();
-        for (OrderItemPojo orderItemPojo : orderItemPojoList) {
-            orderItemDataList.add(convert(orderItemPojo));
-        }
-        return orderItemDataList;
-    }
-
-    public List<OrderItemData> getByOrderId(Integer orderId) {
-        if (Objects.isNull(orderId)) {
-            throw new ApiException("Order ID cannot be null");
-        }
-        List<OrderItemPojo> orderItemPojoList = orderItemFlow.getByOrderId(orderId);
-        List<OrderItemData> orderItemDataList = new ArrayList<>();
-        for (OrderItemPojo orderItemPojo : orderItemPojoList) {
-            orderItemDataList.add(convert(orderItemPojo));
-        }
-        return orderItemDataList;
-    }
-
-    public OrderItemData update(@Valid OrderItemForm orderItemForm, Integer id) {
-        if (Objects.isNull(id)) {
-            throw new ApiException("Order Item ID cannot be null");
-        }
-        preprocess(orderItemForm);
-        return convert(orderItemFlow.update(convert(orderItemForm), id));
-    }
-
-    public void delete(Integer id) {
-        if (Objects.isNull(id)) {
-            throw new ApiException("Order Item ID cannot be null");
-        }
-        orderItemFlow.delete(id);
-    }
-
-    private void preprocess(OrderItemForm orderItemForm) {
+    @Override
+    protected void preprocess(OrderItemForm orderItemForm) {
         // Cross-field/entity logic: orderId lookup, productId/productName/barcode lookup, base64 image validation
         if (Objects.isNull(orderItemForm.getOrderId())) {
             throw new ApiException("Order ID cannot be null");
@@ -108,9 +64,10 @@ public class OrderItemDto {
         }
     }
 
-    private OrderItemPojo convert(OrderItemForm orderItemForm) {
+    @Override
+    protected OrderItemPojo convertFormToEntity(OrderItemForm orderItemForm) {
         OrderItemPojo orderItemPojo = new OrderItemPojo();
-        orderItemPojo.setOrder(orderApi.get(orderItemForm.getOrderId()));
+        orderItemPojo.setOrderId(orderItemForm.getOrderId());
         
         // Get product details and set denormalized fields
         var product = productApi.get(orderItemForm.getProductId());
@@ -122,10 +79,8 @@ public class OrderItemDto {
         
         orderItemPojo.setQuantity(orderItemForm.getQuantity());
         orderItemPojo.setSellingPrice(product.getMrp());
-        // Convert LocalDateTime (IST from frontend) to Instant (UTC) for DB if dateTime is present
-        if (orderItemForm.getDateTime() != null) {
-            orderItemPojo.getOrder().setDate(TimeUtil.toUTC(orderItemForm.getDateTime()));
-        }
+        orderItemPojo.setAmount(product.getMrp() * orderItemForm.getQuantity());
+        
         // Handle base64 image if provided (this would update the product's image)
         if (orderItemForm.getImage() != null && !orderItemForm.getImage().trim().isEmpty()) {
             // For now, we'll just validate the image
@@ -134,7 +89,8 @@ public class OrderItemDto {
         return orderItemPojo;
     }
 
-    private OrderItemData convert(OrderItemPojo orderItemPojo) {
+    @Override
+    protected OrderItemData convertEntityToData(OrderItemPojo orderItemPojo) {
         OrderItemData orderItemData = new OrderItemData();
         orderItemData.setId(orderItemPojo.getId());
         // Since we don't have productId in OrderItemPojo anymore, we need to look it up by barcode
@@ -149,8 +105,17 @@ public class OrderItemDto {
         orderItemData.setProductName(orderItemPojo.getProductName());
         orderItemData.setQuantity(orderItemPojo.getQuantity());
         orderItemData.setSellingPrice(orderItemPojo.getSellingPrice());
-        // Convert UTC Instant from DB to IST LocalDateTime for frontend
-        orderItemData.setDateTime(TimeUtil.toIST(orderItemPojo.getOrder().getDate()));
+        orderItemData.setAmount(orderItemPojo.getAmount());
+        
+        // Get order date from the order
+        try {
+            var order = orderApi.get(orderItemPojo.getOrderId());
+            orderItemData.setDateTime(TimeUtil.toIST(order.getDate()));
+        } catch (Exception e) {
+            // If order not found, set to null
+            orderItemData.setDateTime(null);
+        }
+        
         // Set imageUrl as reference to product image endpoint
         if (orderItemPojo.getProductImageUrl() != null && !orderItemPojo.getProductImageUrl().trim().isEmpty()) {
             try {
@@ -162,6 +127,22 @@ public class OrderItemDto {
         }
         return orderItemData;
     }
+
+    public List<OrderItemData> getByOrderId(Integer orderId) {
+        if (Objects.isNull(orderId)) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        System.out.println("OrderItemDto: Getting order items for order ID: " + orderId);
+        List<OrderItemPojo> orderItemPojoList = orderItemFlow.getByOrderId(orderId);
+        System.out.println("OrderItemDto: Found " + orderItemPojoList.size() + " order item POJOs for order " + orderId);
+        List<OrderItemData> orderItemDataList = new ArrayList<>();
+        for (OrderItemPojo orderItemPojo : orderItemPojoList) {
+            System.out.println("OrderItemDto: Converting order item POJO ID: " + orderItemPojo.getId());
+            orderItemDataList.add(convertEntityToData(orderItemPojo));
+        }
+        System.out.println("OrderItemDto: Returning " + orderItemDataList.size() + " order item data objects");
+        return orderItemDataList;
+    }
     
     private boolean isValidBase64(String str) {
         try {
@@ -170,5 +151,11 @@ public class OrderItemDto {
         } catch (IllegalArgumentException e) {
             return false;
         }
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public OrderItemData update(Integer id, @Valid OrderItemForm form) {
+        return super.update(id, form);
     }
 }

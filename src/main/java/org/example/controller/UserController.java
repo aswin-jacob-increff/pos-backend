@@ -36,22 +36,35 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<UserData> login(@RequestBody UserForm form, HttpServletRequest request) {
         try {
+            System.out.println("=== Login attempt for: " + form.getEmail() + " ===");
+            
             // Invalidate any existing session
             HttpSession oldSession = request.getSession(false);
             if (oldSession != null) {
+                System.out.println("Invalidating old session: " + oldSession.getId());
                 oldSession.invalidate();
             }
+            
             // Create a new session
             HttpSession newSession = request.getSession(true);
+            System.out.println("Created new session: " + newSession.getId());
 
             UserData userData = userDto.login(form);
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(form.getEmail(), form.getPassword())
             );
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            
+            // Store user email in session as fallback
+            newSession.setAttribute("userEmail", form.getEmail());
+            
+            System.out.println("Authentication set for: " + authentication.getName());
+            System.out.println("Session ID after login: " + newSession.getId());
+            System.out.println("Session is new: " + newSession.isNew());
 
             return ResponseEntity.ok(userData);
         } catch (Exception e) {
+            System.out.println("Login failed: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(401).body(null);
         }
@@ -61,81 +74,42 @@ public class UserController {
     @PostMapping("/logout")
     public ResponseEntity<String> logout(HttpServletRequest request, HttpServletResponse response) {
         try {
-            System.out.println("=== Starting Enhanced Logout Process ===");
-            
-            // 1. Clear Spring Security context first
+            // 1. Clear Spring Security context
             SecurityContextHolder.clearContext();
-            System.out.println("✓ Spring Security context cleared");
-            
+
             // 2. Invalidate the session
             HttpSession session = request.getSession(false);
             if (session != null) {
-                String sessionId = session.getId();
                 session.invalidate();
-                System.out.println("✓ Session invalidated: " + sessionId);
-            } else {
-                System.out.println("✓ No session to invalidate");
             }
-            
-            // 3. Enhanced cookie clearing with specific handling for JSESSIONID
+
+            // 3. Clear all cookies present in the request
             Cookie[] cookies = request.getCookies();
             if (cookies != null) {
-                System.out.println("Found " + cookies.length + " cookies to clear:");
                 for (Cookie cookie : cookies) {
-                    System.out.println("  - " + cookie.getName() + " = " + cookie.getValue());
-                    
-                    // Special handling for JSESSIONID cookies (including node_ prefix)
-                    if (cookie.getName().equals("JSESSIONID") || 
-                        cookie.getName().contains("SESSION") ||
-                        cookie.getValue() != null && cookie.getValue().startsWith("node_")) {
-                        
-                        System.out.println("    Special handling for session cookie: " + cookie.getName());
-                        
-                        // Clear with multiple paths and domains
-                        String[] paths = {"/", "/api", ""};
-                        for (String path : paths) {
-                            Cookie newCookie = new Cookie(cookie.getName(), "");
-                            newCookie.setPath(path);
-                            newCookie.setMaxAge(0);
-                            newCookie.setHttpOnly(true);
-                            newCookie.setSecure(false);
-                            response.addCookie(newCookie);
-                        }
-                        
-                        // Also try with explicit domain
-                        Cookie domainCookie = new Cookie(cookie.getName(), "");
-                        domainCookie.setPath("/");
-                        domainCookie.setDomain(request.getServerName());
-                        domainCookie.setMaxAge(0);
-                        domainCookie.setHttpOnly(true);
-                        domainCookie.setSecure(false);
-                        response.addCookie(domainCookie);
-                    } else {
-                        // Clear regular cookies
-                        Cookie newCookie = new Cookie(cookie.getName(), "");
-                        newCookie.setPath("/");
-                        newCookie.setMaxAge(0);
-                        newCookie.setHttpOnly(true);
-                        newCookie.setSecure(false);
-                        response.addCookie(newCookie);
-                    }
+                    Cookie cleared = new Cookie(cookie.getName(), "");
+                    cleared.setPath("/");
+                    cleared.setMaxAge(0);
+                    cleared.setHttpOnly(true);
+                    cleared.setSecure(false); // Set to true if using HTTPS
+                    response.addCookie(cleared);
                 }
-            } else {
-                System.out.println("✓ No cookies found to clear");
             }
-            
-            // 4. Force clear JSESSIONID with multiple approaches
-            String[] jsessionVariants = {"JSESSIONID", "jsessionid", "JSESSION", "jsession"};
-            for (String jsessionName : jsessionVariants) {
-                Cookie forceCookie = new Cookie(jsessionName, "");
-                forceCookie.setPath("/");
-                forceCookie.setMaxAge(0);
-                forceCookie.setHttpOnly(true);
-                forceCookie.setSecure(false);
-                response.addCookie(forceCookie);
-                
-                // Also with domain
-                Cookie domainCookie = new Cookie(jsessionName, "");
+
+            // 4. Explicitly clear JSESSIONID and common variants with multiple paths/domains
+            String[] sessionCookieNames = {"JSESSIONID", "jsessionid", "SESSION", "session"};
+            String[] paths = {"/", "/api", ""};
+            for (String name : sessionCookieNames) {
+                for (String path : paths) {
+                    Cookie c = new Cookie(name, "");
+                    c.setPath(path);
+                    c.setMaxAge(0);
+                    c.setHttpOnly(true);
+                    c.setSecure(false);
+                    response.addCookie(c);
+                }
+                // Also try with explicit domain
+                Cookie domainCookie = new Cookie(name, "");
                 domainCookie.setPath("/");
                 domainCookie.setDomain(request.getServerName());
                 domainCookie.setMaxAge(0);
@@ -144,29 +118,28 @@ public class UserController {
                 response.addCookie(domainCookie);
             }
 
-            // Clear __reveal_ut cookie
-            Cookie revealCookie = new Cookie("__reveal_ut", "");
-            revealCookie.setPath("/");
-            revealCookie.setDomain("localhost");
-            revealCookie.setMaxAge(0);
-            revealCookie.setHttpOnly(true);
-            revealCookie.setSecure(false); // Set to true if using HTTPS
-            response.addCookie(revealCookie);
-            
-            // 5. Add comprehensive response headers
+            // Explicitly clear __reveal_ut cookie with all common paths and domains
+            String[] revealPaths = {"/", "/api", ""};
+            for (String path : revealPaths) {
+                Cookie reveal = new Cookie("__reveal_ut", "");
+                reveal.setPath(path);
+                reveal.setMaxAge(0);
+                reveal.setHttpOnly(true);
+                reveal.setSecure(false); // Set to true if using HTTPS
+                response.addCookie(reveal);
+            }
+            // Also try with explicit domain
+            Cookie revealDomain = new Cookie("__reveal_ut", "");
+            revealDomain.setPath("/");
+            revealDomain.setDomain(request.getServerName());
+            revealDomain.setMaxAge(0);
+            revealDomain.setHttpOnly(true);
+            revealDomain.setSecure(false);
+            response.addCookie(revealDomain);
+
+            // 5. Add Clear-Site-Data header for extra safety
             response.setHeader("Clear-Site-Data", "\"cache\", \"cookies\", \"storage\", \"executionContexts\"");
-            response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
-            response.setHeader("Pragma", "no-cache");
-            response.setHeader("Expires", "Thu, 01 Jan 1970 00:00:00 GMT");
-            
-            // 6. Force session timeout with multiple Set-Cookie headers
-            response.addHeader("Set-Cookie", "JSESSIONID=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly");
-            response.addHeader("Set-Cookie", "jsessionid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly");
-            response.addHeader("Set-Cookie", "JSESSIONID=; Path=/; Domain=" + request.getServerName() + "; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly");
-            
-            System.out.println("✓ Enhanced logout completed - All session data cleared");
-            System.out.println("=== Logout Process Complete ===");
-            
+
             return ResponseEntity.ok("Logged out successfully");
         } catch (Exception e) {
             e.printStackTrace();
@@ -176,18 +149,55 @@ public class UserController {
 
     // Get current user info
     @GetMapping("/me")
-    public ResponseEntity<UserData> getCurrentUser() {
+    public ResponseEntity<UserData> getCurrentUser(HttpServletRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        HttpSession session = request.getSession(false);
+        
+        // Debug logging
+        System.out.println("=== /api/user/me called ===");
+        System.out.println("Authentication: " + (authentication != null ? authentication.getName() : "null"));
+        System.out.println("Authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        System.out.println("Session: " + (session != null ? session.getId() : "null"));
+        System.out.println("Session Valid: " + (session != null && !session.isNew()));
+        
+        // Check cookies
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            System.out.println("Cookies received:");
+            for (Cookie cookie : cookies) {
+                System.out.println("  " + cookie.getName() + "=" + cookie.getValue());
+            }
+        } else {
+            System.out.println("No cookies received");
+        }
+        
+        String userEmail = null;
+        
+        // Try SecurityContext first
         if (authentication != null && authentication.isAuthenticated()) {
-            String email = authentication.getName();
+            userEmail = authentication.getName();
+            System.out.println("User from SecurityContext: " + userEmail);
+        }
+        // Fallback: try to get user from session
+        else if (session != null && !session.isNew()) {
+            userEmail = (String) session.getAttribute("userEmail");
+            System.out.println("User from session: " + userEmail);
+        }
+        
+        if (userEmail != null) {
             try {
-                UserData userData = userDto.getUserByEmail(email);
+                UserData userData = userDto.getUserByEmail(userEmail);
+                System.out.println("User found: " + userEmail);
                 return ResponseEntity.ok(userData);
             } catch (Exception e) {
+                System.out.println("Error getting user by email: " + e.getMessage());
+                e.printStackTrace();
                 return ResponseEntity.notFound().build();
             }
+        } else {
+            System.out.println("No valid authentication found");
+            return ResponseEntity.status(401).build();
         }
-        return ResponseEntity.status(401).build();
     }
 
     // Test endpoint to create a user programmatically
@@ -197,6 +207,7 @@ public class UserController {
             UserForm form = new UserForm();
             form.setEmail("admin@example.com");
             form.setPassword("admin123");
+            form.setRole("SUPERVISOR");
             userDto.signup(form);
             return ResponseEntity.ok("User created successfully");
         } catch (Exception e) {

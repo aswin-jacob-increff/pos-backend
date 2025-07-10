@@ -8,15 +8,21 @@ import java.util.List;
 import jakarta.persistence.criteria.*;
 
 @Repository
-public class DaySalesDao {
-    @PersistenceContext
-    private EntityManager em;
+public class DaySalesDao extends AbstractDao<DaySalesPojo> {
+
+    public DaySalesDao() {
+        super(DaySalesPojo.class);
+    }
 
     public void saveOrUpdate(DaySalesPojo daySales) {
         try {
-            if (daySales.getDate() != null && findByDate(daySales.getDate()) != null) {
+            DaySalesPojo existing = findByDate(daySales.getDate());
+            if (existing != null) {
                 // Update existing entity
-                em.merge(daySales);
+                existing.setTotalRevenue(daySales.getTotalRevenue());
+                existing.setInvoicedOrdersCount(daySales.getInvoicedOrdersCount());
+                existing.setInvoicedItemsCount(daySales.getInvoicedItemsCount());
+                em.merge(existing);
             } else {
                 // Persist new entity
                 em.persist(daySales);
@@ -53,11 +59,21 @@ public class DaySalesDao {
         return em.find(DaySalesPojo.class, date);
     }
     
-    public List<DaySalesPojo> findAll() {
+    @Override
+    public List<DaySalesPojo> selectAll() {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<DaySalesPojo> cq = cb.createQuery(DaySalesPojo.class);
         Root<DaySalesPojo> root = cq.from(DaySalesPojo.class);
         cq.select(root).orderBy(cb.desc(root.get("date")));
         return em.createQuery(cq).getResultList();
+    }
+
+    @Override
+    protected void updateEntity(DaySalesPojo existing, DaySalesPojo updated) {
+        existing.setDate(updated.getDate());
+        existing.setTotalRevenue(updated.getTotalRevenue());
+        existing.setInvoicedOrdersCount(updated.getInvoicedOrdersCount());
+        existing.setInvoicedItemsCount(updated.getInvoicedItemsCount());
+        // Orders are now denormalized and managed separately
     }
 } 

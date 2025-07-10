@@ -2,6 +2,7 @@ package org.example.dto;
 
 import org.example.flow.OrderFlow;
 import org.example.flow.ProductFlow;
+import org.example.flow.OrderItemFlow;
 import org.example.api.InvoiceApi;
 import org.example.model.OrderData;
 import org.example.model.OrderForm;
@@ -27,7 +28,7 @@ import java.util.Objects;
 import java.time.format.DateTimeFormatter;
 
 @Component
-public class OrderDto {
+public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
 
     @Autowired
     private OrderFlow orderFlow;
@@ -40,112 +41,71 @@ public class OrderDto {
 
     @Autowired
     private InvoiceApi invoiceApi;
-
-    public OrderData add(@Valid OrderForm orderForm) {
-        OrderPojo orderPojo = orderFlow.add(convert(orderForm));
-        return convert(orderPojo);
-    }
-
-    public OrderData get(Integer id) {
-        validateOrderId(id);
-        return convert(orderFlow.get(id));
-    }
-
-    public List<OrderData> getAll() {
-        List<OrderPojo> orderPojoList = orderFlow.getAll();
-        List<OrderData> orderDataList = new ArrayList<>();
-        for (OrderPojo orderPojo : orderPojoList) {
-            orderDataList.add(convert(orderPojo));
-        }
-        return orderDataList;
-    }
-
-    public OrderData update(Integer id, @Valid OrderForm orderForm) {
-        validateOrderId(id);
-        return convert(orderFlow.update(id, convert(orderForm)));
-    }
-
-    public void delete(Integer id) {
-        validateOrderId(id);
-        orderFlow.delete(id);
-    }
     
-    public void cancelOrder(Integer id) {
-        validateOrderId(id);
-        orderFlow.cancelOrder(id);
-    }
+    @Autowired
+    private org.example.api.OrderItemApi orderItemApi;
     
-    private void validateOrderId(Integer id) {
-        if (id == null) {
-            throw new ApiException("Order ID cannot be null");
-        }
-        if (id <= 0) {
-            throw new ApiException("Order ID must be positive");
-        }
+    @Autowired
+    private org.example.dto.OrderItemDto orderItemDto;
+    
+    @Autowired
+    private org.example.flow.OrderItemFlow orderItemFlow;
+
+    @Override
+    protected String getEntityName() {
+        return "Order";
     }
 
-    private OrderPojo convert(OrderForm orderForm) {
+    @Override
+    protected OrderPojo convertFormToEntity(OrderForm orderForm) {
         OrderPojo orderPojo = new OrderPojo();
         // Convert LocalDateTime (IST from frontend) to Instant (UTC) for DB storage
         orderPojo.setDate(orderForm.getDate() != null ? TimeUtil.toUTC(orderForm.getDate()) : null);
         orderPojo.setTotal(0.0);
-        if (orderForm.getOrderItemFormList() != null) {
-            List<OrderItemPojo> itemPojoList = new ArrayList<>();
-            for (OrderItemForm itemForm : orderForm.getOrderItemFormList()) {
-                OrderItemPojo itemPojo = new OrderItemPojo();
-                itemPojo.setQuantity(itemForm.getQuantity());
-                itemPojo.setSellingPrice(itemForm.getSellingPrice());
-                itemPojo.setAmount(itemForm.getSellingPrice() * itemForm.getQuantity());
-                ProductPojo product = productFlow.get(itemForm.getProductId());
-                if (product == null) {
-                    throw new ApiException("Product with ID " + itemForm.getProductId() + " not found");
-                }
-                // Set product details directly in order item
-                itemPojo.setProductBarcode(product.getBarcode());
-                itemPojo.setProductName(product.getName());
-                itemPojo.setClientName(product.getClientName());
-                itemPojo.setProductMrp(product.getMrp());
-                itemPojo.setProductImageUrl(product.getImageUrl());
-                itemPojoList.add(itemPojo);
-            }
-            orderPojo.setOrderItems(itemPojoList);
-        }
+        orderPojo.setUserId(orderForm.getUserId());
+        // Note: Order items are now managed separately in the order creation process
+        // The order is created first, then items are added with orderId reference
         return orderPojo;
     }
 
-    private OrderData convert(OrderPojo orderPojo) {
+    @Override
+    protected OrderData convertEntityToData(OrderPojo orderPojo) {
         OrderData orderData = new OrderData();
         orderData.setId(orderPojo.getId());
         // Convert UTC Instant from DB to IST LocalDateTime for frontend
         orderData.setDate(TimeUtil.toIST(orderPojo.getDate()));
         orderData.setTotal(orderPojo.getTotal());
         orderData.setStatus(orderPojo.getStatus());
-
-        if (orderPojo.getOrderItems() != null) {
-            List<OrderItemData> orderItemDataList = new ArrayList<>();
-            for (OrderItemPojo itemPojo : orderPojo.getOrderItems()) {
-                OrderItemData itemData = new OrderItemData();
-                itemData.setId(itemPojo.getId());
-                itemData.setQuantity(itemPojo.getQuantity());
-                itemData.setSellingPrice(itemPojo.getSellingPrice());
-                itemData.setAmount(itemPojo.getAmount());
-                itemData.setProductId(null); // No longer have product ID reference
-                itemData.setProductName(itemPojo.getProductName());
-                // Convert UTC Instant from DB to IST LocalDateTime for frontend
-                itemData.setDateTime(TimeUtil.toIST(orderPojo.getDate()));
-                if (itemPojo.getProductImageUrl() != null && !itemPojo.getProductImageUrl().trim().isEmpty()) {
-                    itemData.setImageUrl(itemPojo.getProductImageUrl());
-                }
-                orderItemDataList.add(itemData);
-            }
-            orderData.setOrderItemDataList(orderItemDataList);
+        orderData.setUserId(orderPojo.getUserId());
+        
+        // Fetch order items for this order using OrderItemDto
+        try {
+            System.out.println("Fetching order items for order ID: " + orderPojo.getId());
+            List<OrderItemData> orderItems = orderItemDto.getByOrderId(orderPojo.getId());
+            System.out.println("Found " + orderItems.size() + " order items for order " + orderPojo.getId());
+            orderData.setOrderItemDataList(orderItems);
+        } catch (Exception e) {
+            // If order items cannot be fetched, set empty list
+            System.out.println("Warning: Could not fetch order items for order " + orderPojo.getId() + ": " + e.getMessage());
+            e.printStackTrace();
+            orderData.setOrderItemDataList(new ArrayList<>());
         }
-
+        
         return orderData;
     }
 
+    // Custom methods
+    public void cancelOrder(Integer id) {
+        if (id == null) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        orderFlow.cancelOrder(id);
+    }
+
     public org.springframework.core.io.Resource downloadInvoice(Integer orderId) {
-        validateOrderId(orderId);
+        if (orderId == null) {
+            throw new ApiException("Order ID cannot be null");
+        }
         OrderPojo orderPojo = orderFlow.get(orderId);
         
         try {
@@ -167,11 +127,14 @@ public class OrderDto {
                 System.out.println("No invoice found in database, creating new one...");
             }
             
+            // Get order items for this order
+            List<OrderItemPojo> orderItems = orderItemApi.getByOrderId(orderId);
+            
             // Create InvoiceData object to send to invoice service
             InvoiceData invoiceData = new InvoiceData();
             invoiceData.setOrderId(orderPojo.getId());
             invoiceData.setTotal(orderPojo.getTotal());
-            invoiceData.setTotalQuantity(orderPojo.getOrderItems().stream()
+            invoiceData.setTotalQuantity(orderItems.stream()
                     .mapToInt(OrderItemPojo::getQuantity).sum());
             invoiceData.setId(orderPojo.getId());
             // Convert UTC Instant to IST String for invoice in dd/mm/yyyy hh:mm format
@@ -180,7 +143,7 @@ public class OrderDto {
 
             // Convert order items to invoice items
             List<InvoiceItemData> invoiceItemDataList = new ArrayList<>();
-            for (OrderItemPojo itemPojo : orderPojo.getOrderItems()) {
+            for (OrderItemPojo itemPojo : orderItems) {
                 InvoiceItemData itemData = new InvoiceItemData();
                 itemData.setId(itemPojo.getId());
                 itemData.setProductId(null); // No longer have product ID reference
@@ -260,8 +223,82 @@ public class OrderDto {
         }
     }
 
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public OrderData add(@Valid OrderForm form) {
+        preprocess(form);
+        OrderPojo orderPojo = convertFormToEntity(form);
+        
+        // Create the order first
+        orderFlow.add(orderPojo);
+        
+        // Now create the order items
+        if (form.getOrderItemFormList() != null && !form.getOrderItemFormList().isEmpty()) {
+            System.out.println("Creating " + form.getOrderItemFormList().size() + " order items for order " + orderPojo.getId());
+            
+            double totalAmount = 0.0;
+            for (OrderItemForm itemForm : form.getOrderItemFormList()) {
+                // Set the order ID for each item
+                itemForm.setOrderId(orderPojo.getId());
+                
+                // Create order item using OrderItemDto
+                OrderItemPojo orderItemPojo = orderItemDto.convertFormToEntity(itemForm);
+                orderItemFlow.add(orderItemPojo);
+                
+                totalAmount += orderItemPojo.getAmount();
+            }
+            
+            // Update order total
+            orderPojo.setTotal(totalAmount);
+            orderFlow.update(orderPojo.getId(), orderPojo);
+            
+            System.out.println("Created order items successfully. Total amount: " + totalAmount);
+        }
+        
+        return convertEntityToData(orderPojo);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public OrderData update(Integer id, @Valid OrderForm form) {
+        return super.update(id, form);
+    }
+
 
     
+    /**
+     * Get orders within a date range
+     * @param startDate Start date (inclusive)
+     * @param endDate End date (inclusive)
+     * @return List of order data within the date range
+     */
+    public List<OrderData> getOrdersByDateRange(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            throw new ApiException("Start date and end date cannot be null");
+        }
+        if (endDate.isBefore(startDate)) {
+            throw new ApiException("End date cannot be before start date");
+        }
+        
+        List<OrderPojo> orderPojos = orderFlow.getOrdersByDateRange(startDate, endDate);
+        List<OrderData> orderDataList = new ArrayList<>();
+        
+        for (OrderPojo orderPojo : orderPojos) {
+            orderDataList.add(convertEntityToData(orderPojo));
+        }
+        
+        return orderDataList;
+    }
+
+    public List<OrderData> getOrdersByUserId(String userId) {
+        List<OrderPojo> orderPojos = orderFlow.getOrdersByUserId(userId);
+        List<OrderData> orderDataList = new ArrayList<>();
+        for (OrderPojo orderPojo : orderPojos) {
+            orderDataList.add(convertEntityToData(orderPojo));
+        }
+        return orderDataList;
+    }
+
     /**
      * Format date for invoice in "Date: dd/mm/yyyy. Time: hh:mm" format
      */

@@ -15,5 +15,11 @@ public class ProductData {
     private Double mrp;
     private String imageUrl; // Reference to image endpoint: /api/products/{id}/image
 
+    public void setMrp(Double mrp) {
+        this.mrp = mrp == null ? null : org.example.util.TimeUtil.round2(mrp);
+    }
+    public Double getMrp() {
+        return mrp == null ? null : org.example.util.TimeUtil.round2(mrp);
+    }
 }
 

@@ -12,7 +12,15 @@ import org.example.enums.Role;
 public class UserPojo extends AbstractPojo {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.TABLE)
+    @GeneratedValue(strategy = GenerationType.TABLE, generator = "user_id_generator")
+    @TableGenerator(
+        name = "user_id_generator",
+        table = "id_generators",
+        pkColumnName = "gen_name",
+        valueColumnName = "gen_val",
+        pkColumnValue = "user_id",
+        allocationSize = 1
+    )
     private Integer id;
 
     @Column(nullable = false)

@@ -7,21 +7,17 @@ import java.util.List;
 import org.example.pojo.OrderItemPojo;
 
 @Repository
-public class OrderItemDao {
+public class OrderItemDao extends AbstractDao<OrderItemPojo> {
 
-    @PersistenceContext
-    private EntityManager em;
-
-    public void insert(OrderItemPojo item) {
-        em.persist(item);
+    public OrderItemDao() {
+        super(OrderItemPojo.class);
     }
 
+    @Override
     public OrderItemPojo select(Integer id) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderItemPojo> query = cb.createQuery(OrderItemPojo.class);
         Root<OrderItemPojo> root = query.from(OrderItemPojo.class);
-        // Fetch order directly
-        root.fetch("order", JoinType.LEFT);
         query.select(root)
              .where(cb.equal(root.get("id"), id));
         try {
@@ -34,48 +30,34 @@ public class OrderItemDao {
         }
     }
 
+    @Override
     public List<OrderItemPojo> selectAll() {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderItemPojo> query = cb.createQuery(OrderItemPojo.class);
         Root<OrderItemPojo> root = query.from(OrderItemPojo.class);
-        // Fetch order directly
-        root.fetch("order", JoinType.LEFT);
         query.select(root);
         return em.createQuery(query).getResultList();
     }
 
-    public void update(Integer id, OrderItemPojo item) {
-        // Preserve the version field to avoid optimistic locking conflicts
-        OrderItemPojo existing = select(id);
-        if (existing != null) {
-            existing.setOrder(item.getOrder());
-            existing.setProductBarcode(item.getProductBarcode());
-            existing.setProductName(item.getProductName());
-            existing.setClientName(item.getClientName());
-            existing.setProductMrp(item.getProductMrp());
-            existing.setProductImageUrl(item.getProductImageUrl());
-            existing.setQuantity(item.getQuantity());
-            existing.setSellingPrice(item.getSellingPrice());
-            existing.setAmount(item.getAmount());
-            em.merge(existing);
-        }
-    }
-
-    public void delete(Integer id) {
-        OrderItemPojo item = select(id);
-        if(item != null) {
-            em.remove(item);
-        }
+    @Override
+    protected void updateEntity(OrderItemPojo existing, OrderItemPojo updated) {
+        existing.setOrderId(updated.getOrderId());
+        existing.setProductBarcode(updated.getProductBarcode());
+        existing.setProductName(updated.getProductName());
+        existing.setClientName(updated.getClientName());
+        existing.setProductMrp(updated.getProductMrp());
+        existing.setProductImageUrl(updated.getProductImageUrl());
+        existing.setQuantity(updated.getQuantity());
+        existing.setSellingPrice(updated.getSellingPrice());
+        existing.setAmount(updated.getAmount());
     }
 
     public List<OrderItemPojo> selectByOrderId(Integer orderId) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderItemPojo> query = cb.createQuery(OrderItemPojo.class);
         Root<OrderItemPojo> root = query.from(OrderItemPojo.class);
-        
         query.select(root)
-             .where(cb.equal(root.get("order").get("id"), orderId));
-        
+             .where(cb.equal(root.get("orderId"), orderId));
         return em.createQuery(query).getResultList();
     }
 
@@ -83,10 +65,8 @@ public class OrderItemDao {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderItemPojo> query = cb.createQuery(OrderItemPojo.class);
         Root<OrderItemPojo> root = query.from(OrderItemPojo.class);
-        
         query.select(root)
              .where(cb.equal(root.get("productBarcode"), barcode));
-        
         return em.createQuery(query).getResultList();
     }
 

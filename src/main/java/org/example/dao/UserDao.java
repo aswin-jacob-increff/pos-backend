@@ -6,13 +6,10 @@ import org.example.pojo.UserPojo;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class UserDao {
+public class UserDao extends AbstractDao<UserPojo> {
 
-    @PersistenceContext
-    private EntityManager em;
-
-    public void insert(UserPojo user) {
-        em.persist(user);
+    public UserDao() {
+        super(UserPojo.class);
     }
 
     public UserPojo getByEmail(String email) {
@@ -24,5 +21,12 @@ public class UserDao {
              .where(cb.equal(cb.lower(root.get("email")), email.toLowerCase().trim()));
         
         return em.createQuery(query).getResultList().stream().findFirst().orElse(null);
+    }
+
+    @Override
+    protected void updateEntity(UserPojo existing, UserPojo updated) {
+        existing.setEmail(updated.getEmail());
+        existing.setPassword(updated.getPassword());
+        existing.setRole(updated.getRole());
     }
 }

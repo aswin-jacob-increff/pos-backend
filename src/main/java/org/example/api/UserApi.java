@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 
 @Service
-public class UserApi implements UserDetailsService {
+public class UserApi extends AbstractApi<UserPojo> implements UserDetailsService {
 
     @Autowired
     private SecurityConfig securityConfig;
@@ -27,17 +27,18 @@ public class UserApi implements UserDetailsService {
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+    @Override
+    protected String getEntityName() {
+        return "User";
+    }
+
     // Signup method that accepts a pre-constructed UserPojo (used by UserFlow)
     public void signup(UserPojo userPojo) {
         try {
-            // Assign role based on email
-            Role role = securityConfig.isSupervisor(userPojo.getEmail()) ? Role.SUPERVISOR : Role.USER;
-
             // Normalize and hash password
             userPojo.setEmail(userPojo.getEmail().toLowerCase().trim());
             userPojo.setPassword(passwordEncoder.encode(userPojo.getPassword()));
-            userPojo.setRole(role);
-
+            // Role is already set on the pojo (from signup form)
             // Save user
             userDao.insert(userPojo);
         } catch (Exception e) {

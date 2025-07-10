@@ -1,105 +1,29 @@
 package org.example.dao;
 
-import jakarta.persistence.*;
-import jakarta.persistence.criteria.*;
 import org.springframework.stereotype.Repository;
-import java.util.List;
 import org.example.pojo.InventoryPojo;
 
 @Repository
-public class InventoryDao {
-
-    @PersistenceContext
-    private EntityManager em;
-
-    public void insert(InventoryPojo inventory) {
-        try {
-            em.persist(inventory);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public InventoryPojo select(Integer id) {
-        try {
-            return em.find(InventoryPojo.class, id);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    public List<InventoryPojo> selectAll() {
-        try {
-            CriteriaBuilder cb = em.getCriteriaBuilder();
-            CriteriaQuery<InventoryPojo> query = cb.createQuery(InventoryPojo.class);
-            Root<InventoryPojo> root = query.from(InventoryPojo.class);
-            query.select(root);
-            return em.createQuery(query).getResultList();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    public void update(Integer id, InventoryPojo inventory) {
-        try {
-            // Preserve the version field to avoid optimistic locking conflicts
-            InventoryPojo existing = select(id);
-            if (existing != null) {
-                existing.setQuantity(inventory.getQuantity());
-                existing.setProductBarcode(inventory.getProductBarcode());
-                existing.setProductName(inventory.getProductName());
-                existing.setClientName(inventory.getClientName());
-                existing.setProductMrp(inventory.getProductMrp());
-                existing.setProductImageUrl(inventory.getProductImageUrl());
-                em.merge(existing);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void delete(Integer id) {
-        try {
-            InventoryPojo inventory = select(id);
-            if(inventory != null) {
-                em.remove(inventory);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+public class InventoryDao extends AbstractDao<InventoryPojo> {
+    public InventoryDao() {
+        super(InventoryPojo.class);
     }
 
     public InventoryPojo getByProductBarcode(String barcode) {
-        try {
-            CriteriaBuilder cb = em.getCriteriaBuilder();
-            CriteriaQuery<InventoryPojo> query = cb.createQuery(InventoryPojo.class);
-            Root<InventoryPojo> root = query.from(InventoryPojo.class);
-            
-            query.select(root)
-                 .where(cb.equal(root.get("productBarcode"), barcode));
-            
-            return em.createQuery(query).getResultStream().findFirst().orElse(null);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        return selectByField("productBarcode", barcode);
     }
 
     public InventoryPojo getByProductName(String name) {
-        try {
-            CriteriaBuilder cb = em.getCriteriaBuilder();
-            CriteriaQuery<InventoryPojo> query = cb.createQuery(InventoryPojo.class);
-            Root<InventoryPojo> root = query.from(InventoryPojo.class);
-            
-            query.select(root)
-                 .where(cb.equal(cb.lower(root.get("productName")), name.trim().toLowerCase()));
-            
-            return em.createQuery(query).getResultStream().findFirst().orElse(null);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        return selectByField("productName", name.trim().toLowerCase());
+    }
+
+    @Override
+    protected void updateEntity(InventoryPojo existing, InventoryPojo updated) {
+        existing.setQuantity(updated.getQuantity());
+        existing.setProductBarcode(updated.getProductBarcode());
+        existing.setProductName(updated.getProductName());
+        existing.setClientName(updated.getClientName());
+        existing.setProductMrp(updated.getProductMrp());
+        existing.setProductImageUrl(updated.getProductImageUrl());
     }
 }

@@ -24,6 +24,7 @@ public class ClientController {
 
     @Operation(summary = "Adds a client")
     @PostMapping
+    @org.springframework.transaction.annotation.Transactional
     public ClientData add(@RequestBody ClientForm form) {
         return clientDto.add(form);
     }
@@ -42,12 +43,14 @@ public class ClientController {
 
     @Operation(summary = "Updates a client by ID")
     @PutMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional
     public ClientData update(@PathVariable Integer id, @RequestBody ClientForm form) {
         return clientDto.update(id, form);
     }
 
     @Operation(summary = "Toggles client status by ID or name")
     @PutMapping("/toggle")
+    @org.springframework.transaction.annotation.Transactional
     public void toggleStatus(@RequestParam(required = false) Integer id,
                             @RequestParam(required = false) String name) {
         clientDto.toggleStatus(id, name);
@@ -55,6 +58,7 @@ public class ClientController {
 
     @Operation(summary = "Upload clients via TSV file")
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<String> uploadClientsFromTsv(@RequestParam("file") MultipartFile file) {
         try {
             String result = clientDto.uploadClientsFromTsv(file);
