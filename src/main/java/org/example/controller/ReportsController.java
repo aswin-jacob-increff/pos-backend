@@ -31,34 +31,52 @@ public class ReportsController {
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
-        if (startDate.isAfter(endDate)) {
-            throw new ApiException("Start date cannot be after end date.");
+        try {
+            if (startDate.isAfter(endDate)) {
+                throw new ApiException("Start date cannot be after end date.");
+            }
+            return daySalesRepo.findByDateRange(startDate, endDate);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get day sales: " + e.getMessage());
         }
-        return daySalesRepo.findByDateRange(startDate, endDate);
     }
 
     @PostMapping("/sales")
     public List<SalesReportData> getSalesReport(@RequestBody SalesReportForm form) {
-        System.out.println("Received sales report request - StartDate: " + form.getStartDate() + 
-                          ", EndDate: " + form.getEndDate() + 
-                          ", Brand: '" + form.getBrand() + "'" + 
-                          ", Category: '" + form.getCategory() + "'");
-        if (form.getStartDate().isAfter(form.getEndDate())) {
-            throw new ApiException("Start date cannot be after end date.");
+        try {
+            System.out.println("Received sales report request - StartDate: " + form.getStartDate() + 
+                              ", EndDate: " + form.getEndDate() + 
+                              ", Brand: '" + form.getBrand() + "'" + 
+                              ", Category: '" + form.getCategory() + "'");
+            if (form.getStartDate().isAfter(form.getEndDate())) {
+                throw new ApiException("Start date cannot be after end date.");
+            }
+            return reportsDto.getSalesReport(form);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get sales report: " + e.getMessage());
         }
-        return reportsDto.getSalesReport(form);
     }
     
     @PostMapping("/custom-date-range-sales")
     public List<CustomDateRangeSalesData> getCustomDateRangeSalesReport(@RequestBody CustomDateRangeSalesForm form) {
-        System.out.println("Received custom date range sales report request - StartDate: " + form.getStartDate() + 
-                          ", EndDate: " + form.getEndDate() + 
-                          ", Brand: '" + form.getBrand() + "'" + 
-                          ", Category: '" + form.getCategory() + "'");
-        if (form.getStartDate().isAfter(form.getEndDate())) {
-            throw new ApiException("Start date cannot be after end date.");
+        try {
+            System.out.println("Received custom date range sales report request - StartDate: " + form.getStartDate() + 
+                              ", EndDate: " + form.getEndDate() + 
+                              ", Brand: '" + form.getBrand() + "'" + 
+                              ", Category: '" + form.getCategory() + "'");
+            if (form.getStartDate().isAfter(form.getEndDate())) {
+                throw new ApiException("Start date cannot be after end date.");
+            }
+            return reportsDto.getCustomDateRangeSalesReport(form);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get custom date range sales report: " + e.getMessage());
         }
-        return reportsDto.getCustomDateRangeSalesReport(form);
     }
     
     @GetMapping("/day-on-day-sales")
@@ -66,17 +84,29 @@ public class ReportsController {
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
-        if (startDate.isAfter(endDate)) {
-            throw new ApiException("Start date cannot be after end date.");
+        try {
+            if (startDate.isAfter(endDate)) {
+                throw new ApiException("Start date cannot be after end date.");
+            }
+            return reportsDto.getDayOnDaySalesReport(startDate, endDate);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get day-on-day sales report: " + e.getMessage());
         }
-        return reportsDto.getDayOnDaySalesReport(startDate, endDate);
     }
 
     @GetMapping("/day-sales/{date}")
     public DaySalesPojo getDaySalesByDate(@PathVariable @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
-        DaySalesPojo daySales = daySalesRepo.findByDate(date);
-        if (daySales == null) throw new ApiException("No sales data for this date");
-        return daySales;
+        try {
+            DaySalesPojo daySales = daySalesRepo.findByDate(date);
+            if (daySales == null) throw new ApiException("No sales data for this date");
+            return daySales;
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get day sales by date: " + e.getMessage());
+        }
     }
     
     @GetMapping("/all-day-sales")

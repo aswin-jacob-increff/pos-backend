@@ -26,26 +26,50 @@ public class ClientController {
     @PostMapping
     @org.springframework.transaction.annotation.Transactional
     public ClientData add(@RequestBody ClientForm form) {
-        return dto.add(form);
+        try {
+            return dto.add(form);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to add client: " + e.getMessage());
+        }
     }
 
     @Operation(summary = "Gets all clients")
     @GetMapping
     public List<ClientData> getAll() {
-        return dto.getAll();
+        try {
+            return dto.getAll();
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get all clients: " + e.getMessage());
+        }
     }
 
     @GetMapping("/search")
     public ClientData getClient(@RequestParam(required = false) Integer id,
                                @RequestParam(required = false) String name) {
-        return dto.getByNameOrId(id, name);
+        try {
+            return dto.getByNameOrId(id, name);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get client: " + e.getMessage());
+        }
     }
 
     @Operation(summary = "Updates a client by ID")
     @PutMapping("/{id}")
     @org.springframework.transaction.annotation.Transactional
     public ClientData update(@PathVariable Integer id, @RequestBody ClientForm form) {
-        return dto.update(id, form);
+        try {
+            return dto.update(id, form);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to update client: " + e.getMessage());
+        }
     }
 
     @Operation(summary = "Toggles client status by ID or name")
@@ -53,7 +77,13 @@ public class ClientController {
     @org.springframework.transaction.annotation.Transactional
     public void toggleStatus(@RequestParam(required = false) Integer id,
                             @RequestParam(required = false) String name) {
-        dto.toggleStatus(id, name);
+        try {
+            dto.toggleStatus(id, name);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to toggle client status: " + e.getMessage());
+        }
     }
 
     @Operation(summary = "Upload clients via TSV file")

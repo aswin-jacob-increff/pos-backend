@@ -28,17 +28,35 @@ public class InventoryController {
     @PostMapping
     @org.springframework.transaction.annotation.Transactional
     public InventoryData add(@RequestBody InventoryForm form) {
-        return inventoryDto.add(form);
+        try {
+            return inventoryDto.add(form);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to add inventory: " + e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
     public InventoryData get(@PathVariable Integer id) {
-        return inventoryDto.get(id);
+        try {
+            return inventoryDto.get(id);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get inventory: " + e.getMessage());
+        }
     }
 
     @GetMapping
     public List<InventoryData> getAll() {
-        return inventoryDto.getAll();
+        try {
+            return inventoryDto.getAll();
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get all inventory: " + e.getMessage());
+        }
     }
 
     @GetMapping("/byProduct")
@@ -70,7 +88,36 @@ public class InventoryController {
     @PutMapping("/{id}")
     @org.springframework.transaction.annotation.Transactional
     public InventoryData update(@PathVariable Integer id, @RequestBody InventoryForm form) {
-        return inventoryDto.update(id, form);
+        try {
+            return inventoryDto.update(id, form);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to update inventory: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional
+    public void delete(@PathVariable Integer id) {
+        try {
+            inventoryDto.delete(id);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to delete inventory: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/product/{productBarcode}")
+    public InventoryData getByProductBarcode(@PathVariable String productBarcode) {
+        try {
+            return inventoryDto.getByProductBarcode(productBarcode);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get inventory by product barcode: " + e.getMessage());
+        }
     }
     
     @PutMapping("/{productId}/addStock")

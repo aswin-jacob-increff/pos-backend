@@ -13,9 +13,52 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
     @Autowired
     private InventoryDao inventoryDao;
 
+    @Autowired
+    private ClientApi clientApi;
+
     @Override
     protected String getEntityName() {
         return "Inventory";
+    }
+
+    @Override
+    protected void validateAdd(InventoryPojo inventory) {
+        // Check if the client is active before adding inventory
+        if (inventory.getClientName() != null) {
+            try {
+                var client = clientApi.getByName(inventory.getClientName());
+                if (client == null) {
+                    throw new ApiException("Client '" + inventory.getClientName() + "' not found");
+                }
+                if (!client.getStatus()) {
+                    throw new ApiException("Client is not active");
+                }
+            } catch (ApiException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new ApiException("Error validating client: " + e.getMessage());
+            }
+        }
+    }
+
+    @Override
+    protected void validateUpdate(InventoryPojo existing, InventoryPojo updated) {
+        // Check if the client is active before updating inventory
+        if (updated.getClientName() != null) {
+            try {
+                var client = clientApi.getByName(updated.getClientName());
+                if (client == null) {
+                    throw new ApiException("Client '" + updated.getClientName() + "' not found");
+                }
+                if (!client.getStatus()) {
+                    throw new ApiException("Client is not active");
+                }
+            } catch (ApiException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new ApiException("Error validating client: " + e.getMessage());
+            }
+        }
     }
 
     public InventoryPojo getByProductName(String productName) {
@@ -37,6 +80,22 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
         if (Objects.isNull(inventory)) {
             throw new ApiException("No inventory found for product barcode: " + barcode);
         }
+        
+        // Check if the client is active before adding stock
+        try {
+            var client = clientApi.getByName(inventory.getClientName());
+            if (client == null) {
+                throw new ApiException("Client '" + inventory.getClientName() + "' not found");
+            }
+            if (!client.getStatus()) {
+                throw new ApiException("Client is not active");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Error validating client: " + e.getMessage());
+        }
+        
         InventoryPojo updatedInventory = new InventoryPojo();
         updatedInventory.setProductBarcode(inventory.getProductBarcode());
         updatedInventory.setProductName(inventory.getProductName());
@@ -61,6 +120,22 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
         if (inventory.getQuantity() < quantityToRemove) {
             throw new ApiException("Insufficient stock. Available: " + inventory.getQuantity() + ", Requested: " + quantityToRemove);
         }
+        
+        // Check if the client is active before removing stock
+        try {
+            var client = clientApi.getByName(inventory.getClientName());
+            if (client == null) {
+                throw new ApiException("Client '" + inventory.getClientName() + "' not found");
+            }
+            if (!client.getStatus()) {
+                throw new ApiException("Client is not active");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Error validating client: " + e.getMessage());
+        }
+        
         InventoryPojo updatedInventory = new InventoryPojo();
         updatedInventory.setProductBarcode(inventory.getProductBarcode());
         updatedInventory.setProductName(inventory.getProductName());
@@ -82,6 +157,22 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
         if (Objects.isNull(inventory)) {
             throw new ApiException("No inventory found for product barcode: " + barcode);
         }
+        
+        // Check if the client is active before setting stock
+        try {
+            var client = clientApi.getByName(inventory.getClientName());
+            if (client == null) {
+                throw new ApiException("Client '" + inventory.getClientName() + "' not found");
+            }
+            if (!client.getStatus()) {
+                throw new ApiException("Client is not active");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Error validating client: " + e.getMessage());
+        }
+        
         InventoryPojo updatedInventory = new InventoryPojo();
         updatedInventory.setProductBarcode(inventory.getProductBarcode());
         updatedInventory.setProductName(inventory.getProductName());

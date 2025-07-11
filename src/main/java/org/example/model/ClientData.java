@@ -9,5 +9,6 @@ public class ClientData {
 
     private Integer id;
     private String clientName;
+    private Boolean status;
 
 }

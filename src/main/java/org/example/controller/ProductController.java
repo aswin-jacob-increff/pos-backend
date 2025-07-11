@@ -23,28 +23,58 @@ public class ProductController {
     @PostMapping
     @org.springframework.transaction.annotation.Transactional
     public ProductData add(@RequestBody ProductForm form) {
-        return productDto.add(form);
+        try {
+            return productDto.add(form);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to add product: " + e.getMessage());
+        }
     }
 
     @GetMapping("/id/{id}")
     public ProductData get(@PathVariable Integer id) {
-        return productDto.get(id);
+        try {
+            return productDto.get(id);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get product: " + e.getMessage());
+        }
     }
 
     @GetMapping
     public List<ProductData> getAll() {
-        return productDto.getAll();
+        try {
+            return productDto.getAll();
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get all products: " + e.getMessage());
+        }
     }
 
     @GetMapping("/barcode/{barcode}")
     public ProductData getByBarcode(@PathVariable String barcode) {
-        return productDto.getByBarcode(barcode);
+        try {
+            return productDto.getByBarcode(barcode);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get product by barcode: " + e.getMessage());
+        }
     }
 
     @PutMapping("/{id}")
     @org.springframework.transaction.annotation.Transactional
     public ProductData update(@PathVariable Integer id, @RequestBody ProductForm form) {
-        return productDto.update(id, form);
+        try {
+            return productDto.update(id, form);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to update product: " + e.getMessage());
+        }
     }
 
     @DeleteMapping
@@ -52,7 +82,13 @@ public class ProductController {
     public void deleteProduct(@RequestParam(required = false) Integer id,
                               @RequestParam(required = false) String name,
                               @RequestParam(required = false) String barcode) {
-        productDto.deleteProduct(id, name, barcode);
+        try {
+            productDto.deleteProduct(id, name, barcode);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to delete product: " + e.getMessage());
+        }
     }
 
     @GetMapping("/{id}/image")

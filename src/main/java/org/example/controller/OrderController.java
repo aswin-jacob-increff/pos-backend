@@ -23,12 +23,24 @@ public class OrderController {
     @PostMapping("/add")
     @org.springframework.transaction.annotation.Transactional
     public OrderData add(@RequestBody OrderForm form) {
-        return orderDto.add(form);
+        try {
+            return orderDto.add(form);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to add order: " + e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
     public OrderData get(@PathVariable Integer id) {
-        return orderDto.get(id);
+        try {
+            return orderDto.get(id);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get order: " + e.getMessage());
+        }
     }
 
     @GetMapping
@@ -65,19 +77,37 @@ public class OrderController {
     @PutMapping("/{id}")
     @org.springframework.transaction.annotation.Transactional
     public OrderData update(@PathVariable Integer id, @RequestBody OrderForm form) {
-        return orderDto.update(id, form);
+        try {
+            return orderDto.update(id, form);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to update order: " + e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
     @org.springframework.transaction.annotation.Transactional
     public void delete(@PathVariable Integer id) {
-        orderDto.delete(id);
+        try {
+            orderDto.delete(id);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to delete order: " + e.getMessage());
+        }
     }
     
     @DeleteMapping("/{id}/cancel")
     @org.springframework.transaction.annotation.Transactional
     public void cancelOrder(@PathVariable Integer id) {
-        orderDto.cancelOrder(id);
+        try {
+            orderDto.cancelOrder(id);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to cancel order: " + e.getMessage());
+        }
     }
 
     @GetMapping("/{id}/download-invoice")
@@ -147,7 +177,13 @@ public class OrderController {
 
     @GetMapping("/by-user")
     public List<OrderData> getOrdersByUserId(@RequestParam String userId) {
-        return orderDto.getOrdersByUserId(userId);
+        try {
+            return orderDto.getOrdersByUserId(userId);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get orders by user ID: " + e.getMessage());
+        }
     }
 
 }

@@ -31,6 +31,7 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
     protected ClientPojo convertFormToEntity(ClientForm form) {
         ClientPojo pojo = new ClientPojo();
         pojo.setClientName(form.getClientName());
+        pojo.setStatus(form.getStatus() != null ? form.getStatus() : true); // Default to true if null
         return pojo;
     }
 
@@ -39,6 +40,7 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         ClientData data = new ClientData();
         data.setId(pojo.getId());
         data.setClientName(pojo.getClientName());
+        data.setStatus(pojo.getStatus());
         return data;
     }
 

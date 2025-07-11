@@ -39,9 +39,7 @@ public class ClientFlow extends AbstractFlow<ClientPojo> {
         if (pojo == null) {
             throw new RuntimeException("Client with ID '" + id + "' not found.");
         }
-        // TODO: Implement status toggle logic when status field is added to ClientPojo
-        // For now, this is a placeholder
-        throw new RuntimeException("Status toggle not yet implemented - requires status field in ClientPojo");
+        api.toggleStatus(id);
     }
 
     public void toggleStatusByName(String name) {
@@ -49,9 +47,7 @@ public class ClientFlow extends AbstractFlow<ClientPojo> {
         if (pojo == null) {
             throw new RuntimeException("Client with name '" + name + "' not found.");
         }
-        // TODO: Implement status toggle logic when status field is added to ClientPojo
-        // For now, this is a placeholder
-        throw new RuntimeException("Status toggle not yet implemented - requires status field in ClientPojo");
+        api.toggleStatusByName(name);
     }
 
     public void createClient(String name) {

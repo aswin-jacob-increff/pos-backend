@@ -19,5 +19,22 @@ public class ClientDao extends AbstractDao<ClientPojo> {
     @Override
     protected void updateEntity(ClientPojo existing, ClientPojo updated) {
         existing.setClientName(updated.getClientName());
+        existing.setStatus(updated.getStatus());
+    }
+
+    public void toggleStatus(Integer id) {
+        ClientPojo client = select(id);
+        if (client != null) {
+            client.setStatus(!client.getStatus());
+            update(id, client);
+        }
+    }
+
+    public void toggleStatusByName(String name) {
+        ClientPojo client = selectByName(name);
+        if (client != null) {
+            client.setStatus(!client.getStatus());
+            update(client.getId(), client);
+        }
     }
 }

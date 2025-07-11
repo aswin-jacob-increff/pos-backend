@@ -24,5 +24,8 @@ public class ClientPojo extends AbstractPojo {
 
     @Column(unique = true)
     private String clientName;
+
+    @Column(nullable = false)
+    private Boolean status = true; // Default to true (active)
 }
 

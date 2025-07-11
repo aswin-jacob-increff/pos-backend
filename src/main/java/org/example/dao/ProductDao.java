@@ -2,6 +2,7 @@ package org.example.dao;
 
 import org.springframework.stereotype.Repository;
 import org.example.pojo.ProductPojo;
+import java.util.List;
 
 @Repository
 public class ProductDao extends AbstractDao<ProductPojo> {
@@ -16,6 +17,15 @@ public class ProductDao extends AbstractDao<ProductPojo> {
 
     public ProductPojo selectByName(String name) {
         return selectByField("name", name);
+    }
+
+    public List<ProductPojo> selectByClientName(String clientName) {
+        return selectByFields(new String[]{"clientName"}, new Object[]{clientName});
+    }
+
+    public boolean hasProductsByClientName(String clientName) {
+        List<ProductPojo> products = selectByClientName(clientName);
+        return products != null && !products.isEmpty();
     }
 
     @Override

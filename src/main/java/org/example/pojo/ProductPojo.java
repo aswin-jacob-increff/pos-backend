@@ -28,7 +28,7 @@ public class ProductPojo extends AbstractPojo {
     @Column(nullable = false)
     private String clientName;
 
-    @Column(unique = true)
+    @Column(unique = false)
     private String name;
 
     private Double mrp;
