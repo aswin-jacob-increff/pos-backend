@@ -45,14 +45,7 @@ public class SpringSecurityConfig {
                 )
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(Customizer.withDefaults())
-                .logout(logout -> logout
-                        .logoutUrl("/api/user/logout")
-                        .logoutSuccessUrl("/api/user/login")
-                        .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID", "SESSION", "remember-me", "auth", "user", "token")
-                        .clearAuthentication(true)
-                        .permitAll()
-                )
+                .logout(AbstractHttpConfigurer::disable)  // Disable Spring Security's logout to use custom logout
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                         .maximumSessions(1)

@@ -80,26 +80,75 @@ public class UserController {
     @PostMapping("/logout")
     public ResponseEntity<String> logout(HttpServletRequest request, HttpServletResponse response) {
         try {
+            System.out.println("=== Logout attempt ===");
+            
+            // Get current user info before logout
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            HttpSession session = request.getSession(false);
+            
+            System.out.println("User attempting logout: " + (authentication != null ? authentication.getName() : "null"));
+            System.out.println("Session ID: " + (session != null ? session.getId() : "null"));
+            System.out.println("Session Valid: " + (session != null && !session.isNew()));
+            
+            // Check session attributes
+            if (session != null) {
+                Object userEmail = session.getAttribute("userEmail");
+                Object userRole = session.getAttribute("userRole");
+                System.out.println("Session userEmail: " + userEmail);
+                System.out.println("Session userRole: " + userRole);
+            }
+            
+            // Check cookies BEFORE logout
+            Cookie[] cookiesBefore = request.getCookies();
+            if (cookiesBefore != null) {
+                System.out.println("Cookies BEFORE logout (" + cookiesBefore.length + "):");
+                for (Cookie cookie : cookiesBefore) {
+                    System.out.println("  " + cookie.getName() + "=" + cookie.getValue() + " (path=" + cookie.getPath() + ", domain=" + cookie.getDomain() + ")");
+                }
+            } else {
+                System.out.println("No cookies BEFORE logout");
+            }
+            
             // 1. Clear Spring Security context
             SecurityContextHolder.clearContext();
+            System.out.println("SecurityContext cleared");
 
             // 2. Invalidate the session
-            HttpSession session = request.getSession(false);
             if (session != null) {
                 session.invalidate();
+                System.out.println("Session invalidated");
+            } else {
+                System.out.println("No session to invalidate");
             }
 
             // 3. Clear all cookies present in the request
-            Cookie[] cookies = request.getCookies();
-            if (cookies != null) {
-                for (Cookie cookie : cookies) {
+            if (cookiesBefore != null) {
+                System.out.println("Clearing " + cookiesBefore.length + " cookies");
+                for (Cookie cookie : cookiesBefore) {
+                    // Clear with original path and domain if they exist
                     Cookie cleared = new Cookie(cookie.getName(), "");
-                    cleared.setPath("/");
+                    cleared.setPath(cookie.getPath() != null ? cookie.getPath() : "/");
+                    cleared.setDomain(cookie.getDomain()); // Keep original domain (can be null)
                     cleared.setMaxAge(0);
                     cleared.setHttpOnly(true);
                     cleared.setSecure(false); // Set to true if using HTTPS
                     response.addCookie(cleared);
+                    System.out.println("  Cleared cookie: " + cookie.getName() + " (path=" + cleared.getPath() + ", domain=" + cleared.getDomain() + ")");
+                    
+                    // Also clear with root path to ensure it's gone
+                    if (cookie.getPath() == null || !cookie.getPath().equals("/")) {
+                        Cookie rootCleared = new Cookie(cookie.getName(), "");
+                        rootCleared.setPath("/");
+                        rootCleared.setDomain(cookie.getDomain());
+                        rootCleared.setMaxAge(0);
+                        rootCleared.setHttpOnly(true);
+                        rootCleared.setSecure(false);
+                        response.addCookie(rootCleared);
+                        System.out.println("  Also cleared cookie: " + cookie.getName() + " with root path");
+                    }
                 }
+            } else {
+                System.out.println("No cookies to clear");
             }
 
             // 4. Explicitly clear JSESSIONID and common variants with multiple paths/domains
@@ -113,6 +162,7 @@ public class UserController {
                     c.setHttpOnly(true);
                     c.setSecure(false);
                     response.addCookie(c);
+                    System.out.println("  Cleared session cookie: " + name + " (path=" + path + ")");
                 }
                 // Also try with explicit domain
                 Cookie domainCookie = new Cookie(name, "");
@@ -122,6 +172,7 @@ public class UserController {
                 domainCookie.setHttpOnly(true);
                 domainCookie.setSecure(false);
                 response.addCookie(domainCookie);
+                System.out.println("  Cleared session cookie: " + name + " (domain=" + request.getServerName() + ")");
             }
 
             // Explicitly clear __reveal_ut cookie with all common paths and domains
@@ -133,6 +184,7 @@ public class UserController {
                 reveal.setHttpOnly(true);
                 reveal.setSecure(false); // Set to true if using HTTPS
                 response.addCookie(reveal);
+                System.out.println("  Cleared __reveal_ut cookie (path=" + path + ")");
             }
             // Also try with explicit domain
             Cookie revealDomain = new Cookie("__reveal_ut", "");
@@ -142,12 +194,25 @@ public class UserController {
             revealDomain.setHttpOnly(true);
             revealDomain.setSecure(false);
             response.addCookie(revealDomain);
+            System.out.println("  Cleared __reveal_ut cookie (domain=" + request.getServerName() + ")");
+            
+            // Also try with null domain (session cookie)
+            Cookie revealNullDomain = new Cookie("__reveal_ut", "");
+            revealNullDomain.setPath("/");
+            revealNullDomain.setDomain(null);
+            revealNullDomain.setMaxAge(0);
+            revealNullDomain.setHttpOnly(true);
+            revealNullDomain.setSecure(false);
+            response.addCookie(revealNullDomain);
+            System.out.println("  Cleared __reveal_ut cookie (null domain)");
 
             // 5. Add Clear-Site-Data header for extra safety
             response.setHeader("Clear-Site-Data", "\"cache\", \"cookies\", \"storage\", \"executionContexts\"");
 
+            System.out.println("Logout completed successfully");
             return ResponseEntity.ok("Logged out successfully");
         } catch (Exception e) {
+            System.out.println("Logout failed: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body("Logout failed: " + e.getMessage());
         }

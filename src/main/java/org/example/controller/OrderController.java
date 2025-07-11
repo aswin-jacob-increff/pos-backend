@@ -46,8 +46,8 @@ public class OrderController {
                 Object userEmail = session.getAttribute("userEmail");
                 Object userRole = session.getAttribute("userRole");
                 if (userEmail != null) {
-                    email = userEmail.toString();
-                    isSupervisor = "ROLE_SUPERVISOR".equals(userRole);
+                    email = (String) userEmail;
+                    isSupervisor = userRole != null && userRole.toString().equals("ROLE_SUPERVISOR");
                 } else {
                     throw new ApiException("User not authenticated");
                 }
@@ -120,8 +120,8 @@ public class OrderController {
                 Object userEmail = session.getAttribute("userEmail");
                 Object userRole = session.getAttribute("userRole");
                 if (userEmail != null) {
-                    email = userEmail.toString();
-                    isSupervisor = "ROLE_SUPERVISOR".equals(userRole);
+                    email = (String) userEmail;
+                    isSupervisor = userRole != null && userRole.toString().equals("ROLE_SUPERVISOR");
                 } else {
                     throw new ApiException("User not authenticated");
                 }
