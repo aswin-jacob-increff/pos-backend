@@ -55,8 +55,14 @@ public class UserController {
             );
             SecurityContextHolder.getContext().setAuthentication(authentication);
             
-            // Store user email in session as fallback
+            // Store user email and role in session as fallback
             newSession.setAttribute("userEmail", form.getEmail());
+            // Get the user role from the authentication authorities
+            String userRole = authentication.getAuthorities().stream()
+                .findFirst()
+                .map(authority -> authority.getAuthority())
+                .orElse("ROLE_USER");
+            newSession.setAttribute("userRole", userRole);
             
             System.out.println("Authentication set for: " + authentication.getName());
             System.out.println("Session ID after login: " + newSession.getId());

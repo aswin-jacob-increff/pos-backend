@@ -13,8 +13,8 @@ public class ClientFlow extends AbstractFlow<ClientPojo> {
     private ClientApi api;
 
     @Override
-    protected Integer getEntityId(ClientPojo entity) {
-        return entity.getId();
+    protected Integer getEntityId(ClientPojo pojo) {
+        return pojo.getId();
     }
 
     @Override
@@ -27,16 +27,16 @@ public class ClientFlow extends AbstractFlow<ClientPojo> {
     }
 
     public void deleteClientByName(String name) {
-        ClientPojo client = api.getByName(name);
-        if (client == null) {
+        ClientPojo pojo = api.getByName(name);
+        if (pojo == null) {
             throw new RuntimeException("Client with name '" + name + "' not found.");
         }
-        api.delete(client.getId());
+        api.delete(pojo.getId());
     }
 
     public void toggleStatus(Integer id) {
-        ClientPojo client = api.get(id);
-        if (client == null) {
+        ClientPojo pojo = api.get(id);
+        if (pojo == null) {
             throw new RuntimeException("Client with ID '" + id + "' not found.");
         }
         // TODO: Implement status toggle logic when status field is added to ClientPojo
@@ -45,8 +45,8 @@ public class ClientFlow extends AbstractFlow<ClientPojo> {
     }
 
     public void toggleStatusByName(String name) {
-        ClientPojo client = api.getByName(name);
-        if (client == null) {
+        ClientPojo pojo = api.getByName(name);
+        if (pojo == null) {
             throw new RuntimeException("Client with name '" + name + "' not found.");
         }
         // TODO: Implement status toggle logic when status field is added to ClientPojo
@@ -54,9 +54,9 @@ public class ClientFlow extends AbstractFlow<ClientPojo> {
         throw new RuntimeException("Status toggle not yet implemented - requires status field in ClientPojo");
     }
 
-    public void createClient(String clientName) {
-        ClientPojo client = new ClientPojo();
-        client.setClientName(clientName);
-        api.add(client);
+    public void createClient(String name) {
+        ClientPojo pojo = new ClientPojo();
+        pojo.setClientName(name);
+        api.add(pojo);
     }
 }

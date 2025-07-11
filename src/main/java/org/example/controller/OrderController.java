@@ -10,6 +10,8 @@ import java.util.List;
 
 import org.example.model.OrderData;
 import org.example.model.OrderForm;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -30,10 +32,29 @@ public class OrderController {
     }
 
     @GetMapping
-    public List<OrderData> getAll(org.springframework.security.core.Authentication authentication) {
-        String email = authentication.getName();
-        boolean isSupervisor = authentication.getAuthorities().stream()
-            .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERVISOR"));
+    public List<OrderData> getAll(org.springframework.security.core.Authentication authentication, 
+                                 HttpServletRequest request) {
+        String email;
+        boolean isSupervisor = false;
+        if (authentication != null) {
+            email = authentication.getName();
+            isSupervisor = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERVISOR"));
+        } else {
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                Object userEmail = session.getAttribute("userEmail");
+                Object userRole = session.getAttribute("userRole");
+                if (userEmail != null) {
+                    email = userEmail.toString();
+                    isSupervisor = "ROLE_SUPERVISOR".equals(userRole);
+                } else {
+                    throw new ApiException("User not authenticated");
+                }
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        }
         if (isSupervisor) {
             return orderDto.getAll();
         } else {
@@ -84,11 +105,38 @@ public class OrderController {
     @GetMapping("/by-date-range")
     public List<OrderData> getOrdersByDateRange(
             @RequestParam String startDate,
-            @RequestParam String endDate) {
+            @RequestParam String endDate,
+            org.springframework.security.core.Authentication authentication,
+            HttpServletRequest request) {
+        String email = null;
+        boolean isSupervisor = false;
+        if (authentication != null) {
+            email = authentication.getName();
+            isSupervisor = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERVISOR"));
+        } else {
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                Object userEmail = session.getAttribute("userEmail");
+                Object userRole = session.getAttribute("userRole");
+                if (userEmail != null) {
+                    email = userEmail.toString();
+                    isSupervisor = "ROLE_SUPERVISOR".equals(userRole);
+                } else {
+                    throw new ApiException("User not authenticated");
+                }
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        }
         try {
             java.time.LocalDate start = java.time.LocalDate.parse(startDate);
             java.time.LocalDate end = java.time.LocalDate.parse(endDate);
-            return orderDto.getOrdersByDateRange(start, end);
+            if (isSupervisor) {
+                return orderDto.getOrdersByDateRange(start, end);
+            } else {
+                return orderDto.getOrdersByUserIdAndDateRange(email, start, end);
+            }
         } catch (java.time.format.DateTimeParseException e) {
             throw new ApiException("Invalid date format. Please use yyyy-MM-dd format (e.g., 2024-01-15)");
         } catch (Exception e) {

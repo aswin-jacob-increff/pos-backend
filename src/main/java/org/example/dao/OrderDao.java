@@ -69,16 +69,14 @@ public class OrderDao extends AbstractDao<OrderPojo> {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderPojo> cq = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = cq.from(OrderPojo.class);
-        
-        // Convert LocalDate to UTC Instants for comparison
-        Instant start = startDate.atStartOfDay(ZoneOffset.UTC).toInstant();
-        Instant end = endDate.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
-        
+        // Convert LocalDate (IST) to UTC Instants for comparison
+        java.time.ZoneId istZone = java.time.ZoneId.of("Asia/Kolkata");
+        Instant start = startDate.atStartOfDay(istZone).toInstant();
+        Instant end = endDate.plusDays(1).atStartOfDay(istZone).toInstant();
         Predicate dateBetween = cb.between(root.get("date"), start, end);
         cq.select(root)
           .where(dateBetween)
-          .orderBy(cb.asc(root.get("date"))); // Order by date ascending
-        
+          .orderBy(cb.asc(root.get("date")));
         return em.createQuery(cq).getResultList();
     }
 

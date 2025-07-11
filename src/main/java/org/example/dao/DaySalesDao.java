@@ -16,20 +16,30 @@ public class DaySalesDao extends AbstractDao<DaySalesPojo> {
 
     public void saveOrUpdate(DaySalesPojo daySales) {
         try {
-            DaySalesPojo existing = findByDate(daySales.getDate());
-            if (existing != null) {
-                // Update existing entity
-                existing.setTotalRevenue(daySales.getTotalRevenue());
-                existing.setInvoicedOrdersCount(daySales.getInvoicedOrdersCount());
-                existing.setInvoicedItemsCount(daySales.getInvoicedItemsCount());
-                em.merge(existing);
-            } else {
-                // Persist new entity
-                em.persist(daySales);
-            }
-            // Flush to ensure the operation is executed immediately
+            System.out.println("Upserting day sales for date: " + daySales.getDate() + 
+                              " (Revenue: " + daySales.getTotalRevenue() + 
+                              ", Orders: " + daySales.getInvoicedOrdersCount() + 
+                              ", Items: " + daySales.getInvoicedItemsCount() + ")");
+            
+            // Use native SQL with ON DUPLICATE KEY UPDATE to handle race conditions
+            String sql = "INSERT INTO pos_day_sales (date, totalRevenue, invoicedOrdersCount, invoicedItemsCount) " +
+                        "VALUES (?, ?, ?, ?) " +
+                        "ON DUPLICATE KEY UPDATE " +
+                        "totalRevenue = VALUES(totalRevenue), " +
+                        "invoicedOrdersCount = VALUES(invoicedOrdersCount), " +
+                        "invoicedItemsCount = VALUES(invoicedItemsCount)";
+            
+            Query query = em.createNativeQuery(sql);
+            query.setParameter(1, daySales.getDate());
+            query.setParameter(2, daySales.getTotalRevenue());
+            query.setParameter(3, daySales.getInvoicedOrdersCount());
+            query.setParameter(4, daySales.getInvoicedItemsCount());
+            
+            int rowsAffected = query.executeUpdate();
+            System.out.println("Day sales upsert completed. Rows affected: " + rowsAffected);
             em.flush();
         } catch (Exception e) {
+            System.err.println("Error in day sales upsert for date " + daySales.getDate() + ": " + e.getMessage());
             e.printStackTrace();
             throw e;
         }

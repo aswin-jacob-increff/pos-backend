@@ -20,7 +20,7 @@ import jakarta.validation.Valid;
 public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
 
     @Autowired
-    private ClientFlow clientFlow;
+    private ClientFlow flow;
 
     @Override
     protected String getEntityName() {
@@ -28,24 +28,24 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
     }
 
     @Override
-    protected ClientPojo convertFormToEntity(ClientForm clientForm) {
-        ClientPojo clientPojo = new ClientPojo();
-        clientPojo.setClientName(clientForm.getClientName());
-        return clientPojo;
+    protected ClientPojo convertFormToEntity(ClientForm form) {
+        ClientPojo pojo = new ClientPojo();
+        pojo.setClientName(form.getClientName());
+        return pojo;
     }
 
     @Override
-    protected ClientData convertEntityToData(ClientPojo clientPojo) {
-        ClientData clientData = new ClientData();
-        clientData.setId(clientPojo.getId());
-        clientData.setClientName(clientPojo.getClientName());
-        return clientData;
+    protected ClientData convertEntityToData(ClientPojo pojo) {
+        ClientData data = new ClientData();
+        data.setId(pojo.getId());
+        data.setClientName(pojo.getClientName());
+        return data;
     }
 
     @Override
-    protected void preprocess(ClientForm clientForm) {
-        if (clientForm.getClientName() != null) {
-            clientForm.setClientName(StringUtil.format(clientForm.getClientName()));
+    protected void preprocess(ClientForm form) {
+        if (form.getClientName() != null) {
+            form.setClientName(StringUtil.format(form.getClientName()));
         }
     }
 
@@ -60,29 +60,29 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         if (name.trim().isEmpty()) {
             throw new IllegalArgumentException("Client name cannot be null");
         }
-        clientFlow.deleteClientByName(StringUtil.format(name));
+        flow.deleteClientByName(StringUtil.format(name));
     }
 
     public void toggleStatus(Integer id) {
         if (Objects.isNull(id)) {
             throw new ApiException("Client ID cannot be null");
         }
-        clientFlow.toggleStatus(id);
+        flow.toggleStatus(id);
     }
 
     public void toggleStatusByName(String name) {
         if (Objects.isNull(name) || name.trim().isEmpty()) {
             throw new ApiException("Client name cannot be null or empty");
         }
-        clientFlow.toggleStatusByName(StringUtil.format(name));
+        flow.toggleStatusByName(StringUtil.format(name));
     }
 
     public ClientData getByNameOrId(Integer id, String name) {
         name = StringUtil.format(name);
         if (Objects.nonNull(id) && Objects.nonNull(name)) {
             try {
-                ClientPojo idPojo = clientFlow.get(id);
-                ClientPojo namePojo = clientFlow.getByName(name);
+                ClientPojo idPojo = flow.get(id);
+                ClientPojo namePojo = flow.getByName(name);
                 if (idPojo.equals(namePojo)) {
                     return convertEntityToData(idPojo);
                 } else {
@@ -92,9 +92,9 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
                 throw new ApiException(e.getMessage());
             }
         } else if (Objects.nonNull(id)) {
-            return convertEntityToData(clientFlow.get(id));
+            return convertEntityToData(flow.get(id));
         } else {
-            return convertEntityToData(clientFlow.getByName(name));
+            return convertEntityToData(flow.getByName(name));
         }
     }
 
@@ -102,13 +102,13 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         // Validate file
         FileValidationUtil.validateTsvFile(file);
         try {
-            List<ClientForm> clientForms = ClientTsvParser.parse(file.getInputStream());
-            FileValidationUtil.validateFileSize(clientForms.size());
+            List<ClientForm> forms = ClientTsvParser.parse(file.getInputStream());
+            FileValidationUtil.validateFileSize(forms.size());
             // Only add if all are valid
-            for (ClientForm form : clientForms) {
+            for (ClientForm form : forms) {
                 add(form);
             }
-            return "Uploaded " + clientForms.size() + " clients";
+            return "Uploaded " + forms.size() + " clients";
         } catch (ApiException e) {
             // Propagate parser validation errors
             throw e;

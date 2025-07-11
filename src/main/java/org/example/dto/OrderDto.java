@@ -112,6 +112,9 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
             System.out.println("Starting invoice download for order: " + orderId);
             System.out.println("Current order status: " + orderPojo.getStatus());
             
+            // Clean up any duplicate invoices for this order
+            invoiceApi.cleanupDuplicateInvoices(orderId);
+            
             // Check if invoice already exists in database
             org.example.pojo.InvoicePojo existingInvoice = invoiceApi.getByOrderId(orderId);
             if (existingInvoice != null) {
@@ -146,7 +149,16 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
             for (OrderItemPojo itemPojo : orderItems) {
                 InvoiceItemData itemData = new InvoiceItemData();
                 itemData.setId(itemPojo.getId());
-                itemData.setProductId(null); // No longer have product ID reference
+                
+                // Get the actual product ID from the product using barcode
+                try {
+                    org.example.pojo.ProductPojo product = productFlow.getByBarcode(itemPojo.getProductBarcode());
+                    itemData.setProductId(product != null ? product.getId() : null);
+                } catch (Exception e) {
+                    System.out.println("Warning: Could not find product for barcode " + itemPojo.getProductBarcode() + ", setting productId to null");
+                    itemData.setProductId(null);
+                }
+                
                 itemData.setProductName(itemPojo.getProductName());
                 itemData.setProductBarcode(itemPojo.getProductBarcode());
                 itemData.setClientId(null); // No longer have client ID reference
@@ -297,6 +309,26 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
             orderDataList.add(convertEntityToData(orderPojo));
         }
         return orderDataList;
+    }
+
+    public List<OrderData> getOrdersByUserIdAndDateRange(String userId, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        if (userId == null || startDate == null || endDate == null) {
+            throw new ApiException("User ID, start date, and end date cannot be null");
+        }
+        if (endDate.isBefore(startDate)) {
+            throw new ApiException("End date cannot be before start date");
+        }
+        List<OrderPojo> allUserOrders = orderFlow.getOrdersByUserId(userId);
+        List<OrderData> filtered = new ArrayList<>();
+        for (OrderPojo order : allUserOrders) {
+            if (order.getDate() != null) {
+                java.time.LocalDate orderDateIST = org.example.util.TimeUtil.toIST(order.getDate()).toLocalDate();
+                if ((orderDateIST.isEqual(startDate) || orderDateIST.isAfter(startDate)) && orderDateIST.isBefore(endDate.plusDays(1))) {
+                    filtered.add(convertEntityToData(order));
+                }
+            }
+        }
+        return filtered;
     }
 
     /**

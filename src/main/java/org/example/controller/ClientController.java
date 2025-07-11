@@ -20,32 +20,32 @@ import org.example.exception.ApiException;
 public class ClientController {
 
     @Autowired
-    private ClientDto clientDto;
+    private ClientDto dto;
 
     @Operation(summary = "Adds a client")
     @PostMapping
     @org.springframework.transaction.annotation.Transactional
     public ClientData add(@RequestBody ClientForm form) {
-        return clientDto.add(form);
+        return dto.add(form);
     }
 
     @Operation(summary = "Gets all clients")
     @GetMapping
     public List<ClientData> getAll() {
-        return clientDto.getAll();
+        return dto.getAll();
     }
 
     @GetMapping("/search")
     public ClientData getClient(@RequestParam(required = false) Integer id,
                                @RequestParam(required = false) String name) {
-        return clientDto.getByNameOrId(id, name);
+        return dto.getByNameOrId(id, name);
     }
 
     @Operation(summary = "Updates a client by ID")
     @PutMapping("/{id}")
     @org.springframework.transaction.annotation.Transactional
     public ClientData update(@PathVariable Integer id, @RequestBody ClientForm form) {
-        return clientDto.update(id, form);
+        return dto.update(id, form);
     }
 
     @Operation(summary = "Toggles client status by ID or name")
@@ -53,7 +53,7 @@ public class ClientController {
     @org.springframework.transaction.annotation.Transactional
     public void toggleStatus(@RequestParam(required = false) Integer id,
                             @RequestParam(required = false) String name) {
-        clientDto.toggleStatus(id, name);
+        dto.toggleStatus(id, name);
     }
 
     @Operation(summary = "Upload clients via TSV file")
@@ -61,7 +61,7 @@ public class ClientController {
     @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<String> uploadClientsFromTsv(@RequestParam("file") MultipartFile file) {
         try {
-            String result = clientDto.uploadClientsFromTsv(file);
+            String result = dto.uploadClientsFromTsv(file);
             return ResponseEntity.ok(result);
         } catch (ApiException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

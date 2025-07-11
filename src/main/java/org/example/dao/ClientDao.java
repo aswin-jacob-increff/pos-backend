@@ -12,8 +12,8 @@ public class ClientDao extends AbstractDao<ClientPojo> {
         super(ClientPojo.class);
     }
 
-    public ClientPojo selectByName(String clientName) {
-        return selectByField("clientName", clientName);
+    public ClientPojo selectByName(String name) {
+        return selectByField("clientName", name);
     }
 
     @Override

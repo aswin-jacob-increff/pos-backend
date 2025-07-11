@@ -13,7 +13,7 @@ import java.util.Objects;
 public class ClientApi extends AbstractApi<ClientPojo> {
 
     @Autowired
-    private ClientDao clientDao;
+    private ClientDao dao;
 
     @Override
     protected String getEntityName() {
@@ -21,8 +21,8 @@ public class ClientApi extends AbstractApi<ClientPojo> {
     }
 
     @Override
-    protected void validateAdd(ClientPojo clientPojo) {
-        ClientPojo existing = clientDao.selectByName(clientPojo.getClientName());
+    protected void validateAdd(ClientPojo pojo) {
+        ClientPojo existing = dao.selectByName(pojo.getClientName());
         if(Objects.nonNull(existing)) {
             throw new ApiException("Client already exists");
         }
@@ -33,14 +33,14 @@ public class ClientApi extends AbstractApi<ClientPojo> {
         // Check if the new name is different from the current name
         if (!existing.getClientName().equalsIgnoreCase(updated.getClientName())) {
             // Check if the new name already exists for another client
-            ClientPojo clientWithNewName = clientDao.selectByName(updated.getClientName());
-            if (Objects.nonNull(clientWithNewName) && !clientWithNewName.getId().equals(existing.getId())) {
+            ClientPojo pojoWithNewName = dao.selectByName(updated.getClientName());
+            if (Objects.nonNull(pojoWithNewName) && !pojoWithNewName.getId().equals(existing.getId())) {
                 throw new ApiException("Client name already exists");
             }
         }
     }
 
-    public ClientPojo getByName(String clientName) {
-        return getByField("clientName", clientName.trim().toLowerCase());
+    public ClientPojo getByName(String name) {
+        return getByField("clientName", name.trim().toLowerCase());
     }
 } 

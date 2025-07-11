@@ -16,6 +16,17 @@ public class InvoiceDao extends AbstractDao<InvoicePojo> {
     public InvoicePojo selectByOrderId(Integer orderId) {
         return selectByField("orderId", orderId);
     }
+    
+    public List<InvoicePojo> selectAllByOrderId(Integer orderId) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<InvoicePojo> query = cb.createQuery(InvoicePojo.class);
+        Root<InvoicePojo> root = query.from(InvoicePojo.class);
+        
+        query.select(root)
+             .where(cb.equal(root.get("orderId"), orderId));
+        
+        return em.createQuery(query).getResultList();
+    }
 
     @Override
     protected void updateEntity(InvoicePojo existing, InvoicePojo updated) {

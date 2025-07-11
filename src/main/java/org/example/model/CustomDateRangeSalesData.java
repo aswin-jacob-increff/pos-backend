@@ -7,6 +7,7 @@ import lombok.Setter;
 @Setter
 public class CustomDateRangeSalesData {
     private String brand;
+    private String category; // product name/category
     private Double totalAmount;
     private Integer totalOrders;
     private Integer totalItems;
