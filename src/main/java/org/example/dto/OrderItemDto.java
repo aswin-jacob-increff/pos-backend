@@ -71,6 +71,9 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
         
         // Get product details and set denormalized fields
         var product = productApi.get(orderItemForm.getProductId());
+        if (product == null) {
+            throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
+        }
         orderItemPojo.setProductBarcode(product.getBarcode());
         orderItemPojo.setProductName(product.getName());
         orderItemPojo.setClientName(product.getClientName());
@@ -93,10 +96,15 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
     protected OrderItemData convertEntityToData(OrderItemPojo orderItemPojo) {
         OrderItemData orderItemData = new OrderItemData();
         orderItemData.setId(orderItemPojo.getId());
+        orderItemData.setOrderId(orderItemPojo.getOrderId()); // Set the order ID
         // Since we don't have productId in OrderItemPojo anymore, we need to look it up by barcode
         try {
             var product = productApi.getByBarcode(orderItemPojo.getProductBarcode());
-            orderItemData.setProductId(product.getId());
+            if (product != null) {
+                orderItemData.setProductId(product.getId());
+            } else {
+                orderItemData.setProductId(null);
+            }
         } catch (Exception e) {
             // If product not found, set to null
             orderItemData.setProductId(null);
@@ -120,7 +128,11 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
         if (orderItemPojo.getProductImageUrl() != null && !orderItemPojo.getProductImageUrl().trim().isEmpty()) {
             try {
                 var product = productApi.getByBarcode(orderItemPojo.getProductBarcode());
-                orderItemData.setImageUrl("/api/products/" + product.getId() + "/image");
+                if (product != null) {
+                    orderItemData.setImageUrl("/api/products/" + product.getId() + "/image");
+                } else {
+                    orderItemData.setImageUrl(orderItemPojo.getProductImageUrl());
+                }
             } catch (Exception e) {
                 orderItemData.setImageUrl(orderItemPojo.getProductImageUrl());
             }
@@ -128,9 +140,41 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
         return orderItemData;
     }
 
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public OrderItemData add(@Valid OrderItemForm form) {
+        if (Objects.isNull(form)) {
+            throw new ApiException("Order item form cannot be null");
+        }
+        return super.add(form);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public OrderItemData update(Integer id, @Valid OrderItemForm form) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("Order item ID cannot be null");
+        }
+        if (Objects.isNull(form)) {
+            throw new ApiException("Order item form cannot be null");
+        }
+        return super.update(id, form);
+    }
+
+    @Override
+    public OrderItemData get(Integer id) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("Order item ID cannot be null");
+        }
+        return super.get(id);
+    }
+
     public List<OrderItemData> getByOrderId(Integer orderId) {
         if (Objects.isNull(orderId)) {
             throw new ApiException("Order ID cannot be null");
+        }
+        if (orderId <= 0) {
+            throw new ApiException("Order ID must be positive");
         }
         System.out.println("OrderItemDto: Getting order items for order ID: " + orderId);
         List<OrderItemPojo> orderItemPojoList = orderItemFlow.getByOrderId(orderId);
@@ -151,11 +195,5 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
         } catch (IllegalArgumentException e) {
             return false;
         }
-    }
-
-    @Override
-    @org.springframework.transaction.annotation.Transactional
-    public OrderItemData update(Integer id, @Valid OrderItemForm form) {
-        return super.update(id, form);
     }
 }

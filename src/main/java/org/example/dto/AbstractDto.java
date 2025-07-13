@@ -47,12 +47,6 @@ public abstract class AbstractDto<T, F, D> {
         return convertEntityToData(api.get(id));
     }
 
-    @org.springframework.transaction.annotation.Transactional
-    public void delete(Integer id) {
-        validateId(id);
-        api.delete(id);
-    }
-
     /**
      * Get entity name for error messages
      */

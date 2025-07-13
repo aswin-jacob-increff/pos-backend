@@ -8,11 +8,14 @@ import org.example.api.ClientApi;
 import org.example.exception.ApiException;
 import org.example.util.FileValidationUtil;
 import org.example.util.ProductTsvParser;
+import org.example.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import jakarta.validation.Valid;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Component
 public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductData> {
@@ -31,7 +34,7 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
     @Override
     protected ProductPojo convertFormToEntity(ProductForm productForm) {
         ProductPojo productPojo = new ProductPojo();
-        productPojo.setClientName(productForm.getClientName());
+        productPojo.setClientName(StringUtil.format(productForm.getClientName()));
         productPojo.setName(productForm.getName());
         productPojo.setMrp(productForm.getMrp());
         productPojo.setBarcode(productForm.getBarcode());
@@ -60,9 +63,22 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         return productData;
     }
 
+    protected ProductPojo convertDataToEntity(ProductData productData) {
+        ProductPojo productPojo = new ProductPojo();
+        productPojo.setId(productData.getId());
+        productPojo.setName(productData.getName());
+        productPojo.setClientName(productData.getClientName());
+        productPojo.setBarcode(productData.getBarcode());
+        productPojo.setMrp(productData.getMrp());
+        productPojo.setImageUrl(productData.getImageUrl());
+        return productPojo;
+    }
+
     @Override
     protected void preprocess(ProductForm productForm) {
-        // Validate clientName is provided
+        if (productForm == null) {
+            throw new ApiException("Product form cannot be null");
+        }
         if (productForm.getClientName() == null || productForm.getClientName().trim().isEmpty()) {
             throw new ApiException("Client name is required");
         }
@@ -77,40 +93,18 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
 
     @Override
     @org.springframework.transaction.annotation.Transactional
-    public ProductData update(Integer id, @Valid ProductForm form) {
-        preprocess(form);
-        ProductPojo updatedProduct = convertFormToEntity(form);
-        ProductPojo result = productFlow.update(id, updatedProduct);
-        return convertEntityToData(result);
-    }
-
-    // Custom methods that don't fit the generic pattern
-    public ProductData getByBarcode(String barcode) {
-        return convertEntityToData(productFlow.getByBarcode(barcode));
-    }
-
-    public ProductData getByName(String name) {
-        return convertEntityToData(productFlow.getByName(name));
-    }
-
-    public void deleteByName(String name) {
-        productFlow.deleteByName(name);
-    }
-
-    public void deleteByBarcode(String barcode) {
-        productFlow.deleteByBarcode(barcode);
-    }
-
-    public void deleteProduct(Integer id, String name, String barcode) {
-        if (id != null) {
-            delete(id);
-        } else if (name != null) {
-            deleteByName(name);
-        } else if (barcode != null) {
-            deleteByBarcode(barcode);
-        } else {
-            throw new ApiException("You must provide either 'id', 'name', or 'barcode' to delete a product.");
+    public ProductData add(@Valid ProductForm form) {
+        if (Objects.isNull(form)) {
+            throw new ApiException("Product form cannot be null");
         }
+        return super.add(form);
+    }
+
+    @Override
+    public List<ProductData> getAll() {
+        return productFlow.getAll().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
     }
 
     public String uploadProductsFromTsv(MultipartFile file) {
@@ -141,6 +135,17 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
             throw new ApiException("Product image not found");
         }
         return product.getImageUrl();
+    }
+
+    public ProductData getByBarcode(String barcode) {
+        if (barcode == null || barcode.trim().isEmpty()) {
+            throw new ApiException("Barcode cannot be null or empty");
+        }
+        ProductPojo product = productFlow.getByBarcode(barcode);
+        if (product == null) {
+            throw new ApiException("Product with barcode '" + barcode + "' not found");
+        }
+        return convertEntityToData(product);
     }
     
     private boolean isValidUrl(String url) {

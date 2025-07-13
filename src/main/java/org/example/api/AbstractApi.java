@@ -45,16 +45,6 @@ public abstract class AbstractApi<T> {
         dao.update(id, updatedEntity);
     }
 
-    public void delete(Integer id) {
-        validateId(id);
-        T entity = dao.select(id);
-        if (Objects.isNull(entity)) {
-            throw new ApiException(getEntityName() + " with ID " + id + " not found");
-        }
-        validateDelete(entity);
-        dao.delete(id);
-    }
-
     /**
      * Get entity name for error messages
      */

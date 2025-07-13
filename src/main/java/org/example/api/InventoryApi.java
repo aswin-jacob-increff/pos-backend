@@ -23,6 +23,10 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
 
     @Override
     protected void validateAdd(InventoryPojo inventory) {
+        // Check if the client name is present
+        if (inventory.getClientName() == null) {
+            throw new ApiException("Client name is required for inventory");
+        }
         // Check if the client is active before adding inventory
         if (inventory.getClientName() != null) {
             try {
@@ -43,6 +47,10 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
 
     @Override
     protected void validateUpdate(InventoryPojo existing, InventoryPojo updated) {
+        // Check if the client name is present
+        if (updated.getClientName() == null) {
+            throw new ApiException("Client name is required for inventory");
+        }
         // Check if the client is active before updating inventory
         if (updated.getClientName() != null) {
             try {
@@ -67,6 +75,17 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
 
     public InventoryPojo getByProductBarcode(String barcode) {
         return inventoryDao.getByProductBarcode(barcode);
+    }
+
+    public InventoryPojo get(Integer id) {
+        if (id == null) {
+            throw new ApiException("Inventory ID cannot be null");
+        }
+        InventoryPojo inventory = inventoryDao.select(id);
+        if (inventory == null) {
+            throw new ApiException("Inventory with ID " + id + " not found");
+        }
+        return inventory;
     }
 
     /**
@@ -181,5 +200,21 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
         updatedInventory.setProductImageUrl(inventory.getProductImageUrl());
         updatedInventory.setQuantity(newQuantity);
         inventoryDao.update(inventory.getId(), updatedInventory);
+    }
+
+    @Override
+    public void add(InventoryPojo inventory) {
+        if (Objects.isNull(inventory)) {
+            throw new ApiException("Inventory cannot be null");
+        }
+        super.add(inventory);
+    }
+
+    @Override
+    public void update(Integer id, InventoryPojo updatedInventory) {
+        if (Objects.isNull(updatedInventory)) {
+            throw new ApiException("Inventory cannot be null");
+        }
+        super.update(id, updatedInventory);
     }
 } 

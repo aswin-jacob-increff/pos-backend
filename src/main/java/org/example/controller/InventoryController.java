@@ -97,18 +97,6 @@ public class InventoryController {
         }
     }
 
-    @DeleteMapping("/{id}")
-    @org.springframework.transaction.annotation.Transactional
-    public void delete(@PathVariable Integer id) {
-        try {
-            inventoryDto.delete(id);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to delete inventory: " + e.getMessage());
-        }
-    }
-
     @GetMapping("/product/{productBarcode}")
     public InventoryData getByProductBarcode(@PathVariable String productBarcode) {
         try {

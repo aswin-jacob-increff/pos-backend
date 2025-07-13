@@ -12,6 +12,7 @@ import org.example.dto.ProductDto;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import org.example.exception.ApiException;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/products")
@@ -43,17 +44,6 @@ public class ProductController {
         }
     }
 
-    @GetMapping
-    public List<ProductData> getAll() {
-        try {
-            return productDto.getAll();
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to get all products: " + e.getMessage());
-        }
-    }
-
     @GetMapping("/barcode/{barcode}")
     public ProductData getByBarcode(@PathVariable String barcode) {
         try {
@@ -65,30 +55,17 @@ public class ProductController {
         }
     }
 
-    @PutMapping("/{id}")
-    @org.springframework.transaction.annotation.Transactional
-    public ProductData update(@PathVariable Integer id, @RequestBody ProductForm form) {
-        try {
-            return productDto.update(id, form);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to update product: " + e.getMessage());
-        }
+    @GetMapping
+    public ResponseEntity<List<ProductData>> getAllProducts() {
+        List<ProductData> products = productDto.getAll();
+        return ResponseEntity.ok(products);
     }
 
-    @DeleteMapping
+    @PutMapping("/{id}")
     @org.springframework.transaction.annotation.Transactional
-    public void deleteProduct(@RequestParam(required = false) Integer id,
-                              @RequestParam(required = false) String name,
-                              @RequestParam(required = false) String barcode) {
-        try {
-            productDto.deleteProduct(id, name, barcode);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to delete product: " + e.getMessage());
-        }
+    public ResponseEntity<ProductData> updateProduct(@PathVariable Integer id, @Valid @RequestBody ProductForm form) {
+        ProductData updatedProduct = productDto.update(id, form);
+        return ResponseEntity.ok(updatedProduct);
     }
 
     @GetMapping("/{id}/image")

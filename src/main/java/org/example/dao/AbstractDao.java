@@ -41,13 +41,6 @@ public abstract class AbstractDao<T> {
         }
     }
 
-    public void delete(Integer id) {
-        T entity = select(id);
-        if (entity != null) {
-            em.remove(entity);
-        }
-    }
-
     /**
      * Template method for updating entity fields.
      * Subclasses should override this to implement specific update logic.

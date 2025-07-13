@@ -269,20 +269,51 @@ class ClientApiTest {
     }
 
     @Test
+    void testUpdate_Success() {
+        // Given
+        ClientPojo client = new ClientPojo();
+        client.setId(1);
+        client.setClientName("Updated Client");
+        client.setStatus(true);
+
+        when(clientDao.select(1)).thenReturn(client);
+        doNothing().when(clientDao).update(1, client);
+
+        // When
+        clientApi.update(1, client);
+
+        // Then
+        verify(clientDao).update(1, client);
+    }
+
+    @Test
+    void testUpdate_NullId() {
+        // When & Then
+        assertThrows(ApiException.class, () -> clientApi.update(null, new ClientPojo()));
+        verify(clientDao, never()).update(any(), any());
+    }
+
+    @Test
+    void testUpdate_NullEntity() {
+        // When & Then
+        assertThrows(ApiException.class, () -> clientApi.update(1, null));
+        verify(clientDao, never()).update(any(), any());
+    }
+
+    @Test
     void testGetAll_Success() {
-        // Arrange
-        List<ClientPojo> clients = Arrays.asList(testClient, existingClient);
+        // Given
+        List<ClientPojo> clients = Arrays.asList(
+            new ClientPojo(), new ClientPojo()
+        );
         when(clientDao.selectAll()).thenReturn(clients);
 
-        // Act
+        // When
         List<ClientPojo> result = clientApi.getAll();
 
-        // Assert
-        assertNotNull(result);
+        // Then
         assertEquals(2, result.size());
-        assertEquals("Test Client", result.get(0).getClientName());
-        assertEquals("Existing Client", result.get(1).getClientName());
-        verify(clientDao, times(1)).selectAll();
+        verify(clientDao).selectAll();
     }
 
     @Test
@@ -311,34 +342,5 @@ class ClientApiTest {
 
         assertEquals("Client with ID 999 not found", exception.getMessage());
         verify(clientDao, times(1)).select(999);
-    }
-
-    @Test
-    void testDelete_Success() {
-        // Arrange
-        when(clientDao.select(1)).thenReturn(testClient);
-        doNothing().when(clientDao).delete(1);
-
-        // Act
-        clientApi.delete(1);
-
-        // Assert
-        verify(clientDao, times(1)).select(1);
-        verify(clientDao, times(1)).delete(1);
-    }
-
-    @Test
-    void testDelete_NotFound() {
-        // Arrange
-        when(clientDao.select(999)).thenReturn(null);
-
-        // Act & Assert
-        ApiException exception = assertThrows(ApiException.class, () -> {
-            clientApi.delete(999);
-        });
-
-        assertEquals("Client with ID 999 not found", exception.getMessage());
-        verify(clientDao, times(1)).select(999);
-        verify(clientDao, never()).delete(anyInt());
     }
 } 

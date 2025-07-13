@@ -47,6 +47,17 @@ public class ClientApi extends AbstractApi<ClientPojo> {
         return getByField("clientName", name.trim().toLowerCase());
     }
 
+    public ClientPojo get(Integer id) {
+        if (id == null) {
+            throw new ApiException("Client ID cannot be null");
+        }
+        ClientPojo client = dao.select(id);
+        if (client == null) {
+            throw new ApiException("Client with ID " + id + " not found");
+        }
+        return client;
+    }
+
     public void toggleStatus(Integer id) {
         ClientPojo client = get(id);
         if (client == null) {

@@ -44,10 +44,9 @@ public class ClientIntegrationTest {
     }
 
     @Test
-    @Transactional
     public void testAddAndGetClient() throws Exception {
         ClientForm form = new ClientForm();
-        form.setClientName("Integration Client");
+        form.setClientName("UniqueTestClient123");
         String json = objectMapper.writeValueAsString(form);
 
         // Add client
@@ -58,12 +57,12 @@ public class ClientIntegrationTest {
 
         // Get client by name
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.get("/api/clients/search")
-                .param("name", "Integration Client"))
+                .param("name", "UniqueTestClient123"))
                 .andExpect(status().isOk())
                 .andReturn();
         String response = result.getResponse().getContentAsString();
         ClientData client = objectMapper.readValue(response, ClientData.class);
-        assertThat(client.getClientName()).isEqualTo("integration client");
+        assertThat(client.getClientName()).isEqualTo("uniquetestclient123");
         assertThat(client.getStatus()).isTrue();
     }
 

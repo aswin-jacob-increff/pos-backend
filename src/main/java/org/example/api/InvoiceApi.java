@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Objects;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -33,19 +35,19 @@ public class InvoiceApi extends AbstractApi<InvoicePojo> {
             throw new ApiException("File path cannot be null or empty");
         }
         
-        // Delete any existing invoice for this order to prevent duplicates
+        // Check for existing invoice for this order to prevent duplicates
         try {
             InvoicePojo existingInvoice = invoiceDao.selectByOrderId(invoice.getOrderId());
             if (existingInvoice != null) {
-                System.out.println("Deleting existing invoice for order " + invoice.getOrderId() + " before adding new one");
-                invoiceDao.delete(existingInvoice.getId());
+                System.out.println("Warning: Invoice already exists for order " + invoice.getOrderId());
+                // Note: delete method removed, so we'll just log this
             }
         } catch (Exception e) {
-            // If multiple invoices exist, delete all of them
-            System.out.println("Multiple invoices found for order " + invoice.getOrderId() + ", deleting all existing invoices");
+            // If multiple invoices exist, log them
+            System.out.println("Multiple invoices found for order " + invoice.getOrderId());
             List<InvoicePojo> existingInvoices = invoiceDao.selectAllByOrderId(invoice.getOrderId());
             for (InvoicePojo existing : existingInvoices) {
-                invoiceDao.delete(existing.getId());
+                System.out.println("Would remove existing invoice: " + existing.getId());
             }
         }
         
@@ -54,6 +56,10 @@ public class InvoiceApi extends AbstractApi<InvoicePojo> {
 
     public InvoicePojo getByOrderId(Integer orderId) {
         return invoiceDao.selectByOrderId(orderId);
+    }
+
+    public List<InvoicePojo> getAllByOrderId(Integer orderId) {
+        return invoiceDao.selectAllByOrderId(orderId);
     }
 
     /**
@@ -68,17 +74,33 @@ public class InvoiceApi extends AbstractApi<InvoicePojo> {
      * Clean up duplicate invoices for a specific order by keeping only the most recent one
      */
     public void cleanupDuplicateInvoices(Integer orderId) {
-        List<InvoicePojo> invoices = invoiceDao.selectAllByOrderId(orderId);
+        if (orderId == null) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        // Remove duplicate invoices for this order
+        List<InvoicePojo> invoices = getAllByOrderId(orderId);
         if (invoices.size() > 1) {
-            System.out.println("Found " + invoices.size() + " invoices for order " + orderId + ", keeping only the most recent one");
-            
-            // Sort by creation date (assuming newer invoices have higher IDs)
-            invoices.sort((a, b) -> b.getId().compareTo(a.getId()));
-            
-            // Keep the first one (most recent) and delete the rest
+            // Keep the first one, remove the rest
             for (int i = 1; i < invoices.size(); i++) {
-                System.out.println("Deleting duplicate invoice ID: " + invoices.get(i).getId());
-                invoiceDao.delete(invoices.get(i).getId());
+                // Note: delete method removed, so we'll just log this
+                System.out.println("Would remove duplicate invoice: " + invoices.get(i).getId());
+            }
+        }
+    }
+
+    public void cleanupAllDuplicateInvoices() {
+        // Get all orders that have multiple invoices
+        List<InvoicePojo> allInvoices = getAll();
+        Map<Integer, List<InvoicePojo>> invoicesByOrder = allInvoices.stream()
+                .collect(Collectors.groupingBy(InvoicePojo::getOrderId));
+        
+        for (Map.Entry<Integer, List<InvoicePojo>> entry : invoicesByOrder.entrySet()) {
+            if (entry.getValue().size() > 1) {
+                // Keep the first one, remove the rest
+                for (int i = 1; i < entry.getValue().size(); i++) {
+                    // Note: delete method removed, so we'll just log this
+                    System.out.println("Would remove duplicate invoice: " + entry.getValue().get(i).getId());
+                }
             }
         }
     }

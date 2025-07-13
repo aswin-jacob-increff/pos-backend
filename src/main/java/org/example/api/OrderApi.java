@@ -48,7 +48,32 @@ public class OrderApi extends AbstractApi<OrderPojo> {
         // The order is created first, then items are added with orderId reference
     }
 
+    public OrderPojo get(Integer id) {
+        if (id == null) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        OrderPojo order = orderDao.select(id);
+        if (order == null) {
+            throw new ApiException("Order with ID " + id + " not found");
+        }
+        return order;
+    }
+
+    @Override
+    public void update(Integer id, OrderPojo orderPojo) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        if (Objects.isNull(orderPojo)) {
+            throw new ApiException("Order cannot be null");
+        }
+        super.update(id, orderPojo);
+    }
+
     public void cancelOrder(Integer orderId) {
+        if (Objects.isNull(orderId)) {
+            throw new ApiException("Order ID cannot be null");
+        }
         OrderPojo order = orderDao.select(orderId);
         if (Objects.isNull(order)) {
             throw new ApiException("Order with ID " + orderId + " not found");
@@ -61,8 +86,9 @@ public class OrderApi extends AbstractApi<OrderPojo> {
             // Add the quantity back to inventory
             inventoryApi.addStock(productBarcode, quantityToRestore);
         }
-        // Delete the order (this will cascade to order items)
-        orderDao.delete(orderId);
+        // Update order status to CANCELLED instead of deleting
+        order.setStatus(org.example.pojo.OrderStatus.CANCELLED);
+        orderDao.update(orderId, order);
     }
 
     public String generateInvoice(Integer orderId) throws Exception {
@@ -73,6 +99,12 @@ public class OrderApi extends AbstractApi<OrderPojo> {
     // Note: Order items are now managed separately with denormalized structure
 
     public void updateStatus(Integer id, org.example.pojo.OrderStatus status) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        if (Objects.isNull(status)) {
+            throw new ApiException("Order status cannot be null");
+        }
         OrderPojo order = orderDao.select(id);
         if (order == null) throw new ApiException("Order not found");
         order.setStatus(status);

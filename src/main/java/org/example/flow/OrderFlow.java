@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @Transactional
@@ -19,6 +20,10 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
 
     @Autowired
     private OrderItemApi orderItemApi;
+
+    public OrderFlow() {
+        super(OrderPojo.class);
+    }
 
     @Override
     protected Integer getEntityId(OrderPojo entity) {
@@ -33,6 +38,9 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
     @Override
     @org.springframework.transaction.annotation.Transactional
     public OrderPojo add(OrderPojo orderPojo) {
+        if (Objects.isNull(orderPojo)) {
+            throw new ApiException("Order cannot be null");
+        }
         // Order items are now managed separately in OrderApi
         // The order itself is created first, then items are added
         api.add(orderPojo);
@@ -41,19 +49,38 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
 
     @Override
     @org.springframework.transaction.annotation.Transactional
-    public void delete(Integer id) {
-        List<OrderItemPojo> orderItemPojoList = orderItemApi.getByOrderId(id);
-        for (OrderItemPojo orderItemPojo : orderItemPojoList) {
-            orderItemApi.delete(orderItemPojo.getId());
+    public void update(Integer id, OrderPojo entity) {
+        if (id == null) {
+            throw new ApiException("ID cannot be null");
         }
-        api.delete(id);
+        if (entity == null) {
+            throw new ApiException("Entity cannot be null");
+        }
+        api.update(id, entity);
+    }
+
+    public OrderPojo get(Integer id) {
+        if (id == null) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        return api.get(id);
+    }
+
+    public List<OrderPojo> getAll() {
+        return api.getAll();
     }
 
     public void cancelOrder(Integer id) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("Order ID cannot be null");
+        }
         api.cancelOrder(id);
     }
 
     public String generateInvoice(Integer orderId) throws Exception {
+        if (Objects.isNull(orderId)) {
+            throw new ApiException("Order ID cannot be null");
+        }
         // This method is now handled by OrderDto.downloadInvoice()
         throw new ApiException("Use OrderDto.downloadInvoice() instead");
     }

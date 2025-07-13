@@ -31,6 +31,7 @@ public class ProductDao extends AbstractDao<ProductPojo> {
     @Override
     protected void updateEntity(ProductPojo existing, ProductPojo updated) {
         existing.setName(updated.getName());
+        existing.setBarcode(updated.getBarcode());
         existing.setMrp(updated.getMrp());
         existing.setImageUrl(updated.getImageUrl());
         existing.setClientName(updated.getClientName());

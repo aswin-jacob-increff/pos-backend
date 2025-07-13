@@ -6,6 +6,7 @@ import org.example.pojo.InventoryPojo;
 import org.example.flow.InventoryFlow;
 import org.example.api.ProductApi;
 import org.example.exception.ApiException;
+import org.example.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import java.util.Base64;
@@ -32,7 +33,7 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
         InventoryPojo inventoryPojo = new InventoryPojo();
         inventoryPojo.setProductBarcode(inventoryForm.getBarcode());
         inventoryPojo.setProductName(inventoryForm.getProductName());
-        inventoryPojo.setClientName(inventoryForm.getClientName());
+        inventoryPojo.setClientName(StringUtil.format(inventoryForm.getClientName()));
         inventoryPojo.setProductMrp(inventoryForm.getMrp());
         inventoryPojo.setProductImageUrl(inventoryForm.getImageUrl());
         inventoryPojo.setQuantity(inventoryForm.getQuantity());
@@ -87,7 +88,19 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
 
     @Override
     @org.springframework.transaction.annotation.Transactional
+    public InventoryData add(@Valid InventoryForm form) {
+        if (form == null) {
+            throw new ApiException("Inventory form cannot be null");
+        }
+        return super.add(form);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
     public InventoryData update(Integer id, @Valid InventoryForm form) {
+        if (form == null) {
+            throw new ApiException("Inventory form cannot be null");
+        }
         return super.update(id, form);
     }
 

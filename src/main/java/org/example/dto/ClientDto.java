@@ -5,6 +5,7 @@ import org.example.model.ClientForm;
 import org.example.model.ClientData;
 import org.example.pojo.ClientPojo;
 import org.example.flow.ClientFlow;
+import org.example.api.ClientApi;
 import org.example.util.StringUtil;
 import org.example.util.FileValidationUtil;
 import org.example.util.ClientTsvParser;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 
@@ -30,40 +32,52 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
     @Override
     protected ClientPojo convertFormToEntity(ClientForm form) {
         ClientPojo pojo = new ClientPojo();
-        pojo.setClientName(form.getClientName());
+        pojo.setClientName(StringUtil.format(form.getClientName()));
         pojo.setStatus(form.getStatus() != null ? form.getStatus() : true); // Default to true if null
         return pojo;
     }
 
     @Override
-    protected ClientData convertEntityToData(ClientPojo pojo) {
-        ClientData data = new ClientData();
-        data.setId(pojo.getId());
-        data.setClientName(pojo.getClientName());
-        data.setStatus(pojo.getStatus());
-        return data;
+    protected ClientData convertEntityToData(ClientPojo clientPojo) {
+        ClientData clientData = new ClientData();
+        clientData.setId(clientPojo.getId());
+        clientData.setClientName(clientPojo.getClientName());
+        clientData.setStatus(clientPojo.getStatus());
+        return clientData;
+    }
+
+    protected ClientPojo convertDataToEntity(ClientData clientData) {
+        ClientPojo clientPojo = new ClientPojo();
+        clientPojo.setId(clientData.getId());
+        clientPojo.setClientName(clientData.getClientName());
+        clientPojo.setStatus(clientData.getStatus());
+        return clientPojo;
     }
 
     @Override
-    protected void preprocess(ClientForm form) {
-        if (form.getClientName() != null) {
-            form.setClientName(StringUtil.format(form.getClientName()));
+    protected void preprocess(ClientForm clientForm) {
+        // Validate clientName is provided
+        if (clientForm == null) {
+            throw new ApiException("Client form cannot be null");
+        }
+        if (clientForm.getClientName() == null || clientForm.getClientName().trim().isEmpty()) {
+            throw new ApiException("Client name is required");
         }
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional
+//    @org.springframework.transaction.annotation.Transactional
     public ClientData update(Integer id, @Valid ClientForm form) {
         return super.update(id, form);
     }
 
-    // Custom methods that don't fit the generic pattern
-    public void deleteByName(String name) {
-        if (name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Client name cannot be null");
-        }
-        flow.deleteClientByName(StringUtil.format(name));
+    public List<ClientData> getAll() {
+        return flow.getAll().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
     }
+
+    // Custom methods that don't fit the generic pattern
 
     public void toggleStatus(Integer id) {
         if (Objects.isNull(id)) {
@@ -83,8 +97,8 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         name = StringUtil.format(name);
         if (Objects.nonNull(id) && Objects.nonNull(name)) {
             try {
-                ClientPojo idPojo = flow.get(id);
-                ClientPojo namePojo = flow.getByName(name);
+                ClientPojo idPojo = api.get(id);
+                ClientPojo namePojo = ((ClientApi) api).getByName(name);
                 if (idPojo.equals(namePojo)) {
                     return convertEntityToData(idPojo);
                 } else {
@@ -94,9 +108,9 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
                 throw new ApiException(e.getMessage());
             }
         } else if (Objects.nonNull(id)) {
-            return convertEntityToData(flow.get(id));
+            return convertEntityToData(api.get(id));
         } else {
-            return convertEntityToData(flow.getByName(name));
+            return convertEntityToData(((ClientApi) api).getByName(name));
         }
     }
 

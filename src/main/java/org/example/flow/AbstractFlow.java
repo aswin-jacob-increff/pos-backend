@@ -6,12 +6,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Objects;
+import java.lang.reflect.Method;
 
 @Service
 public abstract class AbstractFlow<T> {
 
     @Autowired
     protected AbstractApi<T> api;
+
+    protected final Class<T> entityClass;
+
+    protected AbstractFlow(Class<T> entityClass) {
+        this.entityClass = entityClass;
+    }
 
     /**
      * Add a new entity
@@ -22,10 +29,17 @@ public abstract class AbstractFlow<T> {
     }
 
     /**
-     * Get entity by ID
+     * Update entity by ID
      */
-    public T get(Integer id) {
-        return api.get(id);
+    @org.springframework.transaction.annotation.Transactional
+    public void update(Integer id, T entity) {
+        if (id == null) {
+            throw new ApiException("ID cannot be null");
+        }
+        if (entity == null) {
+            throw new ApiException("Entity cannot be null");
+        }
+        api.update(id, entity);
     }
 
     /**
@@ -36,25 +50,12 @@ public abstract class AbstractFlow<T> {
     }
 
     /**
-     * Update entity by ID
-     */
-    @org.springframework.transaction.annotation.Transactional
-    public T update(Integer id, T entity) {
-        api.update(id, entity);
-        return api.get(id);
-    }
-
-    /**
-     * Delete entity by ID
-     */
-    public void delete(Integer id) {
-        api.delete(id);
-    }
-
-    /**
      * Get entity by field value
      */
     public T getByField(String fieldName, Object value) {
+        if (fieldName == null || value == null) {
+            throw new ApiException("Field name and value cannot be null");
+        }
         return api.getByField(fieldName, value);
     }
 
@@ -69,65 +70,57 @@ public abstract class AbstractFlow<T> {
      * Get entities by multiple field values
      */
     public List<T> getByFields(String[] fieldNames, Object[] values) {
+        if (fieldNames == null || values == null) {
+            throw new ApiException("Field names and values cannot be null");
+        }
         return api.getByFields(fieldNames, values);
     }
 
     /**
-     * Delete entity by field value
+     * Validate entity exists by ID
      */
-    public void deleteByField(String fieldName, Object value) {
-        T entity = api.getByField(fieldName, value);
-        if (entity == null) {
-            throw new ApiException(getEntityName() + " with " + fieldName + " '" + value + "' not found");
+    protected void validateEntityExists(Integer id) {
+        if (id == null) {
+            throw new ApiException("ID cannot be null");
         }
-        api.delete(getEntityId(entity));
-    }
-
-    /**
-     * Get entity ID - subclasses must implement this
-     */
-    protected abstract Integer getEntityId(T entity);
-
-    /**
-     * Get entity name for error messages
-     */
-    protected abstract String getEntityName();
-
-    /**
-     * Validate entity exists before operations
-     */
-    protected T validateEntityExists(Integer id) {
         T entity = api.get(id);
         if (entity == null) {
             throw new ApiException(getEntityName() + " with ID " + id + " not found");
         }
-        return entity;
     }
 
     /**
-     * Validate entity exists by field before operations
+     * Validate entity exists by field value
      */
-    protected T validateEntityExistsByField(String fieldName, Object value) {
+    protected void validateEntityExistsByField(String fieldName, Object value) {
+        if (fieldName == null || value == null) {
+            throw new ApiException("Field name and value cannot be null");
+        }
         T entity = api.getByField(fieldName, value);
         if (entity == null) {
-            throw new ApiException(getEntityName() + " with " + fieldName + " '" + value + "' not found");
+            throw new ApiException(getEntityName() + " with " + fieldName + " = " + value + " not found");
         }
-        return entity;
     }
 
     /**
-     * Safe delete with validation
+     * Get entity ID from entity object
      */
-    public void safeDelete(Integer id) {
-        validateEntityExists(id);
-        api.delete(id);
+    protected Integer getEntityId(T entity) {
+        if (entity == null) {
+            throw new ApiException("Entity cannot be null");
+        }
+        try {
+            Method getIdMethod = entity.getClass().getMethod("getId");
+            return (Integer) getIdMethod.invoke(entity);
+        } catch (Exception e) {
+            throw new ApiException("Unable to get entity ID: " + e.getMessage());
+        }
     }
 
     /**
-     * Safe delete by field with validation
+     * Get entity name for error messages
      */
-    public void safeDeleteByField(String fieldName, Object value) {
-        validateEntityExistsByField(fieldName, value);
-        deleteByField(fieldName, value);
+    protected String getEntityName() {
+        return entityClass.getSimpleName();
     }
 } 

@@ -2,7 +2,9 @@ package org.example.client.unit;
 
 import org.example.flow.ClientFlow;
 import org.example.api.ClientApi;
+import org.example.api.ProductApi;
 import org.example.pojo.ClientPojo;
+import org.example.pojo.ProductPojo;
 import org.example.exception.ApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +17,7 @@ import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -25,6 +28,9 @@ class ClientFlowTest {
 
     @Mock
     private ClientApi clientApi;
+
+    @Mock
+    private ProductApi productApi;
 
     @InjectMocks
     private ClientFlow clientFlow;
@@ -54,51 +60,23 @@ class ClientFlowTest {
         Field apiField = clientFlow.getClass().getSuperclass().getDeclaredField("api");
         apiField.setAccessible(true);
         apiField.set(clientFlow, clientApi);
+
+        // Manually inject the productApi field using reflection
+        Field productApiField = clientFlow.getClass().getDeclaredField("productApi");
+        productApiField.setAccessible(true);
+        productApiField.set(clientFlow, productApi);
     }
 
     @Test
     void testAdd_Success() {
         // Arrange
-        doNothing().when(clientApi).add(testClient);
+        doNothing().when(clientApi).add(any(ClientPojo.class));
 
         // Act
-        ClientPojo result = clientFlow.add(testClient);
+        clientFlow.add(testClient);
 
         // Assert
-        assertNotNull(result);
-        assertEquals(testClient.getId(), result.getId());
-        assertEquals(testClient.getClientName(), result.getClientName());
-        assertEquals(testClient.getStatus(), result.getStatus());
         verify(clientApi, times(1)).add(testClient);
-    }
-
-    @Test
-    void testGet_Success() {
-        // Arrange
-        when(clientApi.get(1)).thenReturn(testClient);
-
-        // Act
-        ClientPojo result = clientFlow.get(1);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(testClient.getId(), result.getId());
-        assertEquals(testClient.getClientName(), result.getClientName());
-        assertEquals(testClient.getStatus(), result.getStatus());
-        verify(clientApi, times(1)).get(1);
-    }
-
-    @Test
-    void testGet_NotFound() {
-        // Arrange
-        when(clientApi.get(999)).thenReturn(null);
-
-        // Act
-        ClientPojo result = clientFlow.get(999);
-
-        // Assert
-        assertNull(result);
-        verify(clientApi, times(1)).get(999);
     }
 
     @Test
@@ -121,36 +99,33 @@ class ClientFlowTest {
     @Test
     void testUpdate_Success() {
         // Arrange
-        ClientPojo updatedClient = new ClientPojo();
-        updatedClient.setId(1);
-        updatedClient.setClientName("Updated Client");
-        updatedClient.setStatus(false);
+        ClientPojo client = new ClientPojo();
+        client.setId(1);
+        client.setClientName("Updated Client");
+        client.setStatus(true);
 
-        doNothing().when(clientApi).update(eq(1), any(ClientPojo.class));
-        when(clientApi.get(1)).thenReturn(updatedClient);
+        when(clientApi.get(1)).thenReturn(client);
+        doNothing().when(clientApi).update(1, client);
 
-        // Act
-        ClientPojo result = clientFlow.update(1, updatedClient);
+        // When
+        clientFlow.update(1, client);
 
-        // Assert
-        assertNotNull(result);
-        assertEquals(updatedClient.getId(), result.getId());
-        assertEquals(updatedClient.getClientName(), result.getClientName());
-        assertEquals(updatedClient.getStatus(), result.getStatus());
-        verify(clientApi, times(1)).update(1, updatedClient);
-        verify(clientApi, times(1)).get(1);
+        // Then
+        verify(clientApi).update(1, client);
     }
 
     @Test
-    void testDelete_Success() {
-        // Arrange
-        doNothing().when(clientApi).delete(1);
+    void testUpdate_NullId() {
+        // When & Then
+        assertThrows(ApiException.class, () -> clientFlow.update(null, new ClientPojo()));
+        verify(clientApi, never()).update(any(), any());
+    }
 
-        // Act
-        clientFlow.delete(1);
-
-        // Assert
-        verify(clientApi, times(1)).delete(1);
+    @Test
+    void testUpdate_NullEntity() {
+        // When & Then
+        assertThrows(ApiException.class, () -> clientFlow.update(1, null));
+        verify(clientApi, never()).update(any(), any());
     }
 
     @Test
@@ -173,46 +148,14 @@ class ClientFlowTest {
     @Test
     void testGetByName_NotFound() {
         // Arrange
-        lenient().when(clientApi.getByName("nonexistent")).thenReturn(null);
-        lenient().when(clientApi.getByName("NonExistent")).thenReturn(null);
+        when(clientApi.getByName("nonexistent")).thenReturn(null);
 
         // Act
-        ClientPojo result = clientFlow.getByName("NonExistent");
+        ClientPojo result = clientFlow.getByName("nonexistent");
 
         // Assert
         assertNull(result);
-        verify(clientApi, times(1)).getByName("NonExistent");
-    }
-
-    @Test
-    void testDeleteClientByName_Success() {
-        // Arrange
-        lenient().when(clientApi.getByName("test client")).thenReturn(testClient);
-        lenient().when(clientApi.getByName("Test Client")).thenReturn(testClient);
-        doNothing().when(clientApi).delete(1);
-
-        // Act
-        clientFlow.deleteClientByName("Test Client");
-
-        // Assert
-        verify(clientApi, times(1)).getByName("Test Client");
-        verify(clientApi, times(1)).delete(1);
-    }
-
-    @Test
-    void testDeleteClientByName_NotFound() {
-        // Arrange
-        lenient().when(clientApi.getByName("nonexistent")).thenReturn(null);
-        lenient().when(clientApi.getByName("NonExistent")).thenReturn(null);
-
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            clientFlow.deleteClientByName("NonExistent");
-        });
-
-        assertEquals("Client with name 'NonExistent' not found.", exception.getMessage());
-        verify(clientApi, times(1)).getByName("NonExistent");
-        verify(clientApi, never()).delete(anyInt());
+        verify(clientApi, times(1)).getByName("nonexistent");
     }
 
     @Test
@@ -367,92 +310,5 @@ class ClientFlowTest {
         assertEquals(1, result.size());
         assertEquals(testClient.getId(), result.get(0).getId());
         verify(clientApi, times(1)).getByFields(fieldNames, values);
-    }
-
-    @Test
-    void testDeleteByField_Success() {
-        // Arrange
-        when(clientApi.getByField("clientName", "test client")).thenReturn(testClient);
-        doNothing().when(clientApi).delete(1);
-
-        // Act
-        clientFlow.deleteByField("clientName", "test client");
-
-        // Assert
-        verify(clientApi, times(1)).getByField("clientName", "test client");
-        verify(clientApi, times(1)).delete(1);
-    }
-
-    @Test
-    void testDeleteByField_NotFound() {
-        // Arrange
-        when(clientApi.getByField("clientName", "nonexistent")).thenReturn(null);
-
-        // Act & Assert
-        ApiException exception = assertThrows(ApiException.class, () -> {
-            clientFlow.deleteByField("clientName", "nonexistent");
-        });
-
-        assertEquals("Client with clientName 'nonexistent' not found", exception.getMessage());
-        verify(clientApi, times(1)).getByField("clientName", "nonexistent");
-        verify(clientApi, never()).delete(anyInt());
-    }
-
-    @Test
-    void testSafeDelete_Success() {
-        // Arrange
-        when(clientApi.get(1)).thenReturn(testClient);
-        doNothing().when(clientApi).delete(1);
-
-        // Act
-        clientFlow.safeDelete(1);
-
-        // Assert
-        verify(clientApi, times(1)).get(1);
-        verify(clientApi, times(1)).delete(1);
-    }
-
-    @Test
-    void testSafeDelete_NotFound() {
-        // Arrange
-        when(clientApi.get(999)).thenReturn(null);
-
-        // Act & Assert
-        ApiException exception = assertThrows(ApiException.class, () -> {
-            clientFlow.safeDelete(999);
-        });
-
-        assertEquals("Client with ID 999 not found", exception.getMessage());
-        verify(clientApi, times(1)).get(999);
-        verify(clientApi, never()).delete(anyInt());
-    }
-
-    @Test
-    void testSafeDeleteByField_Success() {
-        // Arrange
-        when(clientApi.getByField("clientName", "test client")).thenReturn(testClient);
-        doNothing().when(clientApi).delete(1);
-
-        // Act
-        clientFlow.safeDeleteByField("clientName", "test client");
-
-        // Assert
-        verify(clientApi, times(2)).getByField("clientName", "test client"); // Called twice: once in validateEntityExistsByField and once in deleteByField
-        verify(clientApi, times(1)).delete(1);
-    }
-
-    @Test
-    void testSafeDeleteByField_NotFound() {
-        // Arrange
-        when(clientApi.getByField("clientName", "nonexistent")).thenReturn(null);
-
-        // Act & Assert
-        ApiException exception = assertThrows(ApiException.class, () -> {
-            clientFlow.safeDeleteByField("clientName", "nonexistent");
-        });
-
-        assertEquals("Client with clientName 'nonexistent' not found", exception.getMessage());
-        verify(clientApi, times(1)).getByField("clientName", "nonexistent");
-        verify(clientApi, never()).delete(anyInt());
     }
 } 

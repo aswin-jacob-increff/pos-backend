@@ -12,6 +12,7 @@ import org.example.model.OrderData;
 import org.example.model.OrderForm;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -83,18 +84,6 @@ public class OrderController {
             throw e;
         } catch (Exception e) {
             throw new ApiException("Failed to update order: " + e.getMessage());
-        }
-    }
-
-    @DeleteMapping("/{id}")
-    @org.springframework.transaction.annotation.Transactional
-    public void delete(@PathVariable Integer id) {
-        try {
-            orderDto.delete(id);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to delete order: " + e.getMessage());
         }
     }
     

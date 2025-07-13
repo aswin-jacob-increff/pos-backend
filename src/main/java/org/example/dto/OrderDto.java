@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.time.format.DateTimeFormatter;
+import org.example.api.ProductApi;
 
 @Component
 public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
@@ -35,6 +36,9 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
 
     @Autowired
     private ProductFlow productFlow;
+
+    @Autowired
+    private ProductApi productApi;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -106,7 +110,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         if (orderId == null) {
             throw new ApiException("Order ID cannot be null");
         }
-        OrderPojo orderPojo = orderFlow.get(orderId);
+        OrderPojo orderPojo = api.get(orderId);
         
         try {
             System.out.println("Starting invoice download for order: " + orderId);
@@ -152,7 +156,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
                 
                 // Get the actual product ID from the product using barcode
                 try {
-                    org.example.pojo.ProductPojo product = productFlow.getByBarcode(itemPojo.getProductBarcode());
+                    org.example.pojo.ProductPojo product = productApi.getByBarcode(itemPojo.getProductBarcode());
                     itemData.setProductId(product != null ? product.getId() : null);
                 } catch (Exception e) {
                     System.out.println("Warning: Could not find product for barcode " + itemPojo.getProductBarcode() + ", setting productId to null");
@@ -238,6 +242,9 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     @Override
     @org.springframework.transaction.annotation.Transactional
     public OrderData add(@Valid OrderForm form) {
+        if (Objects.isNull(form)) {
+            throw new ApiException("Order form cannot be null");
+        }
         preprocess(form);
         OrderPojo orderPojo = convertFormToEntity(form);
         
@@ -253,11 +260,9 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
                 // Set the order ID for each item
                 itemForm.setOrderId(orderPojo.getId());
                 
-                // Create order item using OrderItemDto
-                OrderItemPojo orderItemPojo = orderItemDto.convertFormToEntity(itemForm);
-                orderItemFlow.add(orderItemPojo);
-                
-                totalAmount += orderItemPojo.getAmount();
+                // Create order item using OrderItemDto - this will trigger preprocessing
+                OrderItemData orderItemData = orderItemDto.add(itemForm);
+                totalAmount += orderItemData.getAmount();
             }
             
             // Update order total
@@ -273,7 +278,21 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     @Override
     @org.springframework.transaction.annotation.Transactional
     public OrderData update(Integer id, @Valid OrderForm form) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        if (Objects.isNull(form)) {
+            throw new ApiException("Order form cannot be null");
+        }
         return super.update(id, form);
+    }
+
+    @Override
+    public OrderData get(Integer id) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        return super.get(id);
     }
 
 
@@ -303,6 +322,9 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     }
 
     public List<OrderData> getOrdersByUserId(String userId) {
+        if (userId == null || userId.trim().isEmpty()) {
+            throw new ApiException("User ID cannot be null or empty");
+        }
         List<OrderPojo> orderPojos = orderFlow.getOrdersByUserId(userId);
         List<OrderData> orderDataList = new ArrayList<>();
         for (OrderPojo orderPojo : orderPojos) {

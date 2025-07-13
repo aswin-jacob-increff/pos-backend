@@ -82,19 +82,4 @@ public class OrderItemController {
             throw new ApiException("Failed to update order item: " + e.getMessage());
         }
     }
-
-    @DeleteMapping("/{id}")
-    @org.springframework.transaction.annotation.Transactional
-    public void delete(@PathVariable Integer id) {
-        try {
-            if (id == null) {
-                throw new ApiException("Order Item ID cannot be null");
-            }
-            orderItemDto.delete(id);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to delete order item: " + e.getMessage());
-        }
-    }
 }
