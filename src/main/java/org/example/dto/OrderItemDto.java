@@ -96,19 +96,18 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
     protected OrderItemData convertEntityToData(OrderItemPojo orderItemPojo) {
         OrderItemData orderItemData = new OrderItemData();
         orderItemData.setId(orderItemPojo.getId());
-        orderItemData.setOrderId(orderItemPojo.getOrderId()); // Set the order ID
-        // Since we don't have productId in OrderItemPojo anymore, we need to look it up by barcode
+        orderItemData.setOrderId(orderItemPojo.getOrderId());
+        
+        // Single product lookup - cache the result to avoid multiple queries
+        org.example.pojo.ProductPojo product = null;
         try {
-            var product = productApi.getByBarcode(orderItemPojo.getProductBarcode());
-            if (product != null) {
-                orderItemData.setProductId(product.getId());
-            } else {
-                orderItemData.setProductId(null);
-            }
+            product = productApi.getByBarcode(orderItemPojo.getProductBarcode());
         } catch (Exception e) {
-            // If product not found, set to null
-            orderItemData.setProductId(null);
+            // Product not found, continue with denormalized data
         }
+        
+        // Set product ID if found, otherwise null
+        orderItemData.setProductId(product != null ? product.getId() : null);
         orderItemData.setBarcode(orderItemPojo.getProductBarcode());
         orderItemData.setProductName(orderItemPojo.getProductName());
         orderItemData.setQuantity(orderItemPojo.getQuantity());
@@ -124,19 +123,15 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
             orderItemData.setDateTime(null);
         }
         
-        // Set imageUrl as reference to product image endpoint
+        // Set imageUrl - use cached product if available, otherwise use denormalized data
         if (orderItemPojo.getProductImageUrl() != null && !orderItemPojo.getProductImageUrl().trim().isEmpty()) {
-            try {
-                var product = productApi.getByBarcode(orderItemPojo.getProductBarcode());
-                if (product != null) {
-                    orderItemData.setImageUrl("/api/products/" + product.getId() + "/image");
-                } else {
-                    orderItemData.setImageUrl(orderItemPojo.getProductImageUrl());
-                }
-            } catch (Exception e) {
+            if (product != null) {
+                orderItemData.setImageUrl("/api/products/" + product.getId() + "/image");
+            } else {
                 orderItemData.setImageUrl(orderItemPojo.getProductImageUrl());
             }
         }
+        
         return orderItemData;
     }
 

@@ -53,7 +53,8 @@ public class ClientFlow extends AbstractFlow<ClientPojo> {
         
         // If the client name has changed, find all products with the old client name FIRST
         List<ProductPojo> productsToUpdate = null;
-        if (!Objects.equals(existingClient.getClientName().toLowerCase(), clientPojo.getClientName().toLowerCase())) {
+        // Compare the actual stored values (both should be in lowercase due to StringUtil.format)
+        if (!Objects.equals(existingClient.getClientName(), clientPojo.getClientName())) {
             String oldClientName = existingClient.getClientName();
             productsToUpdate = productApi.getByClientName(oldClientName);
         }

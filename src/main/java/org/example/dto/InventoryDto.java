@@ -13,6 +13,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import jakarta.validation.Valid;
+import java.util.ArrayList;
 
 @Component
 public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, InventoryData> {
@@ -47,12 +48,13 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
         inventoryData.setProductName(inventoryPojo.getProductName());
         inventoryData.setBarcode(inventoryPojo.getProductBarcode());
         
-        // Look up product ID by barcode since we denormalized the structure
+        // Try to get product ID, but don't fail if product not found
+        // This avoids N+1 queries and handles cases where products might be deleted
         try {
             var product = productApi.getByBarcode(inventoryPojo.getProductBarcode());
-            inventoryData.setProductId(product.getId());
+            inventoryData.setProductId(product != null ? product.getId() : null);
         } catch (Exception e) {
-            // If product not found, set to null
+            // If product not found, set to null - this is acceptable for denormalized data
             inventoryData.setProductId(null);
         }
         
@@ -137,6 +139,32 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
     public InventoryData getByProductName(String productName) {
         validateProductName(productName);
         return convertEntityToData(inventoryFlow.getByProductName(productName));
+    }
+
+    @Override
+    public List<InventoryData> getAll() {
+        List<InventoryPojo> entities = api.getAll();
+        List<InventoryData> dataList = new ArrayList<>();
+        
+        // Process all inventory items without making individual product lookups
+        // This avoids the N+1 query problem by using denormalized data
+        for (InventoryPojo entity : entities) {
+            InventoryData inventoryData = new InventoryData();
+            inventoryData.setId(entity.getId());
+            inventoryData.setProductName(entity.getProductName());
+            inventoryData.setBarcode(entity.getProductBarcode());
+            inventoryData.setQuantity(entity.getQuantity());
+            inventoryData.setMrp(entity.getProductMrp());
+            inventoryData.setImageUrl(entity.getProductImageUrl());
+            
+            // Set product ID to null since we're not looking it up to avoid N+1 queries
+            // The product ID is not critical for inventory display and can be looked up separately if needed
+            inventoryData.setProductId(null);
+            
+            dataList.add(inventoryData);
+        }
+        
+        return dataList;
     }
 
     // Validation helpers

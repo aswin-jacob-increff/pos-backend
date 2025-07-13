@@ -53,7 +53,7 @@ public class ProductFlow extends AbstractFlow<ProductPojo> {
     public void update(Integer id, ProductPojo productPojo) {
         if (Objects.isNull(id)) {
             throw new ApiException("Product ID cannot be null");
-        }
+    }
         if (Objects.isNull(productPojo)) {
             throw new ApiException("Product cannot be null");
         }

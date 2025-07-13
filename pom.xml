@@ -6,7 +6,7 @@
     <groupId>org.example</groupId>
     <artifactId>POS</artifactId>
     <!--TODO make this 1.0.0-SNAPSHOT -->
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>war</packaging>
 
     <dependencies>
@@ -33,28 +33,24 @@
             <version>6.2.7</version>
         </dependency>
 
-        <!-- Hibernate -->
         <dependency>
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-core</artifactId>
             <version>6.6.1.Final</version>
         </dependency>
 
-        <!-- Jakarta Persistence API -->
         <dependency>
             <groupId>jakarta.persistence</groupId>
             <artifactId>jakarta.persistence-api</artifactId>
             <version>3.2.0</version>
         </dependency>
 
-        <!-- MySQL Connector -->
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>8.0.33</version>
         </dependency>
 
-        <!-- Jackson -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -66,14 +62,12 @@
             <version>2.17.1</version>
         </dependency>
 
-        <!-- springdoc-openapi for Spring WebMVC (Jakarta version) -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.3.0</version>
         </dependency>
 
-        <!-- Jakarta Servlet & JSP -->
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
@@ -97,7 +91,6 @@
             <version>11.0.24</version>
         </dependency>
 
-        <!-- Jetty core -->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlet</artifactId>
@@ -116,7 +109,6 @@
         </dependency>
 
 
-        <!-- Optional, if not included transitively -->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
@@ -168,14 +160,12 @@
             <version>12.0.11</version>
         </dependency>
 
-        <!-- Logging -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.4.14</version>
         </dependency>
 
-        <!-- Testing Dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -218,7 +208,6 @@
     <build>
         <plugins>
 
-            <!-- Compiler Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -232,7 +221,6 @@
                 </configuration>
             </plugin>
 
-            <!-- WAR Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
@@ -242,7 +230,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Jetty Plugin -->
             <plugin>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-maven-plugin</artifactId>
