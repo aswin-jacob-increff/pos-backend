@@ -49,25 +49,32 @@ public class OrderController {
                                  HttpServletRequest request) {
         String email;
         boolean isSupervisor = false;
-        if (authentication != null) {
+        
+        // If not authenticated in current context, try to restore from session
+        if (authentication == null || !authentication.isAuthenticated() || 
+            "anonymousUser".equals(authentication.getName())) {
+            
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                // Try to get authentication from session
+                org.springframework.security.core.Authentication sessionAuth = 
+                    (org.springframework.security.core.Authentication) session.getAttribute("AUTHENTICATION");
+                if (sessionAuth != null && sessionAuth.isAuthenticated()) {
+                    // Restore the authentication in the security context
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(sessionAuth);
+                    authentication = sessionAuth;
+                }
+            }
+        }
+        
+        if (authentication != null && authentication.isAuthenticated()) {
             email = authentication.getName();
             isSupervisor = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERVISOR"));
         } else {
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                Object userEmail = session.getAttribute("userEmail");
-                Object userRole = session.getAttribute("userRole");
-                if (userEmail != null) {
-                    email = (String) userEmail;
-                    isSupervisor = userRole != null && userRole.toString().equals("ROLE_SUPERVISOR");
-                } else {
-                    throw new ApiException("User not authenticated");
-                }
-            } else {
-                throw new ApiException("User not authenticated");
-            }
+            throw new ApiException("User not authenticated");
         }
+        
         if (isSupervisor) {
             return orderDto.getAll();
         } else {
@@ -129,25 +136,32 @@ public class OrderController {
             HttpServletRequest request) {
         String email = null;
         boolean isSupervisor = false;
-        if (authentication != null) {
+        
+        // If not authenticated in current context, try to restore from session
+        if (authentication == null || !authentication.isAuthenticated() || 
+            "anonymousUser".equals(authentication.getName())) {
+            
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                // Try to get authentication from session
+                org.springframework.security.core.Authentication sessionAuth = 
+                    (org.springframework.security.core.Authentication) session.getAttribute("AUTHENTICATION");
+                if (sessionAuth != null && sessionAuth.isAuthenticated()) {
+                    // Restore the authentication in the security context
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(sessionAuth);
+                    authentication = sessionAuth;
+                }
+            }
+        }
+        
+        if (authentication != null && authentication.isAuthenticated()) {
             email = authentication.getName();
             isSupervisor = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERVISOR"));
         } else {
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                Object userEmail = session.getAttribute("userEmail");
-                Object userRole = session.getAttribute("userRole");
-                if (userEmail != null) {
-                    email = (String) userEmail;
-                    isSupervisor = userRole != null && userRole.toString().equals("ROLE_SUPERVISOR");
-                } else {
-                    throw new ApiException("User not authenticated");
-                }
-            } else {
-                throw new ApiException("User not authenticated");
-            }
+            throw new ApiException("User not authenticated");
         }
+        
         try {
             java.time.LocalDate start = java.time.LocalDate.parse(startDate);
             java.time.LocalDate end = java.time.LocalDate.parse(endDate);

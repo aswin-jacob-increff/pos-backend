@@ -18,8 +18,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.security.web.context.SecurityContextRepository;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 
 import java.util.Arrays;
 
@@ -38,25 +36,22 @@ public class SpringSecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/user/signup", "/api/user/login", "/api/user/logout", "/api/user/test-create", "/api/user/auth-status", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/api/supervisor/**").hasRole("SUPERVISOR")
-                        .requestMatchers("/api/operator/**").hasAnyRole("SUPERVISOR", "USER")
-                        .anyRequest().authenticated()
-                )
-                .httpBasic(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
-                .logout(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
-                        .maximumSessions(1)
-                        .expiredUrl("/api/user/login")
-                )
-                .securityContext(securityContext -> securityContext
-                        .requireExplicitSave(false)
-                )
-        ; // or formLogin() if you want form-based UI login
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .authorizeHttpRequests(auth -> auth
+                // Allow custom login/signup endpoints
+                .requestMatchers("/api/user/signup", "/api/user/login", "/api/user/test-create").permitAll()
+                // only supervisors can access anything under /api/supervisor/**
+                .requestMatchers("/api/supervisor/**").hasRole("SUPERVISOR")
+                // maybe operators can access their stuff
+                .requestMatchers("/api/operator/**").hasAnyRole("USER","SUPERVISOR")
+                // everything else must be authenticated
+                .anyRequest().authenticated()
+            )
+            .formLogin(Customizer.withDefaults()) // use default login form
+            .logout(Customizer.withDefaults())   // use default logout
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
+            );
         return http.build();
     }
 
