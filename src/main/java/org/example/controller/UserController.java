@@ -61,81 +61,14 @@ public class UserController {
         }
     }
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<String> logout(HttpServletRequest request) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             HttpSession session = request.getSession(false);
-            Cookie[] cookiesBefore = request.getCookies();
             SecurityContextHolder.clearContext();
             if (session != null) {
                 session.invalidate();
             }
-            if (cookiesBefore != null) {
-                for (Cookie cookie : cookiesBefore) {
-                    Cookie cleared = new Cookie(cookie.getName(), "");
-                    cleared.setPath(cookie.getPath() != null ? cookie.getPath() : "/");
-                    cleared.setDomain(cookie.getDomain()); // Keep original domain (can be null)
-                    cleared.setMaxAge(0);
-                    cleared.setHttpOnly(true);
-                    cleared.setSecure(false); // Set to true if using HTTPS
-                    response.addCookie(cleared);
-                    if (cookie.getPath() == null || !cookie.getPath().equals("/")) {
-                        Cookie rootCleared = new Cookie(cookie.getName(), "");
-                        rootCleared.setPath("/");
-                        rootCleared.setDomain(cookie.getDomain());
-                        rootCleared.setMaxAge(0);
-                        rootCleared.setHttpOnly(true);
-                        rootCleared.setSecure(false);
-                        response.addCookie(rootCleared);
-                    }
-                }
-            }
-            String[] sessionCookieNames = {"JSESSIONID", "jsessionid", "SESSION", "session"};
-            String[] paths = {"/", "/api", ""};
-            for (String name : sessionCookieNames) {
-                for (String path : paths) {
-                    Cookie c = new Cookie(name, "");
-                    c.setPath(path);
-                    c.setMaxAge(0);
-                    c.setHttpOnly(true);
-                    c.setSecure(false);
-                    response.addCookie(c);
-                }
-                Cookie domainCookie = new Cookie(name, "");
-                domainCookie.setPath("/");
-                domainCookie.setDomain(request.getServerName());
-                domainCookie.setMaxAge(0);
-                domainCookie.setHttpOnly(true);
-                domainCookie.setSecure(false);
-                response.addCookie(domainCookie);
-            }
-            String[] revealPaths = {"/", "/api", ""};
-            for (String path : revealPaths) {
-                Cookie reveal = new Cookie("__reveal_ut", "");
-                reveal.setPath(path);
-                reveal.setMaxAge(0);
-                reveal.setHttpOnly(true);
-                reveal.setSecure(false); // Set to true if using HTTPS
-                response.addCookie(reveal);
-            }
-            Cookie revealDomain = new Cookie("__reveal_ut", "");
-            revealDomain.setPath("/");
-            revealDomain.setDomain(request.getServerName());
-            revealDomain.setMaxAge(0);
-            revealDomain.setHttpOnly(true);
-            revealDomain.setSecure(false);
-            response.addCookie(revealDomain);
-            Cookie revealNullDomain = new Cookie("__reveal_ut", "");
-            revealNullDomain.setPath("/");
-            revealNullDomain.setDomain(null);
-            revealNullDomain.setMaxAge(0);
-            revealNullDomain.setHttpOnly(true);
-            revealNullDomain.setSecure(false);
-            response.addCookie(revealNullDomain);
-            response.setHeader("Clear-Site-Data", "\"cache\", \"cookies\", \"storage\", \"executionContexts\"");
-            response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-            response.setHeader("Pragma", "no-cache");
-            response.setHeader("Expires", "0");
             return ResponseEntity.ok("Logged out successfully");
         } catch (ApiException e) {
             throw e;
@@ -196,20 +129,6 @@ public class UserController {
         status.append(", Authenticated: ").append(authentication != null && authentication.isAuthenticated());
         status.append(", Session: ").append(session != null ? session.getId() : "null");
         status.append(", Session Valid: ").append(session != null && !session.isNew());
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            status.append(", Cookies: [");
-            for (int i = 0; i < cookies.length; i++) {
-                Cookie cookie = cookies[i];
-                status.append(cookie.getName()).append("=").append(cookie.getValue());
-                if (i < cookies.length - 1) {
-                    status.append(", ");
-                }
-            }
-            status.append("]");
-        } else {
-            status.append(", Cookies: none");
-        }
         return ResponseEntity.ok(status.toString());
     }
 }
