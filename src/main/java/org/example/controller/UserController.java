@@ -12,10 +12,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-import jakarta.servlet.http.Cookie;
 import org.example.exception.ApiException;
+import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/api/user")
@@ -25,82 +23,115 @@ public class UserController {
     @Autowired
     private AuthenticationManager authenticationManager;
     @PostMapping("/signup")
-    public void signup(@RequestBody UserForm form) {
+    public ResponseEntity<String> signup(@RequestBody UserForm form) {
         try {
+            // Validate input
+            if (form.getEmail() == null || form.getEmail().trim().isEmpty()) {
+                throw new ApiException("Email is required");
+            }
+            if (form.getPassword() == null || form.getPassword().trim().isEmpty()) {
+                throw new ApiException("Password is required");
+            }
+            if (form.getPassword().length() < 6) {
+                throw new ApiException("Password must be at least 6 characters long");
+            }
+            if (form.getRole() == null || form.getRole().trim().isEmpty()) {
+                throw new ApiException("Role is required");
+            }
+            
             userDto.signup(form);
+            return ResponseEntity.ok("User registered successfully");
         } catch (ApiException e) {
             throw e;
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new ApiException("User with this email already exists");
         } catch (Exception e) {
             throw new ApiException("Signup failed: " + e.getMessage());
         }
     }
+
     @PostMapping("/login")
     public ResponseEntity<UserData> login(@RequestBody UserForm form, HttpServletRequest request) {
         try {
-            HttpSession oldSession = request.getSession(false);
-            if (oldSession != null) {
-                oldSession.invalidate();
+            // Validate input
+            if (form.getEmail() == null || form.getEmail().trim().isEmpty()) {
+                throw new ApiException("Email is required");
             }
-            HttpSession newSession = request.getSession(true);
-            UserData userData = userDto.login(form);
+            if (form.getPassword() == null || form.getPassword().trim().isEmpty()) {
+                throw new ApiException("Password is required");
+            }
+            
+            // Authenticate using Spring Security's AuthenticationManager
             Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(form.getEmail(), form.getPassword())
+                new UsernamePasswordAuthenticationToken(form.getEmail().trim().toLowerCase(), form.getPassword())
             );
+            
+            // Create a new session
+            HttpSession session = request.getSession(true);
+            
+            // Set authentication in security context
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            newSession.setAttribute("userEmail", form.getEmail());
-            String userRole = authentication.getAuthorities().stream()
-                .findFirst()
-                .map(authority -> authority.getAuthority())
-                .orElse("ROLE_USER");
-            newSession.setAttribute("userRole", userRole);
+            
+            // Store the SecurityContext in the session using the correct attribute name
+            session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
+            
+            // Also store the authentication directly in the session as a backup
+            session.setAttribute("AUTHENTICATION", authentication);
+            
+            // Get user data after successful authentication
+            UserData userData = userDto.getUserByEmail(form.getEmail().trim().toLowerCase());
+            
             return ResponseEntity.ok(userData);
         } catch (ApiException e) {
             throw e;
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            throw new ApiException("Invalid email or password. Please check your credentials and try again.");
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+            throw new ApiException("User not found. Please check your email address.");
+        } catch (org.springframework.security.authentication.DisabledException e) {
+            throw new ApiException("Your account has been disabled. Please contact administrator.");
+        } catch (org.springframework.security.authentication.LockedException e) {
+            throw new ApiException("Your account has been locked. Please contact administrator.");
         } catch (Exception e) {
             throw new ApiException("Login failed: " + e.getMessage());
         }
     }
-    @PostMapping("/logout")
-    public ResponseEntity<String> logout(HttpServletRequest request) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            HttpSession session = request.getSession(false);
-            SecurityContextHolder.clearContext();
-            if (session != null) {
-                session.invalidate();
-            }
-            return ResponseEntity.ok("Logged out successfully");
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Logout failed: " + e.getMessage());
-        }
-    }
+
+
     @GetMapping("/me")
     public ResponseEntity<UserData> getCurrentUser(HttpServletRequest request) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            HttpSession session = request.getSession(false);
-            String userEmail = null;
+            
+            // If not authenticated in current context, try to restore from session
+            if (authentication == null || !authentication.isAuthenticated() || 
+                "anonymousUser".equals(authentication.getName())) {
+                
+                HttpSession session = request.getSession(false);
+                if (session != null) {
+                    // Try to get authentication from session
+                    Authentication sessionAuth = (Authentication) session.getAttribute("AUTHENTICATION");
+                    if (sessionAuth != null && sessionAuth.isAuthenticated()) {
+                        // Restore the authentication in the security context
+                        SecurityContextHolder.getContext().setAuthentication(sessionAuth);
+                        authentication = sessionAuth;
+                    }
+                }
+            }
+            
             if (authentication != null && authentication.isAuthenticated() &&
                 !"anonymousUser".equals(authentication.getName())) {
-                userEmail = authentication.getName();
-            }
-            if (userEmail == null && session != null) {
-                userEmail = (String) session.getAttribute("userEmail");
-            }
-            if (userEmail != null) {
-                try {
-                    UserData userData = userDto.getUserByEmail(userEmail);
-                    return ResponseEntity.ok(userData);
-                } catch (Exception e) {
-                    throw new ApiException("User not found");
-                }
+                
+                String userEmail = authentication.getName();
+                UserData userData = userDto.getUserByEmail(userEmail);
+                return ResponseEntity.ok(userData);
             } else {
-                throw new ApiException("User not authenticated");
+                throw new ApiException("Session expired. Please log in again.");
             }
         } catch (ApiException e) {
             throw e;
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+            throw new ApiException("User account not found. Please contact administrator.");
         } catch (Exception e) {
             throw new ApiException("Failed to get current user: " + e.getMessage());
         }
@@ -123,12 +154,29 @@ public class UserController {
     @GetMapping("/auth-status")
     public ResponseEntity<String> checkAuthStatus(HttpServletRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        HttpSession session = request.getSession(false);
         StringBuilder status = new StringBuilder();
         status.append("Authentication: ").append(authentication != null ? authentication.getName() : "null");
         status.append(", Authenticated: ").append(authentication != null && authentication.isAuthenticated());
-        status.append(", Session: ").append(session != null ? session.getId() : "null");
-        status.append(", Session Valid: ").append(session != null && !session.isNew());
+        status.append(", Session: ").append(request.getSession(false) != null ? request.getSession().getId() : "null");
+        status.append(", Session Valid: ").append(request.getSession(false) != null && !request.getSession().isNew());
         return ResponseEntity.ok(status.toString());
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(HttpServletRequest request) {
+        try {
+            // Clear the security context
+            SecurityContextHolder.clearContext();
+            
+            // Invalidate the session
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                session.invalidate();
+            }
+            
+            return ResponseEntity.ok("{\"message\":\"Logout successful\"}");
+        } catch (Exception e) {
+            throw new ApiException("Logout failed: " + e.getMessage());
+        }
     }
 }

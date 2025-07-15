@@ -18,6 +18,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 
 import java.util.Arrays;
 
@@ -38,18 +40,21 @@ public class SpringSecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/user/signup", "/api/user/login", "/api/user/test-create", "/api/user/auth-status", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api/user/signup", "/api/user/login", "/api/user/logout", "/api/user/test-create", "/api/user/auth-status", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/supervisor/**").hasRole("SUPERVISOR")
                         .requestMatchers("/api/operator/**").hasAnyRole("SUPERVISOR", "USER")
                         .anyRequest().authenticated()
                 )
                 .httpBasic(AbstractHttpConfigurer::disable)
-                .formLogin(Customizer.withDefaults())
-                .logout(AbstractHttpConfigurer::disable)  // Disable Spring Security's logout to use custom logout
+                .formLogin(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
                         .maximumSessions(1)
                         .expiredUrl("/api/user/login")
+                )
+                .securityContext(securityContext -> securityContext
+                        .requireExplicitSave(false)
                 )
         ; // or formLogin() if you want form-based UI login
         return http.build();
