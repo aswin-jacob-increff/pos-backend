@@ -1,25 +1,30 @@
 package org.example.controller;
 
+import org.example.dto.OrderItemDto;
+import org.example.exception.ApiException;
+import org.example.model.OrderItemData;
+import org.example.model.OrderItemForm;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-import org.example.model.OrderItemForm;
-import org.example.model.OrderItemData;
-import org.example.dto.OrderItemDto;
-import org.example.exception.ApiException;
-
 @RestController
-@RequestMapping("/api/order-items")
+@RequestMapping("/api/supervisor/order-items")
 public class OrderItemController {
 
     @Autowired
     private OrderItemDto orderItemDto;
 
-    @PostMapping
+    @PostMapping("/add")
     @org.springframework.transaction.annotation.Transactional
-    public OrderItemData add(@RequestBody OrderItemForm form) {
+    public OrderItemData add(@RequestBody OrderItemForm form, Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER ITEM ADD ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return orderItemDto.add(form);
         } catch (ApiException e) {
@@ -30,11 +35,12 @@ public class OrderItemController {
     }
 
     @GetMapping("/{id}")
-    public OrderItemData get(@PathVariable Integer id) {
+    public OrderItemData get(@PathVariable Integer id, Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER ITEM GET ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
-            if (id == null) {
-                throw new ApiException("Order Item ID cannot be null");
-            }
             return orderItemDto.get(id);
         } catch (ApiException e) {
             throw e;
@@ -44,7 +50,11 @@ public class OrderItemController {
     }
 
     @GetMapping
-    public List<OrderItemData> getAll() {
+    public List<OrderItemData> getAll(Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER ITEM GET ALL ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return orderItemDto.getAll();
         } catch (ApiException e) {
@@ -54,12 +64,29 @@ public class OrderItemController {
         }
     }
 
-    @GetMapping("/orders/{orderId}")
-    public List<OrderItemData> getByOrderId(@PathVariable Integer orderId) {
+    @PutMapping("/{id}")
+    @org.springframework.transaction.annotation.Transactional
+    public OrderItemData update(@PathVariable Integer id, @RequestBody OrderItemForm form, Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER ITEM UPDATE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
-            if (orderId == null) {
-                throw new ApiException("Order ID cannot be null");
-            }
+            return orderItemDto.update(id, form);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to update order item: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/by-order/{orderId}")
+    public List<OrderItemData> getOrderItemsByOrderId(@PathVariable Integer orderId, Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER ITEM GET BY ORDER ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
             return orderItemDto.getByOrderId(orderId);
         } catch (ApiException e) {
             throw e;
@@ -68,18 +95,4 @@ public class OrderItemController {
         }
     }
 
-    @PutMapping("/{id}")
-    @org.springframework.transaction.annotation.Transactional
-    public void update(@PathVariable Integer id, @RequestBody OrderItemForm form) {
-        try {
-            if (id == null) {
-                throw new ApiException("Order Item ID cannot be null");
-            }
-            orderItemDto.update(id, form);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to update order item: " + e.getMessage());
-        }
-    }
 }

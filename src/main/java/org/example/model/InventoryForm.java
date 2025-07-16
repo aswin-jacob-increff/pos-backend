@@ -9,16 +9,16 @@ import jakarta.validation.constraints.Positive;
 @Getter
 public class InventoryForm {
 
-    @NotNull(message = "Product ID is required")
-    private Integer productId;
-    private String productName;
+    private Integer productId; // No longer mandatory - will be populated by backend
+    private String productName; // Will be populated by backend
+    @NotNull(message = "Barcode is required")
     private String barcode;
-    private String clientName;
+    private String clientName; // Will be populated by backend
     @NotNull(message = "Quantity is required")
     @Positive(message = "Quantity must be positive")
     private Integer quantity;
-    private Double mrp;
-    private String imageUrl;
-    private String image; // Base64 string from frontend
+    private Double mrp; // Will be populated by backend
+    private String imageUrl; // Will be populated by backend
+    private String image; // Base64 string from frontend (optional)
 
 }

@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Base64;
 import java.util.Objects;
 import jakarta.validation.Valid;
 import org.example.util.TimeUtil;
@@ -35,7 +34,7 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
 
     @Override
     protected void preprocess(OrderItemForm orderItemForm) {
-        // Cross-field/entity logic: orderId lookup, productId/productName/barcode lookup, base64 image validation
+        // Cross-field/entity logic: orderId lookup, productId/productName/barcode lookup
         if (Objects.isNull(orderItemForm.getOrderId())) {
             throw new ApiException("Order ID cannot be null");
         }
@@ -56,12 +55,7 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
             orderItemForm.setBarcode(productApi.get(orderItemForm.getProductId()).getBarcode());
             orderItemForm.setProductName(productApi.get(orderItemForm.getProductId()).getName());
         }
-        // Validate base64 image if provided
-        if (orderItemForm.getImage() != null && !orderItemForm.getImage().trim().isEmpty()) {
-            if (!isValidBase64(orderItemForm.getImage())) {
-                throw new ApiException("Image must be a valid base64 string");
-            }
-        }
+        // Image field can contain any string - no validation required
     }
 
     @Override
@@ -78,17 +72,17 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
         orderItemPojo.setProductName(product.getName());
         orderItemPojo.setClientName(product.getClientName());
         orderItemPojo.setProductMrp(product.getMrp());
-        orderItemPojo.setProductImageUrl(product.getImageUrl());
+        
+        // Use form's image if provided, otherwise use product's image URL
+        if (orderItemForm.getImage() != null && !orderItemForm.getImage().trim().isEmpty()) {
+            orderItemPojo.setProductImageUrl(orderItemForm.getImage());
+        } else {
+            orderItemPojo.setProductImageUrl(product.getImageUrl());
+        }
         
         orderItemPojo.setQuantity(orderItemForm.getQuantity());
         orderItemPojo.setSellingPrice(product.getMrp());
         orderItemPojo.setAmount(product.getMrp() * orderItemForm.getQuantity());
-        
-        // Handle base64 image if provided (this would update the product's image)
-        if (orderItemForm.getImage() != null && !orderItemForm.getImage().trim().isEmpty()) {
-            // For now, we'll just validate the image
-            // In a real implementation, you might want to update the product's image
-        }
         return orderItemPojo;
     }
 
@@ -123,13 +117,9 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
             orderItemData.setDateTime(null);
         }
         
-        // Set imageUrl - use cached product if available, otherwise use denormalized data
+        // Set imageUrl - only use the actual stored image URL, don't auto-generate
         if (orderItemPojo.getProductImageUrl() != null && !orderItemPojo.getProductImageUrl().trim().isEmpty()) {
-            if (product != null) {
-                orderItemData.setImageUrl("/api/products/" + product.getId() + "/image");
-            } else {
-                orderItemData.setImageUrl(orderItemPojo.getProductImageUrl());
-            }
+            orderItemData.setImageUrl(orderItemPojo.getProductImageUrl());
         }
         
         return orderItemData;
@@ -183,12 +173,5 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
         return orderItemDataList;
     }
     
-    private boolean isValidBase64(String str) {
-        try {
-            Base64.getDecoder().decode(str);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
+
 }

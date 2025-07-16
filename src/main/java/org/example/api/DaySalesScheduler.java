@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -20,20 +20,22 @@ public class DaySalesScheduler {
     private DaySalesDao daySalesRepo;
     @Autowired
     private OrderDao orderDao;
+    @Autowired
+    private OrderItemApi orderItemApi;
 
-    // Runs every day at 11:59 PM UTC
-    @Scheduled(cron = "59 23 * * * *", zone = "UTC")
+    // Runs every day at 11:59 PM IST (Asia/Kolkata timezone)
+    @Scheduled(cron = "59 23 * * * *", zone = "Asia/Kolkata")
     @Transactional
     public void calculateDaySales() {
-        // Calculate for the current day in UTC
-        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        // Calculate for the current day in IST
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
         calculateDaySalesForDate(today);
     }
 
     @jakarta.annotation.PostConstruct
     @Transactional
     public void backfillDaySales() {
-        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
         LocalDate yesterday = today.minusDays(1);
         LocalDate lastCalculated = daySalesRepo.findLatestDate();
         if (lastCalculated == null) {
@@ -52,18 +54,22 @@ public class DaySalesScheduler {
         List<OrderPojo> orders = orderDao.findOrdersByDate(date);
         
         int ordersCount = orders.size();
-        // Since orders are denormalized, we need to calculate items and revenue differently
-        // We'll use the order total for revenue calculation
         double totalRevenue = Math.round(orders.stream()
             .mapToDouble(OrderPojo::getTotal)
             .sum() * 100.0) / 100.0;
         
-        // For items count, we need to query order items separately
+        // Calculate actual items count from order items
         int itemsCount = 0;
         for (OrderPojo order : orders) {
-            // This would need to be implemented in OrderDao to get items count for an order
-            // For now, we'll estimate based on revenue
-            itemsCount += Math.max(1, (int) Math.ceil(order.getTotal() / 100.0)); // Rough estimate
+            try {
+                List<OrderItemPojo> orderItems = orderItemApi.getByOrderId(order.getId());
+                itemsCount += orderItems.stream()
+                    .mapToInt(OrderItemPojo::getQuantity)
+                    .sum();
+            } catch (Exception e) {
+                // If order items cannot be fetched, skip this order
+                System.err.println("Warning: Could not fetch order items for order " + order.getId() + ": " + e.getMessage());
+            }
         }
         
         // Check if day sales already exists for this date
@@ -83,7 +89,12 @@ public class DaySalesScheduler {
         
         try {
             daySalesRepo.saveOrUpdate(daySales);
+            System.out.println("Day sales upserted for date: " + date + 
+                              " (Revenue: " + totalRevenue + 
+                              ", Orders: " + ordersCount + 
+                              ", Items: " + itemsCount + ")");
         } catch (Exception e) {
+            System.err.println("Error upserting day sales for date " + date + ": " + e.getMessage());
             e.printStackTrace();
         }
     }

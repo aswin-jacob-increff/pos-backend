@@ -16,6 +16,7 @@ import java.util.List;
 import jakarta.validation.Valid;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.example.pojo.ClientPojo;
 
 @Component
 public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductData> {
@@ -51,7 +52,10 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         productData.setId(productPojo.getId());
         productData.setName(productPojo.getName());
         productData.setClientName(productPojo.getClientName());
-        productData.setClientId(null); // No longer have client ID reference
+        
+        // Look up client ID by name
+        productData.setClientId(getClientIdByName(productPojo.getClientName()));
+        
         productData.setBarcode(productPojo.getBarcode());
         productData.setMrp(productPojo.getMrp());
         
@@ -146,6 +150,53 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
             throw new ApiException("Product with barcode '" + barcode + "' not found");
         }
         return convertEntityToData(product);
+    }
+    
+    /**
+     * Get products by client ID
+     */
+    public List<ProductData> getByClientId(Integer clientId) {
+        if (clientId == null) {
+            throw new ApiException("Client ID cannot be null");
+        }
+        
+        try {
+            // Get client by ID first to get the client name
+            ClientPojo client = clientApi.get(clientId);
+            return getByClientName(client.getClientName());
+        } catch (Exception e) {
+            throw new ApiException("Client with ID " + clientId + " not found");
+        }
+    }
+    
+    /**
+     * Get products by client name
+     */
+    public List<ProductData> getByClientName(String clientName) {
+        if (clientName == null || clientName.trim().isEmpty()) {
+            throw new ApiException("Client name cannot be null or empty");
+        }
+        
+        return productFlow.getAll().stream()
+                .filter(product -> clientName.equalsIgnoreCase(product.getClientName()))
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Helper method to get client ID by client name
+     */
+    private Integer getClientIdByName(String clientName) {
+        if (clientName == null || clientName.trim().isEmpty()) {
+            return null;
+        }
+        
+        try {
+            ClientPojo client = clientApi.getByName(clientName);
+            return client.getId();
+        } catch (Exception e) {
+            return null;
+        }
     }
     
     private boolean isValidUrl(String url) {

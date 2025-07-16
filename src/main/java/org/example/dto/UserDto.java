@@ -5,6 +5,7 @@ import org.example.model.UserData;
 import org.example.model.UserForm;
 import org.example.pojo.UserPojo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
@@ -14,6 +15,12 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
 
     @Autowired
     private UserFlow userFlow;
+
+    @Value("${supervisor.email:admin@example.com}")
+    private String supervisorEmail;
+
+    @Value("${supervisor.password:admin123}")
+    private String supervisorPassword;
 
     @Override
     protected String getEntityName() {
@@ -36,12 +43,11 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
         UserPojo pojo = new UserPojo();
         pojo.setEmail(form.getEmail().toLowerCase().trim());
         pojo.setPassword(form.getPassword().trim());
-        // Set role from form
-        if (form.getRole() != null && form.getRole().equalsIgnoreCase("SUPERVISOR")) {
-            pojo.setRole(org.example.enums.Role.SUPERVISOR);
-        } else {
-            pojo.setRole(org.example.enums.Role.USER);
-        }
+        
+        // Automatically set role to USER for all signups
+        // Supervisor accounts are only created via application.properties
+        pojo.setRole(org.example.enums.Role.USER);
+        
         return pojo;
     }
 
@@ -63,6 +69,12 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
     @Transactional
     public void signup(@Valid UserForm form) {
         preprocess(form);
+        
+        // Prevent creation of supervisor accounts via signup
+        if (form.getEmail().equalsIgnoreCase(supervisorEmail)) {
+            throw new RuntimeException("Cannot create supervisor account via signup. Supervisor accounts are pre-configured.");
+        }
+        
         UserPojo pojo = convertFormToEntity(form);
         userFlow.signup(pojo);
     }
@@ -82,5 +94,17 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
             throw new RuntimeException("User not found");
         }
         return convertEntityToData(pojo);
+    }
+
+    /**
+     * Get supervisor credentials from application.properties
+     * This ensures supervisor accounts are only managed through configuration
+     */
+    public String getSupervisorEmail() {
+        return supervisorEmail;
+    }
+
+    public String getSupervisorPassword() {
+        return supervisorPassword;
     }
 }

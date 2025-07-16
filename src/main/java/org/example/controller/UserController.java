@@ -1,27 +1,179 @@
 package org.example.controller;
 
+import org.example.dto.OrderDto;
 import org.example.dto.UserDto;
+import org.example.dto.ProductDto;
+import org.example.dto.InventoryDto;
+import org.example.exception.ApiException;
+import org.example.model.OrderData;
+import org.example.model.OrderForm;
 import org.example.model.UserData;
 import org.example.model.UserForm;
+import org.example.model.ProductData;
+import org.example.model.InventoryData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
-import org.example.exception.ApiException;
 import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
+
+    @Autowired
+    private OrderDto orderDto;
+
     @Autowired
     private UserDto userDto;
+
     @Autowired
-    private AuthenticationManager authenticationManager;
+    private ProductDto productDto;
+
+    @Autowired
+    private InventoryDto inventoryDto;
+
+    @GetMapping("/orders")
+    public List<OrderData> getMyOrders(Authentication authentication) {
+        System.out.println("=== USER ORDERS ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            if (authentication != null && authentication.isAuthenticated()) {
+                String userEmail = authentication.getName();
+                return orderDto.getOrdersByUserId(userEmail);
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        } catch (Exception e) {
+            throw new ApiException("Failed to get user orders: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/orders/by-date-range")
+    public List<OrderData> getMyOrdersByDateRange(
+            @RequestParam String startDate,
+            @RequestParam String endDate,
+            Authentication authentication) {
+        try {
+            if (authentication != null && authentication.isAuthenticated()) {
+                String userEmail = authentication.getName();
+                java.time.LocalDate start = java.time.LocalDate.parse(startDate);
+                java.time.LocalDate end = java.time.LocalDate.parse(endDate);
+                return orderDto.getOrdersByUserIdAndDateRange(userEmail, start, end);
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new ApiException("Invalid date format. Please use yyyy-MM-dd format (e.g., 2024-01-15)");
+        } catch (Exception e) {
+            throw new ApiException("Failed to get orders by date range: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/orders")
+    @org.springframework.transaction.annotation.Transactional
+    public OrderData createOrder(@RequestBody OrderForm form, Authentication authentication) {
+        System.out.println("=== USER ORDER CREATE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            if (authentication != null && authentication.isAuthenticated()) {
+                // Set the user ID from the authenticated user
+                String userEmail = authentication.getName();
+                form.setUserId(userEmail);
+                
+                return orderDto.add(form);
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to create order: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/orders/{id}")
+    public OrderData getMyOrder(@PathVariable Integer id, Authentication authentication) {
+        System.out.println("=== USER ORDER GET ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            if (authentication != null && authentication.isAuthenticated()) {
+                String userEmail = authentication.getName();
+                OrderData order = orderDto.get(id);
+                
+                // Check if the order belongs to the authenticated user
+                if (!userEmail.equals(order.getUserId())) {
+                    throw new ApiException("Access denied. You can only view your own orders.");
+                }
+                
+                return order;
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get order: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/orders/{id}/download-invoice")
+    public ResponseEntity<org.springframework.core.io.Resource> downloadMyOrderInvoice(@PathVariable Integer id, Authentication authentication) {
+        System.out.println("=== USER ORDER DOWNLOAD INVOICE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            if (authentication != null && authentication.isAuthenticated()) {
+                String userEmail = authentication.getName();
+                OrderData existingOrder = orderDto.get(id);
+                
+                // Check if the order belongs to the authenticated user
+                if (!userEmail.equals(existingOrder.getUserId())) {
+                    throw new ApiException("Access denied. You can only download invoices for your own orders.");
+                }
+                
+                org.springframework.core.io.Resource pdfResource = orderDto.downloadInvoice(id);
+                String fileName = "order-" + id + ".pdf";
+                
+                return ResponseEntity.ok()
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                    .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                    .body(pdfResource);
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to download invoice: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/current-user")
+    public ResponseEntity<UserData> getCurrentUser(Authentication authentication) {
+        try {
+            if (authentication != null && authentication.isAuthenticated()) {
+                String userEmail = authentication.getName();
+                UserData userData = userDto.getUserByEmail(userEmail);
+                return ResponseEntity.ok(userData);
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        } catch (Exception e) {
+            throw new ApiException("Failed to get current user: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@RequestBody UserForm form) {
         try {
@@ -35,9 +187,7 @@ public class UserController {
             if (form.getPassword().length() < 6) {
                 throw new ApiException("Password must be at least 6 characters long");
             }
-            if (form.getRole() == null || form.getRole().trim().isEmpty()) {
-                throw new ApiException("Role is required");
-            }
+            // Role validation removed - automatically set to USER
             
             userDto.signup(form);
             return ResponseEntity.ok("User registered successfully");
@@ -50,133 +200,126 @@ public class UserController {
         }
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<UserData> login(@RequestBody UserForm form, HttpServletRequest request) {
+    @GetMapping("/auth-status")
+    public ResponseEntity<String> checkAuthStatus(Authentication authentication) {
+        StringBuilder status = new StringBuilder();
+        status.append("Authentication: ").append(authentication != null ? authentication.getName() : "null");
+        status.append(", Authenticated: ").append(authentication != null && authentication.isAuthenticated());
+        status.append(", Authorities: ").append(authentication != null ? authentication.getAuthorities() : "null");
+        return ResponseEntity.ok(status.toString());
+    }
+
+    @GetMapping("/products/barcode/{barcode}")
+    public ProductData getProductByBarcode(@PathVariable String barcode, Authentication authentication) {
+        System.out.println("=== USER PRODUCT GET BY BARCODE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
-            // Validate input
-            if (form.getEmail() == null || form.getEmail().trim().isEmpty()) {
-                throw new ApiException("Email is required");
+            if (authentication != null && authentication.isAuthenticated()) {
+                return productDto.getByBarcode(barcode);
+            } else {
+                throw new ApiException("User not authenticated");
             }
-            if (form.getPassword() == null || form.getPassword().trim().isEmpty()) {
-                throw new ApiException("Password is required");
-            }
-            
-            // Authenticate using Spring Security's AuthenticationManager
-            Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(form.getEmail().trim().toLowerCase(), form.getPassword())
-            );
-            
-            // Create a new session
-            HttpSession session = request.getSession(true);
-            
-            // Set authentication in security context
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            
-            // Store the SecurityContext in the session using the correct attribute name
-            session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
-            
-            // Also store the authentication directly in the session as a backup
-            session.setAttribute("AUTHENTICATION", authentication);
-            
-            // Get user data after successful authentication
-            UserData userData = userDto.getUserByEmail(form.getEmail().trim().toLowerCase());
-            
-            return ResponseEntity.ok(userData);
         } catch (ApiException e) {
             throw e;
-        } catch (org.springframework.security.authentication.BadCredentialsException e) {
-            throw new ApiException("Invalid email or password. Please check your credentials and try again.");
-        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
-            throw new ApiException("User not found. Please check your email address.");
-        } catch (org.springframework.security.authentication.DisabledException e) {
-            throw new ApiException("Your account has been disabled. Please contact administrator.");
-        } catch (org.springframework.security.authentication.LockedException e) {
-            throw new ApiException("Your account has been locked. Please contact administrator.");
         } catch (Exception e) {
-            throw new ApiException("Login failed: " + e.getMessage());
+            throw new ApiException("Failed to get product by barcode: " + e.getMessage());
         }
     }
 
-
-    @GetMapping("/me")
-    public ResponseEntity<UserData> getCurrentUser(HttpServletRequest request) {
+    @GetMapping("/inventory/barcode/{barcode}")
+    public InventoryData getInventoryByBarcode(@PathVariable String barcode, Authentication authentication) {
+        System.out.println("=== USER INVENTORY GET BY BARCODE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            
-            // If not authenticated in current context, try to restore from session
-            if (authentication == null || !authentication.isAuthenticated() || 
-                "anonymousUser".equals(authentication.getName())) {
+            if (authentication != null && authentication.isAuthenticated()) {
+                return inventoryDto.getByProductBarcode(barcode);
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get inventory by barcode: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/search/barcode/{barcode}")
+    public ResponseEntity<Object> searchByBarcode(@PathVariable String barcode, Authentication authentication) {
+        System.out.println("=== USER SEARCH BY BARCODE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            if (authentication != null && authentication.isAuthenticated()) {
+                // Try to get product first
+                ProductData product = null;
+                InventoryData inventory = null;
                 
-                HttpSession session = request.getSession(false);
-                if (session != null) {
-                    // Try to get authentication from session
-                    Authentication sessionAuth = (Authentication) session.getAttribute("AUTHENTICATION");
-                    if (sessionAuth != null && sessionAuth.isAuthenticated()) {
-                        // Restore the authentication in the security context
-                        SecurityContextHolder.getContext().setAuthentication(sessionAuth);
-                        authentication = sessionAuth;
+                try {
+                    product = productDto.getByBarcode(barcode);
+                } catch (Exception e) {
+                    // Product not found, continue to inventory
+                }
+                
+                try {
+                    inventory = inventoryDto.getByProductBarcode(barcode);
+                } catch (Exception e) {
+                    // Inventory not found
+                }
+                
+                // Create response object
+                java.util.Map<String, Object> response = new java.util.HashMap<>();
+                response.put("barcode", barcode);
+                response.put("product", product);
+                response.put("inventory", inventory);
+                response.put("found", product != null || inventory != null);
+                
+                return ResponseEntity.ok(response);
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to search by barcode: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(HttpServletRequest request, Authentication authentication) {
+        System.out.println("=== USER LOGOUT ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            // Invalidate the current session
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                session.invalidate();
+                System.out.println("Session invalidated successfully");
+            }
+            
+            // Clear any authentication cookies
+            jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+            if (cookies != null) {
+                for (jakarta.servlet.http.Cookie cookie : cookies) {
+                    if ("JSESSIONID".equals(cookie.getName())) {
+                        cookie.setValue("");
+                        cookie.setPath("/");
+                        cookie.setMaxAge(0);
+                        System.out.println("JSESSIONID cookie cleared");
                     }
                 }
             }
             
-            if (authentication != null && authentication.isAuthenticated() &&
-                !"anonymousUser".equals(authentication.getName())) {
-                
-                String userEmail = authentication.getName();
-                UserData userData = userDto.getUserByEmail(userEmail);
-                return ResponseEntity.ok(userData);
-            } else {
-                throw new ApiException("Session expired. Please log in again.");
-            }
-        } catch (ApiException e) {
-            throw e;
-        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
-            throw new ApiException("User account not found. Please contact administrator.");
+            return ResponseEntity.ok("Logout successful");
         } catch (Exception e) {
-            throw new ApiException("Failed to get current user: " + e.getMessage());
+            System.err.println("Error during logout: " + e.getMessage());
+            return ResponseEntity.ok("Logout completed");
         }
     }
-    @PostMapping("/test-create")
-    public ResponseEntity<String> testCreateUser() {
-        try {
-            UserForm form = new UserForm();
-            form.setEmail("admin@example.com");
-            form.setPassword("admin123");
-            form.setRole("SUPERVISOR");
-            userDto.signup(form);
-            return ResponseEntity.ok("User created successfully");
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Error creating user: " + e.getMessage());
-        }
-    }
-    @GetMapping("/auth-status")
-    public ResponseEntity<String> checkAuthStatus(HttpServletRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        StringBuilder status = new StringBuilder();
-        status.append("Authentication: ").append(authentication != null ? authentication.getName() : "null");
-        status.append(", Authenticated: ").append(authentication != null && authentication.isAuthenticated());
-        status.append(", Session: ").append(request.getSession(false) != null ? request.getSession().getId() : "null");
-        status.append(", Session Valid: ").append(request.getSession(false) != null && !request.getSession().isNew());
-        return ResponseEntity.ok(status.toString());
-    }
-
-    @PostMapping("/logout")
-    public ResponseEntity<String> logout(HttpServletRequest request) {
-        try {
-            // Clear the security context
-            SecurityContextHolder.clearContext();
-            
-            // Invalidate the session
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                session.invalidate();
-            }
-            
-            return ResponseEntity.ok("{\"message\":\"Logout successful\"}");
-        } catch (Exception e) {
-            throw new ApiException("Logout failed: " + e.getMessage());
-        }
-    }
-}
+} 

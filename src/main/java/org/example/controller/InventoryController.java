@@ -4,6 +4,7 @@ import org.example.exception.ApiException;
 import org.example.util.InventoryTsvParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ import org.example.dto.InventoryDto;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/api/inventory")
+@RequestMapping("/api/supervisor/inventory")
 public class InventoryController {
 
     @Autowired
@@ -27,7 +28,11 @@ public class InventoryController {
 
     @PostMapping
     @org.springframework.transaction.annotation.Transactional
-    public InventoryData add(@RequestBody InventoryForm form) {
+    public InventoryData add(@RequestBody InventoryForm form, Authentication authentication) {
+        System.out.println("=== SUPERVISOR INVENTORY ADD ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return inventoryDto.add(form);
         } catch (ApiException e) {
@@ -38,7 +43,11 @@ public class InventoryController {
     }
 
     @GetMapping("/{id}")
-    public InventoryData get(@PathVariable Integer id) {
+    public InventoryData get(@PathVariable Integer id, Authentication authentication) {
+        System.out.println("=== SUPERVISOR INVENTORY GET ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return inventoryDto.get(id);
         } catch (ApiException e) {
@@ -49,7 +58,11 @@ public class InventoryController {
     }
 
     @GetMapping
-    public List<InventoryData> getAll() {
+    public List<InventoryData> getAll(Authentication authentication) {
+        System.out.println("=== SUPERVISOR INVENTORY GET ALL ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return inventoryDto.getAll();
         } catch (ApiException e) {
@@ -63,8 +76,13 @@ public class InventoryController {
     public InventoryData getInventoryByAny(
             @RequestParam(required = false) Integer id,
             @RequestParam(required = false) String barcode,
-            @RequestParam(required = false) String name
+            @RequestParam(required = false) String name,
+            Authentication authentication
     ) {
+        System.out.println("=== SUPERVISOR INVENTORY GET BY PRODUCT ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         InventoryData inventoryData = new InventoryData();
 
         if (id != null) {
@@ -87,7 +105,11 @@ public class InventoryController {
 
     @PutMapping("/{id}")
     @org.springframework.transaction.annotation.Transactional
-    public InventoryData update(@PathVariable Integer id, @RequestBody InventoryForm form) {
+    public InventoryData update(@PathVariable Integer id, @RequestBody InventoryForm form, Authentication authentication) {
+        System.out.println("=== SUPERVISOR INVENTORY UPDATE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return inventoryDto.update(id, form);
         } catch (ApiException e) {
@@ -98,7 +120,11 @@ public class InventoryController {
     }
 
     @GetMapping("/product/{productBarcode}")
-    public InventoryData getByProductBarcode(@PathVariable String productBarcode) {
+    public InventoryData getByProductBarcode(@PathVariable String productBarcode, Authentication authentication) {
+        System.out.println("=== SUPERVISOR INVENTORY GET BY BARCODE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return inventoryDto.getByProductBarcode(productBarcode);
         } catch (ApiException e) {
@@ -112,8 +138,13 @@ public class InventoryController {
     @org.springframework.transaction.annotation.Transactional
     public InventoryData addStock(
             @PathVariable String productId,
-            @RequestParam Integer quantity
+            @RequestParam Integer quantity,
+            Authentication authentication
     ) {
+        System.out.println("=== SUPERVISOR INVENTORY ADD STOCK ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         // Add validation and logging
         if (productId == null || productId.trim().isEmpty() || "null".equalsIgnoreCase(productId)) {
             throw new ApiException("Product barcode cannot be null or empty. Received: '" + productId + "'");
@@ -132,8 +163,13 @@ public class InventoryController {
     @org.springframework.transaction.annotation.Transactional
     public InventoryData removeStock(
             @PathVariable String productId,
-            @RequestParam Integer quantity
+            @RequestParam Integer quantity,
+            Authentication authentication
     ) {
+        System.out.println("=== SUPERVISOR INVENTORY REMOVE STOCK ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         // Add validation and logging
         if (productId == null || productId.trim().isEmpty() || "null".equalsIgnoreCase(productId)) {
             throw new ApiException("Product barcode cannot be null or empty. Received: '" + productId + "'");
@@ -152,8 +188,13 @@ public class InventoryController {
     @org.springframework.transaction.annotation.Transactional
     public InventoryData setStock(
             @PathVariable String productId,
-            @RequestParam Integer quantity
+            @RequestParam Integer quantity,
+            Authentication authentication
     ) {
+        System.out.println("=== SUPERVISOR INVENTORY SET STOCK ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         // Add validation and logging
         if (productId == null || productId.trim().isEmpty() || "null".equalsIgnoreCase(productId)) {
             throw new ApiException("Product barcode cannot be null or empty. Received: '" + productId + "'");
@@ -169,20 +210,18 @@ public class InventoryController {
     }
     
     @GetMapping("/{productId}/image")
-    public ResponseEntity<ByteArrayResource> getProductImage(@PathVariable String productId) {
+    public ResponseEntity<ByteArrayResource> getProductImage(@PathVariable String productId, Authentication authentication) {
+        System.out.println("=== SUPERVISOR INVENTORY GET PRODUCT IMAGE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
             InventoryData inventory = inventoryDto.getByProductBarcode(productId);
             if (inventory.getImageUrl() == null || inventory.getImageUrl().trim().isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-            
-            // Extract the actual base64 data from the product
-            // We need to get the product's base64 data, not the URL
-            // This is a bit complex since we're going through inventory
-            // For now, we'll redirect to the product image endpoint
             return ResponseEntity.status(302)
-                    .header("Location", "/api/products/" + productId + "/image")
+                    .header("Location", "/api/supervisor/products/" + productId + "/image")
                     .build();
                     
         } catch (Exception e) {
@@ -193,7 +232,11 @@ public class InventoryController {
 
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<String> uploadInventoryFromTsv(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> uploadInventoryFromTsv(@RequestParam("file") MultipartFile file, Authentication authentication) {
+        System.out.println("=== SUPERVISOR INVENTORY UPLOAD TSV ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         if (file == null || file.isEmpty() || !file.getOriginalFilename().endsWith(".tsv")) {
             throw new ApiException("Please upload a valid non-empty .tsv file.");
         }
@@ -202,7 +245,6 @@ public class InventoryController {
             if (forms.size() > 5000) {
                 throw new ApiException("File upload limit exceeded: Maximum 5000 rows allowed.");
             }
-            // Only add if all are valid
             int count = 0;
             for (InventoryForm form : forms) {
                 inventoryDto.add(form); // Use add(form) which uses barcode-based logic
@@ -212,7 +254,6 @@ public class InventoryController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("Invalid TSV format: " + e.getMessage());
         } catch (ApiException e) {
-            // Propagate parser validation errors
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
