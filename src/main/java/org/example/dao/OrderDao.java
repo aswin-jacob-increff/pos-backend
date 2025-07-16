@@ -7,6 +7,7 @@ import java.util.List;
 import org.example.pojo.OrderPojo;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 
 @Repository
@@ -86,8 +87,8 @@ public class OrderDao extends AbstractDao<OrderPojo> {
         Root<OrderPojo> root = cq.from(OrderPojo.class);
         cq.select(root.get("date")).orderBy(cb.asc(root.get("date")));
         List<Instant> results = em.createQuery(cq).setMaxResults(1).getResultList();
-        if (results.isEmpty() || results.get(0) == null) return LocalDate.now(ZoneOffset.UTC);
-        return results.get(0).atZone(ZoneOffset.UTC).toLocalDate();
+        if (results.isEmpty() || results.get(0) == null) return LocalDate.now(ZoneId.of("Asia/Kolkata"));
+        return results.get(0).atZone(ZoneId.of("Asia/Kolkata")).toLocalDate();
     }
 
     public List<OrderPojo> findByUserId(String userId) {

@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.example.model.ProductData;
 import org.example.model.ProductForm;
@@ -15,7 +16,7 @@ import org.example.exception.ApiException;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping("/api/supervisor/products")
 public class ProductController {
 
     @Autowired
@@ -23,7 +24,11 @@ public class ProductController {
 
     @PostMapping
     @org.springframework.transaction.annotation.Transactional
-    public ProductData add(@RequestBody ProductForm form) {
+    public ProductData add(@RequestBody ProductForm form, Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT ADD ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return productDto.add(form);
         } catch (ApiException e) {
@@ -34,7 +39,11 @@ public class ProductController {
     }
 
     @GetMapping("/id/{id}")
-    public ProductData get(@PathVariable Integer id) {
+    public ProductData get(@PathVariable Integer id, Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT GET BY ID ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return productDto.get(id);
         } catch (ApiException e) {
@@ -45,7 +54,11 @@ public class ProductController {
     }
 
     @GetMapping("/barcode/{barcode}")
-    public ProductData getByBarcode(@PathVariable String barcode) {
+    public ProductData getByBarcode(@PathVariable String barcode, Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT GET BY BARCODE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return productDto.getByBarcode(barcode);
         } catch (ApiException e) {
@@ -55,21 +68,63 @@ public class ProductController {
         }
     }
 
+    @GetMapping("/client/{clientId}")
+    public List<ProductData> getByClientId(@PathVariable Integer clientId, Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT GET BY CLIENT ID ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            return productDto.getByClientId(clientId);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get products by client ID: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/client/name/{clientName}")
+    public List<ProductData> getByClientName(@PathVariable String clientName, Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT GET BY CLIENT NAME ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            return productDto.getByClientName(clientName);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get products by client name: " + e.getMessage());
+        }
+    }
+
     @GetMapping
-    public ResponseEntity<List<ProductData>> getAllProducts() {
+    public ResponseEntity<List<ProductData>> getAllProducts(Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT GET ALL ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         List<ProductData> products = productDto.getAll();
         return ResponseEntity.ok(products);
     }
 
     @PutMapping("/{id}")
     @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<ProductData> updateProduct(@PathVariable Integer id, @Valid @RequestBody ProductForm form) {
+    public ResponseEntity<ProductData> updateProduct(@PathVariable Integer id, @Valid @RequestBody ProductForm form, Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT UPDATE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         ProductData updatedProduct = productDto.update(id, form);
         return ResponseEntity.ok(updatedProduct);
     }
 
     @GetMapping("/{id}/image")
-    public ResponseEntity<Void> getProductImage(@PathVariable Integer id) {
+    public ResponseEntity<Void> getProductImage(@PathVariable Integer id, Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT GET IMAGE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             String imageUrl = productDto.getProductImageUrl(id);
             return ResponseEntity.status(HttpStatus.FOUND)
@@ -86,7 +141,11 @@ public class ProductController {
     @Operation(summary = "Upload products via TSV file")
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<String> uploadProductsFromTsv(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> uploadProductsFromTsv(@RequestParam("file") MultipartFile file, Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT UPLOAD TSV ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             String result = productDto.uploadProductsFromTsv(file);
             return ResponseEntity.ok(result);
@@ -98,8 +157,5 @@ public class ProductController {
                     .body("Error while processing file: " + e.getMessage());
         }
     }
-
-
-
 
 }

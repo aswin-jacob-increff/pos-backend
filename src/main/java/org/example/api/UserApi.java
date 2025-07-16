@@ -2,7 +2,6 @@ package org.example.api;
 
 import org.example.config.SecurityConfig;
 import org.example.dao.UserDao;
-import org.example.enums.Role;
 import org.example.pojo.UserPojo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -12,8 +11,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.Collections;
 
 @Service

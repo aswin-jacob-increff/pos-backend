@@ -1,9 +1,11 @@
 package org.example.config;
 
 import org.example.api.UserApi;
+import org.example.config.ApiConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -14,15 +16,16 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.config.http.SessionCreationPolicy;
 
 import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
+@Profile("!test")
 public class SpringSecurityConfig {
 
     @Autowired
@@ -37,21 +40,25 @@ public class SpringSecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
             .authorizeHttpRequests(auth -> auth
-                // Allow custom login/signup endpoints
-                .requestMatchers("/api/user/signup", "/api/user/login", "/api/user/test-create").permitAll()
-                // only supervisors can access anything under /api/supervisor/**
-                .requestMatchers("/api/supervisor/**").hasRole("SUPERVISOR")
-                // maybe operators can access their stuff
-                .requestMatchers("/api/operator/**").hasAnyRole("USER","SUPERVISOR")
-                // everything else must be authenticated
+                // Allow signup without authentication
+                .requestMatchers(ApiConfig.User.SIGNUP).permitAll()
+                
+                // Supervisor endpoints - only SUPERVISOR role can access
+                .requestMatchers(ApiConfig.Supervisor.BASE_PATH + "/**").hasRole("SUPERVISOR")
+                
+                // User endpoints - both USER and SUPERVISOR roles can access
+                .requestMatchers(ApiConfig.User.BASE_PATH + "/**").hasAnyRole("USER", "SUPERVISOR")
+                
+                // Everything else must be authenticated
                 .anyRequest().authenticated()
             )
-            .formLogin(Customizer.withDefaults()) // use default login form
-            .logout(Customizer.withDefaults())   // use default logout
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
-            );
+            .httpBasic(Customizer.withDefaults())
+            .formLogin(AbstractHttpConfigurer::disable);
+        
         return http.build();
     }
 

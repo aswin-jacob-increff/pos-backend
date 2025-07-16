@@ -4,6 +4,7 @@ import org.example.dto.OrderDto;
 import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,7 +16,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/api/supervisor/orders")
 public class OrderController {
 
     @Autowired
@@ -23,7 +24,11 @@ public class OrderController {
 
     @PostMapping("/add")
     @org.springframework.transaction.annotation.Transactional
-    public OrderData add(@RequestBody OrderForm form) {
+    public OrderData add(@RequestBody OrderForm form, Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER ADD ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return orderDto.add(form);
         } catch (ApiException e) {
@@ -34,7 +39,11 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    public OrderData get(@PathVariable Integer id) {
+    public OrderData get(@PathVariable Integer id, Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER GET ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return orderDto.get(id);
         } catch (ApiException e) {
@@ -45,46 +54,27 @@ public class OrderController {
     }
 
     @GetMapping
-    public List<OrderData> getAll(org.springframework.security.core.Authentication authentication, 
-                                 HttpServletRequest request) {
-        String email;
-        boolean isSupervisor = false;
+    public List<OrderData> getAll(Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER GET ALL ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
-        // If not authenticated in current context, try to restore from session
-        if (authentication == null || !authentication.isAuthenticated() || 
-            "anonymousUser".equals(authentication.getName())) {
-            
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                // Try to get authentication from session
-                org.springframework.security.core.Authentication sessionAuth = 
-                    (org.springframework.security.core.Authentication) session.getAttribute("AUTHENTICATION");
-                if (sessionAuth != null && sessionAuth.isAuthenticated()) {
-                    // Restore the authentication in the security context
-                    org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(sessionAuth);
-                    authentication = sessionAuth;
-                }
-            }
-        }
-        
-        if (authentication != null && authentication.isAuthenticated()) {
-            email = authentication.getName();
-            isSupervisor = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERVISOR"));
-        } else {
-            throw new ApiException("User not authenticated");
-        }
-        
-        if (isSupervisor) {
+        try {
             return orderDto.getAll();
-        } else {
-            return orderDto.getOrdersByUserId(email);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get all orders: " + e.getMessage());
         }
     }
 
     @PutMapping("/{id}")
     @org.springframework.transaction.annotation.Transactional
-    public OrderData update(@PathVariable Integer id, @RequestBody OrderForm form) {
+    public OrderData update(@PathVariable Integer id, @RequestBody OrderForm form, Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER UPDATE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return orderDto.update(id, form);
         } catch (ApiException e) {
@@ -96,7 +86,11 @@ public class OrderController {
     
     @DeleteMapping("/{id}/cancel")
     @org.springframework.transaction.annotation.Transactional
-    public void cancelOrder(@PathVariable Integer id) {
+    public void cancelOrder(@PathVariable Integer id, Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER CANCEL ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             orderDto.cancelOrder(id);
         } catch (ApiException e) {
@@ -107,7 +101,11 @@ public class OrderController {
     }
 
     @GetMapping("/{id}/download-invoice")
-    public ResponseEntity<org.springframework.core.io.Resource> downloadInvoice(@PathVariable Integer id) {
+    public ResponseEntity<org.springframework.core.io.Resource> downloadInvoice(@PathVariable Integer id, Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER DOWNLOAD INVOICE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             org.springframework.core.io.Resource pdfResource = orderDto.downloadInvoice(id);
             String fileName = "order-" + id + ".pdf";
@@ -132,44 +130,15 @@ public class OrderController {
     public List<OrderData> getOrdersByDateRange(
             @RequestParam String startDate,
             @RequestParam String endDate,
-            org.springframework.security.core.Authentication authentication,
-            HttpServletRequest request) {
-        String email = null;
-        boolean isSupervisor = false;
-        
-        // If not authenticated in current context, try to restore from session
-        if (authentication == null || !authentication.isAuthenticated() || 
-            "anonymousUser".equals(authentication.getName())) {
-            
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                // Try to get authentication from session
-                org.springframework.security.core.Authentication sessionAuth = 
-                    (org.springframework.security.core.Authentication) session.getAttribute("AUTHENTICATION");
-                if (sessionAuth != null && sessionAuth.isAuthenticated()) {
-                    // Restore the authentication in the security context
-                    org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(sessionAuth);
-                    authentication = sessionAuth;
-                }
-            }
-        }
-        
-        if (authentication != null && authentication.isAuthenticated()) {
-            email = authentication.getName();
-            isSupervisor = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERVISOR"));
-        } else {
-            throw new ApiException("User not authenticated");
-        }
+            Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER BY DATE RANGE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
             java.time.LocalDate start = java.time.LocalDate.parse(startDate);
             java.time.LocalDate end = java.time.LocalDate.parse(endDate);
-            if (isSupervisor) {
-                return orderDto.getOrdersByDateRange(start, end);
-            } else {
-                return orderDto.getOrdersByUserIdAndDateRange(email, start, end);
-            }
+            return orderDto.getOrdersByDateRange(start, end);
         } catch (java.time.format.DateTimeParseException e) {
             throw new ApiException("Invalid date format. Please use yyyy-MM-dd format (e.g., 2024-01-15)");
         } catch (Exception e) {
@@ -179,7 +148,11 @@ public class OrderController {
     }
 
     @GetMapping("/by-user")
-    public List<OrderData> getOrdersByUserId(@RequestParam String userId) {
+    public List<OrderData> getOrdersByUserId(@RequestParam String userId, Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER BY USER ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
         try {
             return orderDto.getOrdersByUserId(userId);
         } catch (ApiException e) {

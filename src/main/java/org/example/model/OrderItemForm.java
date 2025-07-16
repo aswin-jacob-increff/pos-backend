@@ -25,6 +25,6 @@ public class OrderItemForm {
     @NotNull(message = "Selling price is required")
     @Positive(message = "Selling price must be positive")
     private Double sellingPrice;
-    private String image; // Base64 string from frontend
+    private String image;
 }
 

@@ -33,11 +33,19 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
     protected InventoryPojo convertFormToEntity(InventoryForm inventoryForm) {
         InventoryPojo inventoryPojo = new InventoryPojo();
         inventoryPojo.setProductBarcode(inventoryForm.getBarcode());
-        inventoryPojo.setProductName(inventoryForm.getProductName());
-        inventoryPojo.setClientName(StringUtil.format(inventoryForm.getClientName()));
-        inventoryPojo.setProductMrp(inventoryForm.getMrp());
-        inventoryPojo.setProductImageUrl(inventoryForm.getImageUrl());
         inventoryPojo.setQuantity(inventoryForm.getQuantity());
+        
+        // Get product details to populate null fields
+        try {
+            var product = productApi.getByBarcode(inventoryForm.getBarcode());
+            inventoryPojo.setProductName(product.getName());
+            inventoryPojo.setClientName(StringUtil.format(product.getClientName()));
+            inventoryPojo.setProductMrp(product.getMrp());
+            inventoryPojo.setProductImageUrl(product.getImageUrl());
+        } catch (Exception e) {
+            throw new ApiException("Product with barcode '" + inventoryForm.getBarcode() + "' not found");
+        }
+        
         return inventoryPojo;
     }
 
@@ -69,16 +77,6 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
         // Validate barcode is provided
         if (inventoryForm.getBarcode() == null || inventoryForm.getBarcode().trim().isEmpty()) {
             throw new ApiException("Product barcode is required");
-        }
-        // Get product details to populate inventory fields
-        try {
-            var product = productApi.getByBarcode(inventoryForm.getBarcode());
-            inventoryForm.setProductName(product.getName());
-            inventoryForm.setClientName(product.getClientName());
-            inventoryForm.setMrp(product.getMrp());
-            inventoryForm.setImageUrl(product.getImageUrl());
-        } catch (Exception e) {
-            throw new ApiException("Product with barcode '" + inventoryForm.getBarcode() + "' not found");
         }
         // Validate base64 image if provided
         if (inventoryForm.getImage() != null && !inventoryForm.getImage().trim().isEmpty()) {
