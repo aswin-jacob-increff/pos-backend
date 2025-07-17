@@ -37,7 +37,12 @@ public class ClientTsvParser {
                 try {
                     ClientForm form = new ClientForm();
                     form.setClientName(cols[0].trim().toLowerCase());
-                    clients.add(form);
+                    try {
+                        clients.add(form);
+                        
+                    } catch (Exception e) {
+                        errors.add("Row " + rowNum + ": " + e.getMessage());
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                     errors.add("Row " + rowNum + ": " + e.getMessage());

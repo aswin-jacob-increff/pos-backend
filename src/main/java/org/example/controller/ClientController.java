@@ -6,8 +6,11 @@ import org.example.model.ClientData;
 import org.example.model.ClientForm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -17,6 +20,7 @@ public class ClientController {
 
     @Autowired
     private ClientDto clientDto;
+
 
     @PostMapping("/add")
     @org.springframework.transaction.annotation.Transactional
@@ -112,6 +116,25 @@ public class ClientController {
             throw e;
         } catch (Exception e) {
             throw new ApiException("Failed to search client: " + e.getMessage());
+        }
+    }
+
+    @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<String> uploadClientsFromTsv(@RequestParam("file") MultipartFile file, Authentication authentication) {
+        System.out.println("=== SUPERVISOR CLIENT UPLOAD TSV ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            String result = clientDto.uploadClientsFromTsv(file);
+            return ResponseEntity.ok(result);
+        } catch (ApiException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error while processing file: " + e.getMessage());
         }
     }
 

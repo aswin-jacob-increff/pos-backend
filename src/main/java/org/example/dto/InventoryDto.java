@@ -143,9 +143,19 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
     public List<InventoryData> getAll() {
         List<InventoryPojo> entities = api.getAll();
         List<InventoryData> dataList = new ArrayList<>();
-        
-        // Process all inventory items without making individual product lookups
-        // This avoids the N+1 query problem by using denormalized data
+
+        // Get all products in one query to avoid N+1 queries
+        List<org.example.pojo.ProductPojo> allProducts = productApi.getAll();
+        java.util.Map<String, Integer> barcodeToProductIdMap = new java.util.HashMap<>();
+
+        // Create a map of barcode to product ID for efficient lookup
+        for (org.example.pojo.ProductPojo product : allProducts) {
+            if (product.getBarcode() != null) {
+                barcodeToProductIdMap.put(product.getBarcode(), product.getId());
+            }
+        }
+
+        // Process all inventory items with efficient product ID lookup
         for (InventoryPojo entity : entities) {
             InventoryData inventoryData = new InventoryData();
             inventoryData.setId(entity.getId());
@@ -154,14 +164,14 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
             inventoryData.setQuantity(entity.getQuantity());
             inventoryData.setMrp(entity.getProductMrp());
             inventoryData.setImageUrl(entity.getProductImageUrl());
-            
-            // Set product ID to null since we're not looking it up to avoid N+1 queries
-            // The product ID is not critical for inventory display and can be looked up separately if needed
-            inventoryData.setProductId(null);
-            
+
+            // Look up product ID from the map
+            Integer productId = barcodeToProductIdMap.get(entity.getProductBarcode());
+            inventoryData.setProductId(productId);
+
             dataList.add(inventoryData);
         }
-        
+
         return dataList;
     }
 

@@ -33,11 +33,9 @@ public class InventoryTsvParser {
                 try {
                     String barcode = cols[0].trim().toLowerCase();
                     Integer quantity = Integer.parseInt(cols[1].trim());
-
                     InventoryForm form = new InventoryForm();
                     form.setBarcode(barcode);
                     form.setQuantity(quantity);
-
                     inventoryForms.add(form);
                 } catch (Exception e) {
                     e.printStackTrace();

@@ -1,11 +1,9 @@
 package org.example.flow;
 
 import org.example.pojo.InventoryPojo;
-import org.example.pojo.OrderItemPojo;
 import org.example.pojo.ProductPojo;
 import org.example.api.ProductApi;
 import org.example.api.InventoryApi;
-import org.example.api.OrderItemApi;
 import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,9 +20,6 @@ public class ProductFlow extends AbstractFlow<ProductPojo> {
 
     @Autowired
     private InventoryApi inventoryApi;
-    
-    @Autowired
-    private OrderItemApi orderItemApi;
 
     public ProductFlow() {
         super(ProductPojo.class);
@@ -130,35 +125,5 @@ public class ProductFlow extends AbstractFlow<ProductPojo> {
             throw new ApiException("Barcode cannot be null or empty");
         }
         return api.getByBarcode(barcode);
-    }
-    
-    /**
-     * Check if a product can be safely deleted
-     */
-    public boolean canDeleteProduct(Integer productId) {
-        if (Objects.isNull(productId)) {
-            throw new ApiException("Product ID cannot be null");
-        }
-        ProductPojo productPojo = api.get(productId);
-        if (productPojo == null) {
-            return true; // Product doesn't exist, so it can be "deleted"
-        }
-        List<OrderItemPojo> orderItems = orderItemApi.getByProductBarcode(productPojo.getBarcode());
-        return orderItems.isEmpty();
-    }
-    
-    /**
-     * Get the number of order items using this product
-     */
-    public int getOrderItemCountForProduct(Integer productId) {
-        if (Objects.isNull(productId)) {
-            throw new ApiException("Product ID cannot be null");
-        }
-        ProductPojo productPojo = api.get(productId);
-        if (productPojo == null) {
-            return 0;
-        }
-        List<OrderItemPojo> orderItems = orderItemApi.getByProductBarcode(productPojo.getBarcode());
-        return orderItems.size();
     }
 }

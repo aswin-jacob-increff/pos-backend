@@ -65,13 +65,6 @@ public abstract class AbstractApi<T> {
     }
 
     /**
-     * Validate entity before deleting
-     */
-    protected void validateDelete(T entity) {
-        // Default implementation - subclasses can override
-    }
-
-    /**
      * Validate ID parameter
      */
     protected void validateId(Integer id) {

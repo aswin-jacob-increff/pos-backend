@@ -51,11 +51,14 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         ProductData productData = new ProductData();
         productData.setId(productPojo.getId());
         productData.setName(productPojo.getName());
-        productData.setClientName(productPojo.getClientName());
         
-        // Look up client ID by name
-        productData.setClientId(getClientIdByName(productPojo.getClientName()));
+        // Debug client ID lookup
+        String clientName = productPojo.getClientName();
+        Integer clientId = getClientIdByName(clientName);
+        System.out.println("Product " + productPojo.getId() + " - Client name: '" + clientName + "', Client ID: " + clientId);
         
+        productData.setClientId(clientId);
+        productData.setClientName(clientName);
         productData.setBarcode(productPojo.getBarcode());
         productData.setMrp(productPojo.getMrp());
         
@@ -65,17 +68,6 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         }
         
         return productData;
-    }
-
-    protected ProductPojo convertDataToEntity(ProductData productData) {
-        ProductPojo productPojo = new ProductPojo();
-        productPojo.setId(productData.getId());
-        productPojo.setName(productData.getName());
-        productPojo.setClientName(productData.getClientName());
-        productPojo.setBarcode(productData.getBarcode());
-        productPojo.setMrp(productData.getMrp());
-        productPojo.setImageUrl(productData.getImageUrl());
-        return productPojo;
     }
 
     @Override
@@ -102,6 +94,19 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
             throw new ApiException("Product form cannot be null");
         }
         return super.add(form);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public ProductData update(Integer id, @Valid ProductForm form) {
+        validateId(id);
+        preprocess(form);
+        ProductPojo entity = convertFormToEntity(form);
+        
+        // Use the flow instead of the API to ensure inventory is updated
+        productFlow.update(id, entity);
+        
+        return convertEntityToData(api.get(id));
     }
 
     @Override
@@ -192,9 +197,19 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         }
         
         try {
-            ClientPojo client = clientApi.getByName(clientName);
-            return client.getId();
+            // Format the client name consistently
+            String formattedClientName = StringUtil.format(clientName);
+            ClientPojo client = clientApi.getByName(formattedClientName);
+            if (client != null) {
+                return client.getId();
+            }
+            
+            // If not found with formatted name, try with original name
+            client = clientApi.getByName(clientName);
+            return client != null ? client.getId() : null;
         } catch (Exception e) {
+            // Log the error for debugging
+            System.err.println("Error getting client ID for name '" + clientName + "': " + e.getMessage());
             return null;
         }
     }

@@ -5,7 +5,6 @@
 
     <groupId>org.example</groupId>
     <artifactId>POS</artifactId>
-    <!--TODO make this 1.0.0-SNAPSHOT -->
     <version>1.0.0-SNAPSHOT</version>
     <packaging>war</packaging>
 

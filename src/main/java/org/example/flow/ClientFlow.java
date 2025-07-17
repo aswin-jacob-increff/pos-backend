@@ -56,7 +56,9 @@ public class ClientFlow extends AbstractFlow<ClientPojo> {
         // Compare the actual stored values (both should be in lowercase due to StringUtil.format)
         if (!Objects.equals(existingClient.getClientName(), clientPojo.getClientName())) {
             String oldClientName = existingClient.getClientName();
+            System.out.println("Client name changed from '" + oldClientName + "' to '" + clientPojo.getClientName() + "'");
             productsToUpdate = productApi.getByClientName(oldClientName);
+            System.out.println("Found " + (productsToUpdate != null ? productsToUpdate.size() : 0) + " products to update");
         }
         
         // Update the client
@@ -65,7 +67,9 @@ public class ClientFlow extends AbstractFlow<ClientPojo> {
         // Now update all products with the new client name
         if (productsToUpdate != null && !productsToUpdate.isEmpty()) {
             String newClientName = clientPojo.getClientName();
+            System.out.println("Updating " + productsToUpdate.size() + " products with new client name: '" + newClientName + "'");
             for (ProductPojo product : productsToUpdate) {
+                System.out.println("Updating product ID " + product.getId() + " client name from '" + product.getClientName() + "' to '" + newClientName + "'");
                 product.setClientName(newClientName);
                 productApi.update(product.getId(), product);
             }
@@ -86,7 +90,7 @@ public class ClientFlow extends AbstractFlow<ClientPojo> {
     public void toggleStatus(Integer id) {
         ClientPojo pojo = api.get(id);
         if (pojo == null) {
-            throw new RuntimeException("Client with ID '" + id + "' not found.");
+            throw new ApiException("Client with ID '" + id + "' not found.");
         }
         api.toggleStatus(id);
     }
@@ -94,7 +98,7 @@ public class ClientFlow extends AbstractFlow<ClientPojo> {
     public void toggleStatusByName(String name) {
         ClientPojo pojo = api.getByName(name);
         if (pojo == null) {
-            throw new RuntimeException("Client with name '" + name + "' not found.");
+            throw new ApiException("Client with name '" + name + "' not found.");
         }
         api.toggleStatusByName(name);
     }

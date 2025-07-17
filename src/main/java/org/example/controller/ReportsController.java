@@ -35,7 +35,7 @@ public class ReportsController {
             throw new ApiException("Failed to generate sales report: " + e.getMessage());
         }
     }
-
+    
     @PostMapping("/sales/custom-date-range")
     public List<CustomDateRangeSalesData> getCustomDateRangeSalesReport(@RequestBody CustomDateRangeSalesForm form, Authentication authentication) {
         System.out.println("=== SUPERVISOR REPORTS CUSTOM DATE RANGE SALES ENDPOINT ===");
@@ -50,7 +50,7 @@ public class ReportsController {
             throw new ApiException("Failed to generate custom date range sales report: " + e.getMessage());
         }
     }
-
+    
     @GetMapping("/day-sales")
     public List<DaySalesForm> getAllDaySales(Authentication authentication) {
         System.out.println("=== SUPERVISOR REPORTS GET ALL DAY SALES ENDPOINT ===");

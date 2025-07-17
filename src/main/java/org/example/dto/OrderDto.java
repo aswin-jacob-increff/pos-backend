@@ -185,9 +185,26 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
             try {
                 response = restTemplate.postForEntity(invoiceAppUrl, entity, String.class);
                 System.out.println("Invoice service response status: " + response.getStatusCode());
+            } catch (org.springframework.web.client.ResourceAccessException e) {
+                // Connection refused, timeout, or network issues
+                System.out.println("Network error calling invoice service: " + e.getMessage());
+                throw new ApiException("Invoice service is not available. Please try again later. Error: " + e.getMessage());
+            } catch (org.springframework.web.client.HttpClientErrorException e) {
+                // 4ors (client errors)
+                System.out.println("HTTP client error calling invoice service: " + e.getMessage());
+                throw new ApiException("Invoice service returned an error: " + e.getStatusCode() + " - " + e.getResponseBodyAsString());
+            } catch (org.springframework.web.client.HttpServerErrorException e) {
+                // 5ors (server errors)
+                System.out.println("HTTP server error calling invoice service: " + e.getMessage());
+                throw new ApiException("Invoice service is experiencing issues. Please try again later. Error: " + e.getStatusCode());
+            } catch (org.springframework.web.client.RestClientException e) {
+                // Other RestTemplate exceptions
+                System.out.println("RestTemplate error calling invoice service: " + e.getMessage());
+                throw new ApiException("Failed to communicate with invoice service: " + e.getMessage());
             } catch (Exception e) {
+                // Any other unexpected exceptions
                 e.printStackTrace();
-                System.out.println("Error calling invoice service: " + e.getMessage());
+                System.out.println("Unexpected error calling invoice service: " + e.getMessage());
                 throw new ApiException("Failed to connect to invoice service at " + invoiceAppUrl + ": " + e.getMessage());
             }
 

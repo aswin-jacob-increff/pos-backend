@@ -1,12 +1,10 @@
 package org.example.product.unit;
 
 import org.example.flow.ProductFlow;
-import org.example.api.ProductApi;
-import org.example.api.InventoryApi;
-import org.example.api.OrderItemApi;
 import org.example.pojo.ProductPojo;
 import org.example.pojo.InventoryPojo;
-import org.example.pojo.OrderItemPojo;
+import org.example.api.ProductApi;
+import org.example.api.InventoryApi;
 import org.example.exception.ApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,15 +30,11 @@ class ProductFlowTest {
     @Mock
     private InventoryApi inventoryApi;
 
-    @Mock
-    private OrderItemApi orderItemApi;
-
     @InjectMocks
     private ProductFlow productFlow;
 
     private ProductPojo testProduct;
     private InventoryPojo testInventory;
-    private OrderItemPojo testOrderItem;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -47,17 +42,17 @@ class ProductFlowTest {
         testProduct.setId(1);
         testProduct.setName("Test Product");
         testProduct.setBarcode("TEST123");
-        testProduct.setClientName("TestClient");
         testProduct.setMrp(100.0);
+        testProduct.setClientName("Test Client");
+        testProduct.setImageUrl("test-image.jpg");
 
         testInventory = new InventoryPojo();
         testInventory.setId(1);
         testInventory.setProductBarcode("TEST123");
-        testInventory.setQuantity(10);
-
-        testOrderItem = new OrderItemPojo();
-        testOrderItem.setId(1);
-        testOrderItem.setProductBarcode("TEST123");
+        testInventory.setProductName("Test Product");
+        testInventory.setProductMrp(100.0);
+        testInventory.setClientName("Test Client");
+        testInventory.setProductImageUrl("test-image.jpg");
 
         // Inject AbstractFlow's api field
         Field abstractApiField = productFlow.getClass().getSuperclass().getDeclaredField("api");
@@ -171,91 +166,5 @@ class ProductFlowTest {
         // Then
         assertEquals(2, result.size());
         verify(api).getAll();
-    }
-
-    @Test
-    void testCanDeleteProduct_Success() {
-        // Given
-        when(api.get(1)).thenReturn(testProduct);
-        when(orderItemApi.getByProductBarcode("TEST123")).thenReturn(Arrays.asList());
-
-        // When
-        boolean result = productFlow.canDeleteProduct(1);
-
-        // Then
-        assertTrue(result);
-        verify(api).get(1);
-        verify(orderItemApi).getByProductBarcode("TEST123");
-    }
-
-    @Test
-    void testCanDeleteProduct_NullId() {
-        // When & Then
-        assertThrows(ApiException.class, () -> productFlow.canDeleteProduct(null));
-    }
-
-    @Test
-    void testCanDeleteProduct_NotFound() {
-        // Given
-        when(api.get(999)).thenReturn(null);
-
-        // When
-        boolean result = productFlow.canDeleteProduct(999);
-
-        // Then
-        assertTrue(result); // Product doesn't exist, so it can be "deleted"
-        verify(api).get(999);
-    }
-
-    @Test
-    void testCanDeleteProduct_UsedInOrders() {
-        // Given
-        when(api.get(1)).thenReturn(testProduct);
-        when(orderItemApi.getByProductBarcode("TEST123")).thenReturn(Arrays.asList(testOrderItem));
-
-        // When
-        boolean result = productFlow.canDeleteProduct(1);
-
-        // Then
-        assertFalse(result);
-        verify(api).get(1);
-        verify(orderItemApi).getByProductBarcode("TEST123");
-    }
-
-    @Test
-    void testGetOrderItemCountForProduct_Success() {
-        // Given
-        when(api.get(1)).thenReturn(testProduct);
-        List<OrderItemPojo> orderItems = Arrays.asList(testOrderItem, testOrderItem);
-        when(orderItemApi.getByProductBarcode("TEST123")).thenReturn(orderItems);
-
-        // When
-        int result = productFlow.getOrderItemCountForProduct(1);
-
-        // Then
-        assertEquals(2, result);
-        verify(api).get(1);
-        verify(orderItemApi).getByProductBarcode("TEST123");
-    }
-
-    @Test
-    void testGetOrderItemCountForProduct_NullId() {
-        // When & Then
-        assertThrows(ApiException.class, () -> productFlow.getOrderItemCountForProduct(null));
-        verify(api, never()).get(any());
-    }
-
-    @Test
-    void testGetOrderItemCountForProduct_NotFound() {
-        // Given
-        when(api.get(999)).thenReturn(null);
-
-        // When
-        int result = productFlow.getOrderItemCountForProduct(999);
-
-        // Then
-        assertEquals(0, result);
-        verify(api).get(999);
-        verify(orderItemApi, never()).getByProductBarcode(any());
     }
 } 

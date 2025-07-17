@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.example.dao.ClientDao;
 import org.example.pojo.ClientPojo;
+import org.example.util.StringUtil;
 import java.util.Objects;
 
 @Service
@@ -44,7 +45,12 @@ public class ClientApi extends AbstractApi<ClientPojo> {
     }
 
     public ClientPojo getByName(String name) {
-        return getByField("clientName", name.trim().toLowerCase());
+        if (name == null || name.trim().isEmpty()) {
+            return null;
+        }
+        // Format the name consistently with how it's stored
+        String formattedName = StringUtil.format(name);
+        return getByField("clientName", formattedName);
     }
 
     public ClientPojo get(Integer id) {

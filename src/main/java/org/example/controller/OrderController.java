@@ -30,7 +30,15 @@ public class OrderController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            return orderDto.add(form);
+            if (authentication != null && authentication.isAuthenticated()) {
+                // Set the user ID from the authenticated user
+                String userEmail = authentication.getName();
+                form.setUserId(userEmail);
+                
+                return orderDto.add(form);
+            } else {
+                throw new ApiException("User not authenticated");
+            }
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {

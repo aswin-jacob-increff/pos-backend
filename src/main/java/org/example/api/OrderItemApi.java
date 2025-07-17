@@ -38,7 +38,7 @@ public class OrderItemApi extends AbstractApi<OrderItemPojo> {
             throw new ApiException("No inventory found for product barcode: " + productBarcode);
         }
         if (orderItemPojo.getQuantity() > inventoryPojo.getQuantity()) {
-            throw new ApiException("Quantity must be less than available stock in inventory. Available: " + inventoryPojo.getQuantity() + ", Requested: " + orderItemPojo.getQuantity());
+            throw new ApiException("Insufficient stock. Available: " + inventoryPojo.getQuantity() + ", Requested: " + orderItemPojo.getQuantity());
         }
         // Calculate amount
         double amount = orderItemPojo.getSellingPrice() * orderItemPojo.getQuantity();
@@ -81,7 +81,7 @@ public class OrderItemApi extends AbstractApi<OrderItemPojo> {
         int newQty = updatedOrderItem.getQuantity();
         int available = inventoryPojo.getQuantity() + oldQty;
         if (newQty > available) {
-            throw new ApiException("Quantity must be less than available stock in inventory. Available: " + available + ", Requested: " + newQty);
+            throw new ApiException("Insufficient stock. Available: " + available + ", Requested: " + newQty);
         }
         // Update inventory - first restore old quantity, then remove new quantity
         inventoryApi.addStock(existingOrderItem.getProductBarcode(), oldQty);

@@ -66,9 +66,14 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
     }
 
     @Override
-//    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.transaction.annotation.Transactional
     public ClientData update(Integer id, @Valid ClientForm form) {
-        return super.update(id, form);
+        validateId(id);
+        preprocess(form);
+        ClientPojo entity = convertFormToEntity(form);
+        // Use the flow instead of the API to ensure products are updated
+        flow.update(id, entity);
+        return convertEntityToData(api.get(id));
     }
 
     public List<ClientData> getAll() {
