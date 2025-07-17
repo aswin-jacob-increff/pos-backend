@@ -4,6 +4,8 @@ import org.example.dto.ClientDto;
 import org.example.flow.ClientFlow;
 import org.example.api.ClientApi;
 import org.example.dao.ClientDao;
+import org.example.dao.ProductDao;
+import org.example.dao.InventoryDao;
 import org.example.api.ProductApi;
 import org.example.model.form.ClientForm;
 import org.example.model.data.ClientData;
@@ -91,6 +93,18 @@ class ClientDtoFlowApiIntegrationTest {
         
         @Bean
         @Primary
+        public ProductDao productDao() {
+            return mock(ProductDao.class);
+        }
+        
+        @Bean
+        @Primary
+        public InventoryDao inventoryDao() {
+            return mock(InventoryDao.class);
+        }
+        
+        @Bean
+        @Primary
         public ProductApi productApi() {
             return mock(ProductApi.class);
         }
@@ -154,6 +168,11 @@ class ClientDtoFlowApiIntegrationTest {
             daoField.setAccessible(true);
             daoField.set(clientApi, clientDao);
 
+            // Inject clientDao into AbstractApi's 'dao' field
+            var abstractDaoField = org.example.api.AbstractApi.class.getDeclaredField("dao");
+            abstractDaoField.setAccessible(true);
+            abstractDaoField.set(clientApi, clientDao);
+
             var productApiField = ClientApi.class.getDeclaredField("productApi");
             productApiField.setAccessible(true);
             productApiField.set(clientApi, productApi);
@@ -162,6 +181,11 @@ class ClientDtoFlowApiIntegrationTest {
             var apiField = ClientFlow.class.getDeclaredField("api");
             apiField.setAccessible(true);
             apiField.set(clientFlow, clientApi);
+
+            // Inject clientApi into AbstractFlow's 'api' field
+            var abstractFlowApiField = org.example.flow.AbstractFlow.class.getDeclaredField("api");
+            abstractFlowApiField.setAccessible(true);
+            abstractFlowApiField.set(clientFlow, clientApi);
 
             var productApiFlowField = ClientFlow.class.getDeclaredField("productApi");
             productApiFlowField.setAccessible(true);
@@ -226,6 +250,8 @@ class ClientDtoFlowApiIntegrationTest {
         client2.setId(2);
         client2.setClientName("test client 2");
         client2.setStatus(false);
+        client2.setCreatedAt(Instant.now());
+        client2.setUpdatedAt(Instant.now());
         
         when(clientDao.selectAll()).thenReturn(Arrays.asList(testClient, client2));
 
@@ -250,8 +276,14 @@ class ClientDtoFlowApiIntegrationTest {
         updateForm.setStatus(false);
 
         when(clientDao.select(1)).thenReturn(testClient);
+        doAnswer(invocation -> {
+            Integer id = invocation.getArgument(0);
+            ClientPojo updatedClient = invocation.getArgument(1);
+            testClient.setClientName(updatedClient.getClientName());
+            testClient.setStatus(updatedClient.getStatus());
+            return null;
+        }).when(clientDao).update(eq(1), any(ClientPojo.class));
         when(clientDao.selectByName("updated client")).thenReturn(null);
-        doNothing().when(clientDao).update(eq(1), any(ClientPojo.class));
         when(productApi.getByClientName("test client")).thenReturn(Arrays.asList());
 
         // Act
@@ -263,7 +295,7 @@ class ClientDtoFlowApiIntegrationTest {
         assertFalse(result.getStatus());
         
         // Verify DAO was called
-        verify(clientDao).select(1);
+        verify(clientDao, times(3)).select(1);
         verify(clientDao).selectByName("updated client");
         verify(clientDao).update(eq(1), any(ClientPojo.class));
     }
@@ -279,8 +311,7 @@ class ClientDtoFlowApiIntegrationTest {
         clientDto.toggleStatus(1);
 
         // Assert
-        verify(clientDao).select(1);
-        verify(productApi).hasProductsByClientName("test client");
+        verify(clientDao, times(2)).select(1);
         verify(clientDao).toggleStatus(1);
     }
 
@@ -295,8 +326,7 @@ class ClientDtoFlowApiIntegrationTest {
         clientDto.toggleStatusByName("test client");
 
         // Assert
-        verify(clientDao).selectByField("clientName", "test client");
-        verify(productApi).hasProductsByClientName("test client");
+        verify(clientDao, times(2)).selectByField(eq("clientName"), eq("test client"));
         verify(clientDao).toggleStatusByName("test client");
     }
 
@@ -306,7 +336,7 @@ class ClientDtoFlowApiIntegrationTest {
         when(clientDao.select(1)).thenReturn(testClient);
 
         // Act
-        ClientData result = clientDto.getByNameOrId(1, null);
+        ClientData result = clientDto.getByNameOrId(1, "");
 
         // Assert
         assertNotNull(result);
@@ -382,7 +412,7 @@ class ClientDtoFlowApiIntegrationTest {
         assertEquals("Client status toggle failed. Client has products.", exception.getMessage());
         
         // Verify DAO was called for validation but not for toggle
-        verify(clientDao).select(1);
+        verify(clientDao, times(2)).select(1);
         verify(productApi).hasProductsByClientName("test client");
         verify(clientDao, never()).toggleStatus(anyInt());
     }

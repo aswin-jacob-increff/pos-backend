@@ -163,19 +163,20 @@ class ClientDtoTest {
 
         ClientPojo client = new ClientPojo();
         client.setId(1);
-        client.setClientName("Updated Client");
+        client.setClientName("updated client"); // StringUtil.format converts to lowercase
         client.setStatus(true);
 
         when(clientApi.get(1)).thenReturn(client);
-        lenient().doNothing().when(clientApi).update(eq(1), any(ClientPojo.class));
+        doNothing().when(clientFlow).update(eq(1), any(ClientPojo.class));
 
         // When
         ClientData result = clientDto.update(1, form);
 
         // Then
         assertNotNull(result);
-        assertEquals("Updated Client", result.getClientName());
-        verify(clientApi).update(eq(1), any(ClientPojo.class));
+        assertEquals("updated client", result.getClientName());
+        verify(clientFlow).update(eq(1), any(ClientPojo.class));
+        verify(clientApi).get(1);
     }
 
     @Test

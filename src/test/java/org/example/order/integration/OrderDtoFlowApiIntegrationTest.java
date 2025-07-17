@@ -1,11 +1,22 @@
 package org.example.order.integration;
 
 import org.example.dto.OrderDto;
+import org.example.dto.OrderItemDto;
 import org.example.flow.OrderFlow;
 import org.example.api.OrderApi;
 import org.example.api.OrderItemApi;
 import org.example.api.InventoryApi;
+import org.example.api.ClientApi;
+import org.example.api.ProductApi;
+import org.example.api.InvoiceApi;
 import org.example.dao.OrderDao;
+import org.example.dao.OrderItemDao;
+import org.example.dao.InventoryDao;
+import org.example.dao.ClientDao;
+import org.example.dao.ProductDao;
+import org.example.dao.InvoiceDao;
+import org.example.flow.ProductFlow;
+import org.example.flow.OrderItemFlow;
 import org.example.model.enums.OrderStatus;
 import org.example.model.form.OrderForm;
 import org.example.model.data.OrderData;
@@ -27,6 +38,7 @@ import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.web.client.RestTemplate;
 
 import jakarta.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
@@ -95,6 +107,18 @@ class OrderDtoFlowApiIntegrationTest {
         
         @Bean
         @Primary
+        public OrderItemDao orderItemDao() {
+            return mock(OrderItemDao.class);
+        }
+        
+        @Bean
+        @Primary
+        public InventoryDao inventoryDao() {
+            return mock(InventoryDao.class);
+        }
+        
+        @Bean
+        @Primary
         public OrderItemApi orderItemApi() {
             return mock(OrderItemApi.class);
         }
@@ -103,6 +127,42 @@ class OrderDtoFlowApiIntegrationTest {
         @Primary
         public InventoryApi inventoryApi() {
             return mock(InventoryApi.class);
+        }
+        
+        @Bean
+        @Primary
+        public ClientApi clientApi() {
+            return mock(ClientApi.class);
+        }
+        
+        @Bean
+        @Primary
+        public ClientDao clientDao() {
+            return mock(ClientDao.class);
+        }
+        
+        @Bean
+        @Primary
+        public ProductApi productApi() {
+            return mock(ProductApi.class);
+        }
+        
+        @Bean
+        @Primary
+        public ProductDao productDao() {
+            return mock(ProductDao.class);
+        }
+        
+        @Bean
+        @Primary
+        public InvoiceApi invoiceApi() {
+            return mock(InvoiceApi.class);
+        }
+        
+        @Bean
+        @Primary
+        public InvoiceDao invoiceDao() {
+            return mock(InvoiceDao.class);
         }
         
         @Bean
@@ -119,6 +179,30 @@ class OrderDtoFlowApiIntegrationTest {
         public OrderDto orderDto() {
             return new OrderDto();
         }
+
+        @Bean
+        @Primary
+        public ProductFlow productFlow() {
+            return mock(ProductFlow.class);
+        }
+
+        @Bean
+        @Primary
+        public OrderItemFlow orderItemFlow() {
+            return mock(OrderItemFlow.class);
+        }
+
+        @Bean
+        @Primary
+        public RestTemplate restTemplate() {
+            return mock(RestTemplate.class);
+        }
+
+        @Bean
+        @Primary
+        public OrderItemDto orderItemDto() {
+            return mock(OrderItemDto.class);
+        }
     }
 
     @Mock
@@ -129,6 +213,12 @@ class OrderDtoFlowApiIntegrationTest {
 
     @Mock
     private InventoryApi inventoryApi;
+
+    @Mock
+    private OrderItemDto orderItemDto;
+
+    @Mock
+    private OrderItemFlow orderItemFlow;
 
     private OrderDto orderDto;
     private OrderFlow orderFlow;
@@ -165,6 +255,8 @@ class OrderDtoFlowApiIntegrationTest {
         orderDto = new OrderDto();
         orderFlow = new OrderFlow();
         orderApi = new OrderApi();
+        orderItemDto = new OrderItemDto();
+        orderItemFlow = new OrderItemFlow();
 
         // Inject mocked dependencies using reflection
         injectMockDependencies();
@@ -173,9 +265,14 @@ class OrderDtoFlowApiIntegrationTest {
     private void injectMockDependencies() {
         try {
             // Inject orderDao into orderApi
-            var daoField = OrderApi.class.getDeclaredField("dao");
-            daoField.setAccessible(true);
-            daoField.set(orderApi, orderDao);
+            var orderDaoField = OrderApi.class.getDeclaredField("orderDao");
+            orderDaoField.setAccessible(true);
+            orderDaoField.set(orderApi, orderDao);
+
+            // Inject orderDao into AbstractApi's 'dao' field
+            var abstractDaoField = org.example.api.AbstractApi.class.getDeclaredField("dao");
+            abstractDaoField.setAccessible(true);
+            abstractDaoField.set(orderApi, orderDao);
 
             var orderItemApiField = OrderApi.class.getDeclaredField("orderItemApi");
             orderItemApiField.setAccessible(true);
@@ -194,14 +291,22 @@ class OrderDtoFlowApiIntegrationTest {
             orderItemApiFlowField.setAccessible(true);
             orderItemApiFlowField.set(orderFlow, orderItemApi);
 
-            var inventoryApiFlowField = OrderFlow.class.getDeclaredField("inventoryApi");
-            inventoryApiFlowField.setAccessible(true);
-            inventoryApiFlowField.set(orderFlow, inventoryApi);
-
             // Inject orderFlow into orderDto
             var flowField = OrderDto.class.getDeclaredField("orderFlow");
             flowField.setAccessible(true);
             flowField.set(orderDto, orderFlow);
+
+            var orderItemDtoField = OrderDto.class.getDeclaredField("orderItemDto");
+            orderItemDtoField.setAccessible(true);
+            orderItemDtoField.set(orderDto, orderItemDto);
+
+            var orderItemFlowField = OrderItemDto.class.getDeclaredField("orderItemFlow");
+            orderItemFlowField.setAccessible(true);
+            orderItemFlowField.set(orderItemDto, orderItemFlow);
+
+            var orderItemFlowApiField = OrderItemFlow.class.getDeclaredField("api");
+            orderItemFlowApiField.setAccessible(true);
+            orderItemFlowApiField.set(orderItemFlow, orderItemApi);
 
             // Inject orderApi into orderDto (inherited from AbstractDto)
             var abstractApiField = org.example.dto.AbstractDto.class.getDeclaredField("api");
@@ -285,7 +390,12 @@ class OrderDtoFlowApiIntegrationTest {
         updateForm.setUserId("updatedUser");
 
         when(orderDao.select(1)).thenReturn(testOrder);
-        doNothing().when(orderDao).update(eq(1), any(OrderPojo.class));
+        doAnswer(invocation -> {
+            Integer id = invocation.getArgument(0);
+            OrderPojo updatedOrder = invocation.getArgument(1);
+            testOrder.setUserId(updatedOrder.getUserId());
+            return null;
+        }).when(orderDao).update(eq(1), any(OrderPojo.class));
 
         // Act
         OrderData result = orderDto.update(1, updateForm);
@@ -295,7 +405,7 @@ class OrderDtoFlowApiIntegrationTest {
         assertEquals("updatedUser", result.getUserId());
         
         // Verify DAO was called
-        verify(orderDao).select(1);
+        verify(orderDao, times(2)).select(1);
         verify(orderDao).update(eq(1), any(OrderPojo.class));
     }
 

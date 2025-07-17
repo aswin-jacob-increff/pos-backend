@@ -4,6 +4,8 @@ import org.example.dto.InventoryDto;
 import org.example.flow.InventoryFlow;
 import org.example.api.InventoryApi;
 import org.example.dao.InventoryDao;
+import org.example.dao.ProductDao;
+import org.example.dao.ClientDao;
 import org.example.api.ProductApi;
 import org.example.api.ClientApi;
 import org.example.model.form.InventoryForm;
@@ -89,6 +91,18 @@ class InventoryDtoFlowApiIntegrationTest {
         @Primary
         public InventoryDao inventoryDao() {
             return mock(InventoryDao.class);
+        }
+        
+        @Bean
+        @Primary
+        public ProductDao productDao() {
+            return mock(ProductDao.class);
+        }
+        
+        @Bean
+        @Primary
+        public ClientDao clientDao() {
+            return mock(ClientDao.class);
         }
         
         @Bean
@@ -181,9 +195,14 @@ class InventoryDtoFlowApiIntegrationTest {
     private void injectMockDependencies() {
         try {
             // Inject inventoryDao into inventoryApi
-            var daoField = InventoryApi.class.getDeclaredField("dao");
-            daoField.setAccessible(true);
-            daoField.set(inventoryApi, inventoryDao);
+            var inventoryDaoField = InventoryApi.class.getDeclaredField("inventoryDao");
+            inventoryDaoField.setAccessible(true);
+            inventoryDaoField.set(inventoryApi, inventoryDao);
+
+            // Inject inventoryDao into AbstractApi's 'dao' field
+            var abstractDaoField = org.example.api.AbstractApi.class.getDeclaredField("dao");
+            abstractDaoField.setAccessible(true);
+            abstractDaoField.set(inventoryApi, inventoryDao);
 
             var clientApiField = InventoryApi.class.getDeclaredField("clientApi");
             clientApiField.setAccessible(true);
@@ -193,10 +212,6 @@ class InventoryDtoFlowApiIntegrationTest {
             var apiField = InventoryFlow.class.getDeclaredField("api");
             apiField.setAccessible(true);
             apiField.set(inventoryFlow, inventoryApi);
-
-            var clientApiFlowField = InventoryFlow.class.getDeclaredField("clientApi");
-            clientApiFlowField.setAccessible(true);
-            clientApiFlowField.set(inventoryFlow, clientApi);
 
             // Inject inventoryFlow into inventoryDto
             var flowField = InventoryDto.class.getDeclaredField("inventoryFlow");
@@ -222,7 +237,11 @@ class InventoryDtoFlowApiIntegrationTest {
         // Arrange
         when(productApi.getByBarcode("TEST123")).thenReturn(testProduct);
         when(clientApi.getByName("test client")).thenReturn(testClient);
-        doNothing().when(inventoryDao).insert(any(InventoryPojo.class));
+        doAnswer(invocation -> {
+            InventoryPojo inventory = invocation.getArgument(0);
+            inventory.setId(1); // Set the ID as if it was inserted
+            return null;
+        }).when(inventoryDao).insert(any(InventoryPojo.class));
 
         // Act
         InventoryData result = inventoryDto.add(testForm);
@@ -235,7 +254,7 @@ class InventoryDtoFlowApiIntegrationTest {
         assertEquals(100.0, result.getMrp());
         
         // Verify DAO was called
-        verify(productApi).getByBarcode("TEST123");
+        verify(productApi, times(2)).getByBarcode("TEST123");
         verify(inventoryDao).insert(any(InventoryPojo.class));
     }
 
@@ -293,7 +312,12 @@ class InventoryDtoFlowApiIntegrationTest {
         when(inventoryDao.select(1)).thenReturn(testInventory);
         when(productApi.getByBarcode("TEST123")).thenReturn(testProduct);
         when(clientApi.getByName("test client")).thenReturn(testClient);
-        doNothing().when(inventoryDao).update(eq(1), any(InventoryPojo.class));
+        doAnswer(invocation -> {
+            Integer id = invocation.getArgument(0);
+            InventoryPojo updatedInventory = invocation.getArgument(1);
+            testInventory.setQuantity(updatedInventory.getQuantity());
+            return null;
+        }).when(inventoryDao).update(eq(1), any(InventoryPojo.class));
 
         // Act
         InventoryData result = inventoryDto.update(1, updateForm);
@@ -304,16 +328,22 @@ class InventoryDtoFlowApiIntegrationTest {
         assertEquals(75, result.getQuantity());
         
         // Verify DAO was called
-        verify(inventoryDao).select(1);
-        verify(productApi).getByBarcode("TEST123");
+        verify(inventoryDao, times(2)).select(1);
+        verify(productApi, times(2)).getByBarcode("TEST123");
         verify(inventoryDao).update(eq(1), any(InventoryPojo.class));
     }
 
     @Test
     void testDtoToFlowToApi_AddStock() {
         // Arrange
-        when(inventoryDao.selectByField("productBarcode", "TEST123")).thenReturn(testInventory);
-        doNothing().when(inventoryDao).update(eq(1), any(InventoryPojo.class));
+        when(inventoryDao.getByProductBarcode("TEST123")).thenReturn(testInventory);
+        when(clientApi.getByName("test client")).thenReturn(testClient);
+        doAnswer(invocation -> {
+            Integer id = invocation.getArgument(0);
+            InventoryPojo updatedInventory = invocation.getArgument(1);
+            testInventory.setQuantity(updatedInventory.getQuantity());
+            return null;
+        }).when(inventoryDao).update(eq(1), any(InventoryPojo.class));
 
         // Act
         InventoryData result = inventoryDto.addStock("TEST123", 25);
@@ -324,15 +354,21 @@ class InventoryDtoFlowApiIntegrationTest {
         assertEquals(75, result.getQuantity()); // 50 + 25
         
         // Verify DAO was called
-        verify(inventoryDao).selectByField("productBarcode", "TEST123");
+        verify(inventoryDao, times(2)).getByProductBarcode("TEST123");
         verify(inventoryDao).update(eq(1), any(InventoryPojo.class));
     }
 
     @Test
     void testDtoToFlowToApi_RemoveStock() {
         // Arrange
-        when(inventoryDao.selectByField("productBarcode", "TEST123")).thenReturn(testInventory);
-        doNothing().when(inventoryDao).update(eq(1), any(InventoryPojo.class));
+        when(inventoryDao.getByProductBarcode("TEST123")).thenReturn(testInventory);
+        when(clientApi.getByName("test client")).thenReturn(testClient);
+        doAnswer(invocation -> {
+            Integer id = invocation.getArgument(0);
+            InventoryPojo updatedInventory = invocation.getArgument(1);
+            testInventory.setQuantity(updatedInventory.getQuantity());
+            return null;
+        }).when(inventoryDao).update(eq(1), any(InventoryPojo.class));
 
         // Act
         InventoryData result = inventoryDto.removeStock("TEST123", 20);
@@ -343,15 +379,21 @@ class InventoryDtoFlowApiIntegrationTest {
         assertEquals(30, result.getQuantity()); // 50 - 20
         
         // Verify DAO was called
-        verify(inventoryDao).selectByField("productBarcode", "TEST123");
+        verify(inventoryDao, times(2)).getByProductBarcode("TEST123");
         verify(inventoryDao).update(eq(1), any(InventoryPojo.class));
     }
 
     @Test
     void testDtoToFlowToApi_SetStock() {
         // Arrange
-        when(inventoryDao.selectByField("productBarcode", "TEST123")).thenReturn(testInventory);
-        doNothing().when(inventoryDao).update(eq(1), any(InventoryPojo.class));
+        when(inventoryDao.getByProductBarcode("TEST123")).thenReturn(testInventory);
+        when(clientApi.getByName("test client")).thenReturn(testClient);
+        doAnswer(invocation -> {
+            Integer id = invocation.getArgument(0);
+            InventoryPojo updatedInventory = invocation.getArgument(1);
+            testInventory.setQuantity(updatedInventory.getQuantity());
+            return null;
+        }).when(inventoryDao).update(eq(1), any(InventoryPojo.class));
 
         // Act
         InventoryData result = inventoryDto.setStock("TEST123", 100);
@@ -362,14 +404,14 @@ class InventoryDtoFlowApiIntegrationTest {
         assertEquals(100, result.getQuantity());
         
         // Verify DAO was called
-        verify(inventoryDao).selectByField("productBarcode", "TEST123");
+        verify(inventoryDao, times(2)).getByProductBarcode("TEST123");
         verify(inventoryDao).update(eq(1), any(InventoryPojo.class));
     }
 
     @Test
     void testDtoToFlowToApi_GetByProductBarcode() {
         // Arrange
-        when(inventoryDao.selectByField("productBarcode", "TEST123")).thenReturn(testInventory);
+        when(inventoryDao.getByProductBarcode("TEST123")).thenReturn(testInventory);
 
         // Act
         InventoryData result = inventoryDto.getByProductBarcode("TEST123");
@@ -381,13 +423,13 @@ class InventoryDtoFlowApiIntegrationTest {
         assertEquals(50, result.getQuantity());
         
         // Verify DAO was called
-        verify(inventoryDao).selectByField("productBarcode", "TEST123");
+        verify(inventoryDao).getByProductBarcode("TEST123");
     }
 
     @Test
     void testDtoToFlowToApi_GetByProductName() {
         // Arrange
-        when(inventoryDao.selectByField("productName", "Test Product")).thenReturn(testInventory);
+        when(inventoryDao.getByProductName("Test Product")).thenReturn(testInventory);
 
         // Act
         InventoryData result = inventoryDto.getByProductName("Test Product");
@@ -399,7 +441,7 @@ class InventoryDtoFlowApiIntegrationTest {
         assertEquals(50, result.getQuantity());
         
         // Verify DAO was called
-        verify(inventoryDao).selectByField("productName", "Test Product");
+        verify(inventoryDao).getByProductName("Test Product");
     }
 
     @Test
@@ -439,9 +481,6 @@ class InventoryDtoFlowApiIntegrationTest {
 
     @Test
     void testDtoToFlowToApi_Validation_AddStockNegativeQuantity() {
-        // Arrange
-        when(inventoryDao.selectByField("productBarcode", "TEST123")).thenReturn(testInventory);
-
         // Act & Assert
         ApiException exception = assertThrows(ApiException.class, () -> {
             inventoryDto.addStock("TEST123", -5);
@@ -456,7 +495,7 @@ class InventoryDtoFlowApiIntegrationTest {
     @Test
     void testDtoToFlowToApi_Validation_RemoveStockInsufficientQuantity() {
         // Arrange
-        when(inventoryDao.selectByField("productBarcode", "TEST123")).thenReturn(testInventory);
+        when(inventoryDao.getByProductBarcode("TEST123")).thenReturn(testInventory);
 
         // Act & Assert
         ApiException exception = assertThrows(ApiException.class, () -> {

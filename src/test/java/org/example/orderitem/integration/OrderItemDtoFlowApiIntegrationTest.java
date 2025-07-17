@@ -4,9 +4,16 @@ import org.example.dto.OrderItemDto;
 import org.example.flow.OrderItemFlow;
 import org.example.api.OrderItemApi;
 import org.example.dao.OrderItemDao;
+import org.example.dao.OrderDao;
+import org.example.dao.InventoryDao;
 import org.example.api.OrderApi;
 import org.example.api.ProductApi;
 import org.example.api.InventoryApi;
+import org.example.api.ClientApi;
+import org.example.api.InvoiceApi;
+import org.example.dao.ClientDao;
+import org.example.dao.ProductDao;
+import org.example.dao.InvoiceDao;
 import org.example.model.enums.OrderStatus;
 import org.example.model.form.OrderItemForm;
 import org.example.model.data.OrderItemData;
@@ -97,6 +104,12 @@ class OrderItemDtoFlowApiIntegrationTest {
         
         @Bean
         @Primary
+        public OrderDao orderDao() {
+            return mock(OrderDao.class);
+        }
+        
+        @Bean
+        @Primary
         public OrderApi orderApi() {
             return mock(OrderApi.class);
         }
@@ -111,6 +124,42 @@ class OrderItemDtoFlowApiIntegrationTest {
         @Primary
         public InventoryApi inventoryApi() {
             return mock(InventoryApi.class);
+        }
+        
+        @Bean
+        @Primary
+        public InventoryDao inventoryDao() {
+            return mock(InventoryDao.class);
+        }
+
+        @Bean
+        @Primary
+        public ClientDao clientDao() {
+            return mock(ClientDao.class);
+        }
+
+        @Bean
+        @Primary
+        public ClientApi clientApi() {
+            return mock(ClientApi.class);
+        }
+        
+        @Bean
+        @Primary
+        public ProductDao productDao() {
+            return mock(ProductDao.class);
+        }
+        
+        @Bean
+        @Primary
+        public InvoiceApi invoiceApi() {
+            return mock(InvoiceApi.class);
+        }
+        
+        @Bean
+        @Primary
+        public InvoiceDao invoiceDao() {
+            return mock(InvoiceDao.class);
         }
         
         @Bean
@@ -204,9 +253,14 @@ class OrderItemDtoFlowApiIntegrationTest {
     private void injectMockDependencies() {
         try {
             // Inject orderItemDao into orderItemApi
-            var daoField = OrderItemApi.class.getDeclaredField("dao");
-            daoField.setAccessible(true);
-            daoField.set(orderItemApi, orderItemDao);
+            var orderItemDaoField = OrderItemApi.class.getDeclaredField("orderItemDao");
+            orderItemDaoField.setAccessible(true);
+            orderItemDaoField.set(orderItemApi, orderItemDao);
+
+            // Inject orderItemDao into AbstractApi's 'dao' field
+            var abstractDaoField = org.example.api.AbstractApi.class.getDeclaredField("dao");
+            abstractDaoField.setAccessible(true);
+            abstractDaoField.set(orderItemApi, orderItemDao);
 
             var inventoryApiField = OrderItemApi.class.getDeclaredField("inventoryApi");
             inventoryApiField.setAccessible(true);
@@ -216,10 +270,6 @@ class OrderItemDtoFlowApiIntegrationTest {
             var apiField = OrderItemFlow.class.getDeclaredField("api");
             apiField.setAccessible(true);
             apiField.set(orderItemFlow, orderItemApi);
-
-            var inventoryApiFlowField = OrderItemFlow.class.getDeclaredField("inventoryApi");
-            inventoryApiFlowField.setAccessible(true);
-            inventoryApiFlowField.set(orderItemFlow, inventoryApi);
 
             // Inject orderItemFlow into orderItemDto
             var flowField = OrderItemDto.class.getDeclaredField("orderItemFlow");
@@ -265,7 +315,7 @@ class OrderItemDtoFlowApiIntegrationTest {
         assertEquals(100.0, result.getAmount());
         
         // Verify DAO was called
-        verify(productApi).get(1);
+        verify(productApi, times(3)).get(1);
         verify(inventoryApi).getByProductBarcode("TEST123");
         verify(inventoryApi).removeStock("TEST123", 2);
         verify(orderItemDao).insert(any(OrderItemPojo.class));
@@ -347,8 +397,8 @@ class OrderItemDtoFlowApiIntegrationTest {
         assertEquals(3, result.getQuantity());
         
         // Verify DAO was called
-        verify(orderItemDao).select(1);
-        verify(productApi).get(1);
+        verify(orderItemDao, times(2)).select(1);
+        verify(productApi, times(3)).get(1);
         verify(inventoryApi).getByProductBarcode("TEST123");
         verify(inventoryApi).addStock("TEST123", 2);
         verify(inventoryApi).removeStock("TEST123", 3);
@@ -408,7 +458,7 @@ class OrderItemDtoFlowApiIntegrationTest {
             orderItemDto.add(testForm);
         });
         
-        assertEquals("Product with ID 999 not found", exception.getMessage());
+        assertEquals("Product not found", exception.getMessage());
         
         // Verify DAO was not called
         verify(orderItemDao, never()).insert(any());
