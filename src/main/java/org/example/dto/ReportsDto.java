@@ -1,12 +1,11 @@
 package org.example.dto;
 
-import org.example.model.SalesReportData;
-import org.example.model.SalesReportForm;
-import org.example.model.CustomDateRangeSalesForm;
-import org.example.model.CustomDateRangeSalesData;
-import org.example.model.DaySalesForm;
+import org.example.model.data.SalesReportData;
+import org.example.model.form.SalesReportForm;
+import org.example.model.form.CustomDateRangeSalesForm;
+import org.example.model.data.CustomDateRangeSalesData;
+import org.example.model.form.DaySalesForm;
 import org.example.pojo.OrderItemPojo;
-import org.example.pojo.ProductPojo;
 import org.example.pojo.OrderPojo;
 import org.example.pojo.DaySalesPojo;
 import org.example.dao.DaySalesDao;
@@ -16,8 +15,7 @@ import org.example.flow.ProductFlow;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.example.exception.ApiException;
-import java.time.ZoneId;
-import java.time.Instant;
+
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.HashMap;

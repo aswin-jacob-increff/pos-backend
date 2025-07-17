@@ -5,23 +5,22 @@ import org.example.dto.UserDto;
 import org.example.dto.ProductDto;
 import org.example.dto.InventoryDto;
 import org.example.exception.ApiException;
-import org.example.model.OrderData;
-import org.example.model.OrderForm;
-import org.example.model.UserData;
-import org.example.model.UserForm;
-import org.example.model.ProductData;
-import org.example.model.InventoryData;
+import org.example.model.constants.ApiEndpoints;
+import org.example.model.data.OrderData;
+import org.example.model.form.OrderForm;
+import org.example.model.data.UserData;
+import org.example.model.form.UserForm;
+import org.example.model.data.ProductData;
+import org.example.model.data.InventoryData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping(ApiEndpoints.User.BASE_PATH)
 public class UserController {
 
     @Autowired

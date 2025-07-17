@@ -2,17 +2,16 @@ package org.example.dto;
 
 import org.example.flow.OrderFlow;
 import org.example.flow.ProductFlow;
-import org.example.flow.OrderItemFlow;
 import org.example.api.InvoiceApi;
-import org.example.model.OrderData;
-import org.example.model.OrderForm;
-import org.example.model.OrderItemData;
-import org.example.model.OrderItemForm;
-import org.example.model.InvoiceData;
-import org.example.model.InvoiceItemData;
+import org.example.model.data.OrderData;
+import org.example.model.enums.OrderStatus;
+import org.example.model.form.OrderForm;
+import org.example.model.data.OrderItemData;
+import org.example.model.form.OrderItemForm;
+import org.example.model.data.InvoiceData;
+import org.example.model.data.InvoiceItemData;
 import org.example.pojo.OrderItemPojo;
 import org.example.pojo.OrderPojo;
-import org.example.pojo.ProductPojo;
 import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -233,7 +232,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
 
                 System.out.println("Updating order status to INVOICED...");
                 // Update order status to INVOICED
-                orderFlow.updateStatus(orderId, org.example.pojo.OrderStatus.INVOICED);
+                orderFlow.updateStatus(orderId, OrderStatus.INVOICED);
 
                 // Convert base64 to PDF bytes for immediate return
                 byte[] pdfBytes = java.util.Base64.getDecoder().decode(response.getBody());

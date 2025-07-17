@@ -1,8 +1,8 @@
-package org.example.model;
+package org.example.model.data;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.example.enums.Role;
+import org.example.model.enums.Role;
 
 @Getter
 @Setter

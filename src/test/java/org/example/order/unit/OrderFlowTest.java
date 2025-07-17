@@ -3,6 +3,7 @@ package org.example.order.unit;
 import org.example.flow.OrderFlow;
 import org.example.api.OrderApi;
 import org.example.api.OrderItemApi;
+import org.example.model.enums.OrderStatus;
 import org.example.pojo.OrderPojo;
 import org.example.pojo.OrderItemPojo;
 import org.example.exception.ApiException;
@@ -42,7 +43,7 @@ class OrderFlowTest {
         testOrder.setId(1);
         testOrder.setDate(Instant.now());
         testOrder.setTotal(100.0);
-        testOrder.setStatus(org.example.pojo.OrderStatus.CREATED);
+        testOrder.setStatus(OrderStatus.CREATED);
 
         testOrderItem = new OrderItemPojo();
         testOrderItem.setId(1);
@@ -104,7 +105,7 @@ class OrderFlowTest {
         order.setId(1);
         order.setDate(Instant.now());
         order.setTotal(100.0);
-        order.setStatus(org.example.pojo.OrderStatus.CREATED);
+        order.setStatus(OrderStatus.CREATED);
         order.setUserId("user123");
 
         doNothing().when(api).update(1, order);

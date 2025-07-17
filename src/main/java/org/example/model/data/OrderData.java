@@ -1,11 +1,11 @@
-package org.example.model;
+package org.example.model.data;
 
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import org.example.pojo.OrderStatus;
+import org.example.model.enums.OrderStatus;
 
 @Setter
 @Getter

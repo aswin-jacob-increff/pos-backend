@@ -2,6 +2,7 @@ package org.example.api;
 
 import org.example.dao.OrderDao;
 import org.example.exception.ApiException;
+import org.example.model.enums.OrderStatus;
 import org.example.pojo.OrderItemPojo;
 import org.example.pojo.OrderPojo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +40,7 @@ public class OrderApi extends AbstractApi<OrderPojo> {
         // Set default date to current UTC time if not provided
         orderPojo.setDate(Objects.nonNull(orderPojo.getDate()) ? orderPojo.getDate() : Instant.now());
         // Set status to CREATED when order is created
-        orderPojo.setStatus(org.example.pojo.OrderStatus.CREATED);
+        orderPojo.setStatus(OrderStatus.CREATED);
         // Insert order first to get the ID
         orderDao.insert(orderPojo);
         
@@ -86,7 +87,7 @@ public class OrderApi extends AbstractApi<OrderPojo> {
             inventoryApi.addStock(productBarcode, quantityToRestore);
         }
         // Update order status to CANCELLED instead of deleting
-        order.setStatus(org.example.pojo.OrderStatus.CANCELLED);
+        order.setStatus(OrderStatus.CANCELLED);
         orderDao.update(orderId, order);
     }
 
@@ -97,7 +98,7 @@ public class OrderApi extends AbstractApi<OrderPojo> {
 
     // Note: Order items are now managed separately with denormalized structure
 
-    public void updateStatus(Integer id, org.example.pojo.OrderStatus status) {
+    public void updateStatus(Integer id, OrderStatus status) {
         if (Objects.isNull(id)) {
             throw new ApiException("Order ID cannot be null");
         }

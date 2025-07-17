@@ -1,7 +1,7 @@
 package org.example.dto;
 
-import org.example.model.ProductForm;
-import org.example.model.ProductData;
+import org.example.model.form.ProductForm;
+import org.example.model.data.ProductData;
 import org.example.pojo.ProductPojo;
 import org.example.flow.ProductFlow;
 import org.example.api.ClientApi;

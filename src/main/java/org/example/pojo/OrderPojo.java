@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
-import org.example.pojo.OrderStatus;
+import org.example.model.enums.OrderStatus;
 
 @Getter
 @Setter

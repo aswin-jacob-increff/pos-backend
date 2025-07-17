@@ -3,7 +3,7 @@ package org.example.order.unit;
 import org.example.api.OrderApi;
 import org.example.pojo.OrderPojo;
 import org.example.pojo.OrderItemPojo;
-import org.example.pojo.OrderStatus;
+import org.example.model.enums.OrderStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

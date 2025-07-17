@@ -1,6 +1,7 @@
 package org.example.controller;
 
 import org.example.exception.ApiException;
+import org.example.model.constants.ApiEndpoints;
 import org.example.util.InventoryTsvParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -9,18 +10,16 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpHeaders;
 
 import java.util.List;
-import java.util.Base64;
 
-import org.example.model.InventoryData;
-import org.example.model.InventoryForm;
+import org.example.model.data.InventoryData;
+import org.example.model.form.InventoryForm;
 import org.example.dto.InventoryDto;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/api/supervisor/inventory")
+@RequestMapping(ApiEndpoints.Supervisor.INVENTORY)
 public class InventoryController {
 
     @Autowired

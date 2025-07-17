@@ -1,9 +1,9 @@
-package org.example.config;
+package org.example.model.constants;
 
 /**
  * Configuration class containing API endpoint constants
  */
-public class ApiConfig {
+public class ApiEndpoints {
     
     public static class User {
         public static final String BASE_PATH = "/api/user";

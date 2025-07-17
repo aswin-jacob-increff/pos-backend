@@ -6,8 +6,9 @@ import org.example.api.OrderApi;
 import org.example.api.OrderItemApi;
 import org.example.api.InventoryApi;
 import org.example.dao.OrderDao;
-import org.example.model.OrderForm;
-import org.example.model.OrderData;
+import org.example.model.enums.OrderStatus;
+import org.example.model.form.OrderForm;
+import org.example.model.data.OrderData;
 import org.example.pojo.OrderPojo;
 import org.example.pojo.OrderItemPojo;
 import org.example.exception.ApiException;
@@ -27,7 +28,6 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 import java.time.Instant;
@@ -145,7 +145,7 @@ class OrderDtoFlowApiIntegrationTest {
         testOrder.setId(1);
         testOrder.setDate(Instant.now());
         testOrder.setTotal(100.0);
-        testOrder.setStatus(org.example.pojo.OrderStatus.CREATED);
+        testOrder.setStatus(OrderStatus.CREATED);
         testOrder.setUserId("user123");
 
         testOrderItem = new OrderItemPojo();
@@ -224,7 +224,7 @@ class OrderDtoFlowApiIntegrationTest {
         // Assert
         assertNotNull(result);
         assertEquals("user123", result.getUserId());
-        assertEquals(org.example.pojo.OrderStatus.CREATED, result.getStatus());
+        assertEquals(OrderStatus.CREATED, result.getStatus());
         assertEquals(0.0, result.getTotal()); // Initial total is 0
         
         // Verify DAO was called
@@ -245,7 +245,7 @@ class OrderDtoFlowApiIntegrationTest {
         assertEquals(1, result.getId());
         assertEquals("user123", result.getUserId());
         assertEquals(100.0, result.getTotal());
-        assertEquals(org.example.pojo.OrderStatus.CREATED, result.getStatus());
+        assertEquals(OrderStatus.CREATED, result.getStatus());
         
         // Verify DAO was called
         verify(orderDao).select(1);
@@ -259,7 +259,7 @@ class OrderDtoFlowApiIntegrationTest {
         order2.setId(2);
         order2.setDate(Instant.now());
         order2.setTotal(150.0);
-        order2.setStatus(org.example.pojo.OrderStatus.CREATED);
+        order2.setStatus(OrderStatus.CREATED);
         order2.setUserId("user456");
         
         when(orderDao.selectAll()).thenReturn(Arrays.asList(testOrder, order2));
@@ -324,7 +324,7 @@ class OrderDtoFlowApiIntegrationTest {
         doNothing().when(orderDao).update(eq(1), any(OrderPojo.class));
 
         // Act
-        orderFlow.updateStatus(1, org.example.pojo.OrderStatus.INVOICED);
+        orderFlow.updateStatus(1, OrderStatus.INVOICED);
 
         // Assert
         verify(orderDao).select(1);

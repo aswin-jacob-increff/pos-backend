@@ -1,7 +1,7 @@
 package org.example.flow;
 
+import org.example.model.enums.OrderStatus;
 import org.example.pojo.OrderPojo;
-import org.example.pojo.OrderItemPojo;
 import org.example.api.OrderApi;
 import org.example.api.OrderItemApi;
 import org.example.exception.ApiException;
@@ -99,7 +99,7 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         }
     }
 
-    public void updateStatus(Integer id, org.example.pojo.OrderStatus status) {
+    public void updateStatus(Integer id, OrderStatus status) {
         api.updateStatus(id, status);
     }
 

@@ -1,8 +1,9 @@
 package org.example.dto;
 
 import org.example.flow.UserFlow;
-import org.example.model.UserData;
-import org.example.model.UserForm;
+import org.example.model.data.UserData;
+import org.example.model.enums.Role;
+import org.example.model.form.UserForm;
 import org.example.pojo.UserPojo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,7 +44,7 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
         
         // Automatically set role to USER for all signups
         // Supervisor accounts are only created via application.properties
-        pojo.setRole(org.example.enums.Role.USER);
+        pojo.setRole(Role.USER);
         
         return pojo;
     }

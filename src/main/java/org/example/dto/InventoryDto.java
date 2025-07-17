@@ -1,7 +1,7 @@
 package org.example.dto;
 
-import org.example.model.InventoryForm;
-import org.example.model.InventoryData;
+import org.example.model.form.InventoryForm;
+import org.example.model.data.InventoryData;
 import org.example.pojo.InventoryPojo;
 import org.example.flow.InventoryFlow;
 import org.example.api.ProductApi;

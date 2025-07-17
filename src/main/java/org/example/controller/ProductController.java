@@ -1,14 +1,15 @@
 package org.example.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import org.example.model.constants.ApiEndpoints;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.example.model.ProductData;
-import org.example.model.ProductForm;
+import org.example.model.data.ProductData;
+import org.example.model.form.ProductForm;
 import org.example.dto.ProductDto;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
@@ -16,7 +17,7 @@ import org.example.exception.ApiException;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/supervisor/products")
+@RequestMapping(ApiEndpoints.Supervisor.PRODUCTS)
 public class ProductController {
 
     @Autowired

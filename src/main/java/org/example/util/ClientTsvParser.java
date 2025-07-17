@@ -1,7 +1,7 @@
 package org.example.util;
 
 import org.example.exception.ApiException;
-import org.example.model.ClientForm;
+import org.example.model.form.ClientForm;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;

@@ -4,12 +4,11 @@ import org.example.dto.OrderDto;
 import org.example.dto.OrderItemDto;
 import org.example.flow.OrderFlow;
 import org.example.api.OrderItemApi;
-import org.example.model.OrderData;
-import org.example.model.OrderForm;
-import org.example.model.OrderItemData;
-import org.example.model.OrderItemForm;
+import org.example.model.data.OrderData;
+import org.example.model.form.OrderForm;
+import org.example.model.data.OrderItemData;
+import org.example.model.form.OrderItemForm;
 import org.example.pojo.OrderPojo;
-import org.example.pojo.OrderItemPojo;
 import org.example.exception.ApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,7 +22,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.time.LocalDateTime;
-import org.example.pojo.OrderStatus;
+import org.example.model.enums.OrderStatus;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -62,7 +61,7 @@ class OrderDtoTest {
         testOrder.setDate(Instant.now());
         testOrder.setTotal(100.0);
         testOrder.setUserId("testuser@example.com");
-        testOrder.setStatus(org.example.pojo.OrderStatus.CREATED);
+        testOrder.setStatus(OrderStatus.CREATED);
 
         testOrderItemForm = new OrderItemForm();
         testOrderItemForm.setBarcode("TEST123");

@@ -1,6 +1,6 @@
 package org.example.api;
 
-import org.example.config.SecurityConfig;
+import org.example.util.SecurityConfig;
 import org.example.dao.UserDao;
 import org.example.pojo.UserPojo;
 import org.springframework.beans.factory.annotation.Autowired;

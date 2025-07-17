@@ -1,9 +1,8 @@
-package org.example.model;
+package org.example.model.data;
 
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Setter

@@ -7,8 +7,9 @@ import org.example.dao.OrderItemDao;
 import org.example.api.OrderApi;
 import org.example.api.ProductApi;
 import org.example.api.InventoryApi;
-import org.example.model.OrderItemForm;
-import org.example.model.OrderItemData;
+import org.example.model.enums.OrderStatus;
+import org.example.model.form.OrderItemForm;
+import org.example.model.data.OrderItemData;
 import org.example.pojo.OrderItemPojo;
 import org.example.pojo.OrderPojo;
 import org.example.pojo.ProductPojo;
@@ -30,7 +31,6 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 import java.time.Instant;
@@ -158,7 +158,7 @@ class OrderItemDtoFlowApiIntegrationTest {
         testOrder.setId(1);
         testOrder.setDate(Instant.now());
         testOrder.setTotal(100.0);
-        testOrder.setStatus(org.example.pojo.OrderStatus.CREATED);
+        testOrder.setStatus(OrderStatus.CREATED);
         testOrder.setUserId("user123");
 
         testProduct = new ProductPojo();

@@ -1,7 +1,7 @@
 package org.example.dto;
 
-import org.example.model.OrderItemForm;
-import org.example.model.OrderItemData;
+import org.example.model.form.OrderItemForm;
+import org.example.model.data.OrderItemData;
 import org.example.pojo.OrderItemPojo;
 import org.example.flow.OrderItemFlow;
 import org.example.api.OrderApi;

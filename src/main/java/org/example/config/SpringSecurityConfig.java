@@ -1,7 +1,8 @@
 package org.example.config;
 
 import org.example.api.UserApi;
-import org.example.config.ApiConfig;
+import org.example.model.constants.ApiEndpoints;
+import org.example.model.constants.Supervisors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,7 +11,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -45,13 +45,13 @@ public class SpringSecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 // Allow signup without authentication
-                .requestMatchers(ApiConfig.User.SIGNUP).permitAll()
+                .requestMatchers(ApiEndpoints.User.SIGNUP).permitAll()
                 
                 // Supervisor endpoints - only SUPERVISOR role can access
-                .requestMatchers(ApiConfig.Supervisor.BASE_PATH + "/**").hasRole("SUPERVISOR")
+                .requestMatchers(ApiEndpoints.Supervisor.BASE_PATH + "/**").hasRole("SUPERVISOR")
                 
                 // User endpoints - both USER and SUPERVISOR roles can access
-                .requestMatchers(ApiConfig.User.BASE_PATH + "/**").hasAnyRole("USER", "SUPERVISOR")
+                .requestMatchers(ApiEndpoints.User.BASE_PATH + "/**").hasAnyRole("USER", "SUPERVISOR")
                 
                 // Everything else must be authenticated
                 .anyRequest().authenticated()
@@ -84,5 +84,10 @@ public class SpringSecurityConfig {
     public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
         auth.userDetailsService(userApi)
             .passwordEncoder(passwordEncoder());
+    }
+
+    public boolean isSupervisor(String email) {
+        String supervisorEmail = Supervisors.ADMIN;
+        return email != null && email.toLowerCase().trim().equals(supervisorEmail);
     }
 }

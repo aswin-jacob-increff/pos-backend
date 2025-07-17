@@ -1,19 +1,19 @@
-package org.example.model;
+package org.example.model.data;
 
 import lombok.Getter;
 import lombok.Setter;
 
 @Setter
 @Getter
-public class InventoryData {
+public class ProductData {
 
     private Integer id;
-    private Integer productId;
-    private String productName;
     private String barcode;
-    private Integer quantity;
+    private String clientName;
+    private Integer clientId;
+    private String name;
     private Double mrp;
-    private String imageUrl; // Reference to image endpoint: /api/products/{productId}/image
+    private String imageUrl; // Reference to image endpoint: /api/products/{id}/image
 
     public void setMrp(Double mrp) {
         this.mrp = mrp == null ? null : org.example.util.TimeUtil.round2(mrp);
@@ -22,3 +22,4 @@ public class InventoryData {
         return mrp == null ? null : org.example.util.TimeUtil.round2(mrp);
     }
 }
+

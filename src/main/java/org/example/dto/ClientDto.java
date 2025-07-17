@@ -1,8 +1,8 @@
 package org.example.dto;
 
 import org.example.exception.ApiException;
-import org.example.model.ClientForm;
-import org.example.model.ClientData;
+import org.example.model.form.ClientForm;
+import org.example.model.data.ClientData;
 import org.example.pojo.ClientPojo;
 import org.example.flow.ClientFlow;
 import org.example.api.ClientApi;

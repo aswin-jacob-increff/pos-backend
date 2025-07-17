@@ -2,8 +2,8 @@ package org.example.controller;
 
 import org.example.dto.ClientDto;
 import org.example.exception.ApiException;
-import org.example.model.ClientData;
-import org.example.model.ClientForm;
+import org.example.model.data.ClientData;
+import org.example.model.form.ClientForm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
@@ -11,11 +11,12 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.example.model.constants.ApiEndpoints;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/supervisor/clients")
+@RequestMapping(ApiEndpoints.Supervisor.CLIENTS)
 public class ClientController {
 
     @Autowired

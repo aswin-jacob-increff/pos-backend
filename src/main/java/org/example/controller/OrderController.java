@@ -2,6 +2,7 @@ package org.example.controller;
 
 import org.example.dto.OrderDto;
 import org.example.exception.ApiException;
+import org.example.model.constants.ApiEndpoints;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -9,14 +10,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-import org.example.model.OrderData;
-import org.example.model.OrderForm;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
+import org.example.model.data.OrderData;
+import org.example.model.form.OrderForm;
 
 @RestController
-@RequestMapping("/api/supervisor/orders")
+@RequestMapping(ApiEndpoints.Supervisor.ORDERS)
 public class OrderController {
 
     @Autowired

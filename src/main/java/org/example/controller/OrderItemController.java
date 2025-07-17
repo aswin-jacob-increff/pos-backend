@@ -2,10 +2,9 @@ package org.example.controller;
 
 import org.example.dto.OrderItemDto;
 import org.example.exception.ApiException;
-import org.example.model.OrderItemData;
-import org.example.model.OrderItemForm;
+import org.example.model.data.OrderItemData;
+import org.example.model.form.OrderItemForm;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 

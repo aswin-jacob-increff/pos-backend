@@ -5,8 +5,8 @@ import org.example.flow.ClientFlow;
 import org.example.api.ClientApi;
 import org.example.dao.ClientDao;
 import org.example.api.ProductApi;
-import org.example.model.ClientForm;
-import org.example.model.ClientData;
+import org.example.model.form.ClientForm;
+import org.example.model.data.ClientData;
 import org.example.pojo.ClientPojo;
 import org.example.exception.ApiException;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +25,6 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 import java.time.Instant;

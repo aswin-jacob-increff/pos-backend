@@ -1,4 +1,4 @@
-package org.example.model;
+package org.example.model.form;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
