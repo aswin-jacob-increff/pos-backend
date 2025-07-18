@@ -3,6 +3,7 @@ package org.example.dto;
 import org.example.exception.ApiException;
 import org.example.model.form.ClientForm;
 import org.example.model.data.ClientData;
+import org.example.model.data.TsvUploadResult;
 import org.example.pojo.ClientPojo;
 import org.example.flow.ClientFlow;
 import org.example.api.ClientApi;
@@ -15,6 +16,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import jakarta.validation.Valid;
 
@@ -119,25 +123,75 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         }
     }
 
-    public String uploadClientsFromTsv(MultipartFile file) {
+    public TsvUploadResult uploadClientsFromTsv(MultipartFile file) {
+        System.out.println("ClientDto.uploadClientsFromTsv - Starting");
         // Validate file
         FileValidationUtil.validateTsvFile(file);
+        System.out.println("ClientDto.uploadClientsFromTsv - File validation passed");
+        
+        TsvUploadResult result;
         try {
-            List<ClientForm> forms = ClientTsvParser.parse(file.getInputStream());
-            FileValidationUtil.validateFileSize(forms.size());
-            // Only add if all are valid
-            for (ClientForm form : forms) {
-                add(form);
-            }
-            return "Uploaded " + forms.size() + " clients";
-        } catch (ApiException e) {
-            // Propagate parser validation errors
-            throw e;
+            System.out.println("ClientDto.uploadClientsFromTsv - Starting parse with complete validation");
+            result = ClientTsvParser.parseWithCompleteValidation(file.getInputStream(), (ClientApi) api);
+            System.out.println("ClientDto.uploadClientsFromTsv - Parse completed. Total: " + result.getTotalRows() + ", Successful: " + result.getSuccessfulRows() + ", Failed: " + result.getFailedRows());
         } catch (Exception e) {
+            System.out.println("ClientDto.uploadClientsFromTsv - Parse failed: " + e.getMessage());
             e.printStackTrace();
-            throw new ApiException("Error while processing file: " + e.getMessage());
+            result = new TsvUploadResult();
+            result.addError("Failed to parse file: " + e.getMessage());
+            return result;
         }
+        
+        // Check if we have any forms to process
+        if (result.getSuccessfulRows() == 0) {
+            System.out.println("ClientDto.uploadClientsFromTsv - No successful rows to process");
+            return result;
+        }
+        
+        // Validate file size
+        try {
+            FileValidationUtil.validateFileSize(result.getSuccessfulRows());
+            System.out.println("ClientDto.uploadClientsFromTsv - File size validation passed");
+        } catch (ApiException e) {
+            System.out.println("ClientDto.uploadClientsFromTsv - File size validation failed: " + e.getMessage());
+            result.addError("File size validation failed: " + e.getMessage());
+            return result;
+        }
+        
+        // Get the parsed forms from the result
+        List<ClientForm> forms = result.getParsedForms();
+        if (forms == null || forms.isEmpty()) {
+            System.out.println("ClientDto.uploadClientsFromTsv - No valid forms found to process");
+            result.addError("No valid forms found to process");
+            return result;
+        }
+        
+        System.out.println("ClientDto.uploadClientsFromTsv - Processing " + forms.size() + " forms");
+        
+        // Reset counters for actual processing
+        result.setSuccessfulRows(0);
+        
+        // Process only the valid forms (already validated by parser)
+        for (ClientForm form : forms) {
+            try {
+                System.out.println("ClientDto.uploadClientsFromTsv - Adding client: " + form.getClientName());
+                // Use the flow directly since validation is already done
+                ClientPojo entity = convertFormToEntity(form);
+                flow.add(entity);
+                result.incrementSuccessful();
+                System.out.println("ClientDto.uploadClientsFromTsv - Successfully added client: " + form.getClientName());
+            } catch (Exception e) {
+                System.out.println("ClientDto.uploadClientsFromTsv - Unexpected error adding client '" + form.getClientName() + "': " + e.getMessage());
+                result.addError("Unexpected error adding client '" + form.getClientName() + "': " + e.getMessage());
+                result.incrementFailed();
+            }
+        }
+        
+        System.out.println("ClientDto.uploadClientsFromTsv - Final result: " + result.getSummary());
+        return result;
     }
+
+
 
     public void toggleStatus(Integer id, String name) {
         if (id != null) {

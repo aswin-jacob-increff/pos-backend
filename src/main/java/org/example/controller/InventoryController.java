@@ -231,34 +231,46 @@ public class InventoryController {
 
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<String> uploadInventoryFromTsv(@RequestParam("file") MultipartFile file, Authentication authentication) {
+    public ResponseEntity<org.example.model.data.TsvUploadResult> uploadInventoryFromTsv(@RequestParam("file") MultipartFile file, Authentication authentication) {
         System.out.println("=== SUPERVISOR INVENTORY UPLOAD TSV ENDPOINT ===");
         System.out.println("Authentication: " + authentication);
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        
-        if (file == null || file.isEmpty() || !file.getOriginalFilename().endsWith(".tsv")) {
-            throw new ApiException("Please upload a valid non-empty .tsv file.");
+        System.out.println("File received: " + (file != null ? "YES" : "NO"));
+        if (file != null) {
+            System.out.println("File name: " + file.getOriginalFilename());
+            System.out.println("File size: " + file.getSize());
+            System.out.println("File content type: " + file.getContentType());
+            System.out.println("File is empty: " + file.isEmpty());
         }
+        
         try {
-            List<InventoryForm> forms = InventoryTsvParser.parse(file.getInputStream());
-            if (forms.size() > 5000) {
-                throw new ApiException("File upload limit exceeded: Maximum 5000 rows allowed.");
+            org.example.model.data.TsvUploadResult result = inventoryDto.uploadInventoryFromTsv(file);
+            System.out.println("Upload result summary: " + result.getSummary());
+            System.out.println("Successful rows: " + result.getSuccessfulRows());
+            System.out.println("Failed rows: " + result.getFailedRows());
+            System.out.println("Errors: " + result.getErrors());
+            System.out.println("Warnings: " + result.getWarnings());
+            
+            // Return appropriate status based on the result
+            if (result.hasErrors()) {
+                // If there are validation errors, return 400 Bad Request
+                return ResponseEntity.badRequest().body(result);
+            } else if (result.getSuccessfulRows() == 0) {
+                // If no successful rows, return 400 Bad Request
+                return ResponseEntity.badRequest().body(result);
+            } else {
+                // If there are successful rows, return 200 OK
+                return ResponseEntity.ok(result);
             }
-            int count = 0;
-            for (InventoryForm form : forms) {
-                inventoryDto.add(form); // Use add(form) which uses barcode-based logic
-                count++;
-            }
-            return ResponseEntity.ok("Successfully uploaded " + count + " inventory records.");
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("Invalid TSV format: " + e.getMessage());
-        } catch (ApiException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
+            System.out.println("Exception: " + e.getMessage());
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to process file: " + e.getMessage());
+            org.example.model.data.TsvUploadResult errorResult = new org.example.model.data.TsvUploadResult();
+            errorResult.addError("Unexpected error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResult);
         }
     }
+
+
 
 }

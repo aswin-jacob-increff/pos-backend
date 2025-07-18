@@ -1,19 +1,27 @@
 package org.example.dto;
 
+import org.example.exception.ApiException;
 import org.example.model.form.InventoryForm;
 import org.example.model.data.InventoryData;
+import org.example.model.data.TsvUploadResult;
 import org.example.pojo.InventoryPojo;
 import org.example.flow.InventoryFlow;
+import org.example.api.InventoryApi;
 import org.example.api.ProductApi;
-import org.example.exception.ApiException;
+import org.example.api.ClientApi;
 import org.example.util.StringUtil;
+import org.example.util.Base64ToPdfUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import java.util.Base64;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.Base64;
 import jakarta.validation.Valid;
 import java.util.ArrayList;
+import org.example.util.FileValidationUtil;
+import org.example.util.InventoryTsvParser;
 
 @Component
 public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, InventoryData> {
@@ -174,6 +182,95 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
 
         return dataList;
     }
+
+    public TsvUploadResult uploadInventoryFromTsv(MultipartFile file) {
+        System.out.println("InventoryDto.uploadInventoryFromTsv - Starting");
+        // Validate file
+        FileValidationUtil.validateTsvFile(file);
+        System.out.println("InventoryDto.uploadInventoryFromTsv - File validation passed");
+        
+        TsvUploadResult result;
+        try {
+            System.out.println("InventoryDto.uploadInventoryFromTsv - Starting parse with complete validation");
+            result = InventoryTsvParser.parseWithCompleteValidation(file.getInputStream(), productApi);
+            System.out.println("InventoryDto.uploadInventoryFromTsv - Parse completed. Total: " + result.getTotalRows() + ", Successful: " + result.getSuccessfulRows() + ", Failed: " + result.getFailedRows());
+        } catch (Exception e) {
+            System.out.println("InventoryDto.uploadInventoryFromTsv - Parse failed: " + e.getMessage());
+            e.printStackTrace();
+            result = new TsvUploadResult();
+            result.addError("Failed to parse file: " + e.getMessage());
+            return result;
+        }
+        
+        // Check if we have any forms to process
+        if (result.getSuccessfulRows() == 0) {
+            System.out.println("InventoryDto.uploadInventoryFromTsv - No successful rows to process");
+            return result;
+        }
+        
+        // Validate file size
+        try {
+            FileValidationUtil.validateFileSize(result.getSuccessfulRows());
+            System.out.println("InventoryDto.uploadInventoryFromTsv - File size validation passed");
+        } catch (ApiException e) {
+            System.out.println("InventoryDto.uploadInventoryFromTsv - File size validation failed: " + e.getMessage());
+            result.addError("File size validation failed: " + e.getMessage());
+            return result;
+        }
+        
+        // Get the parsed forms from the result
+        List<InventoryForm> forms = result.getParsedForms();
+        if (forms == null || forms.isEmpty()) {
+            System.out.println("InventoryDto.uploadInventoryFromTsv - No valid forms found to process");
+            result.addError("No valid forms found to process");
+            return result;
+        }
+        
+        System.out.println("InventoryDto.uploadInventoryFromTsv - Processing " + forms.size() + " forms");
+        
+        // Reset counters for actual processing
+        result.setSuccessfulRows(0);
+        
+        // Process only the valid forms (already validated by parser)
+        for (InventoryForm form : forms) {
+            try {
+                System.out.println("InventoryDto.uploadInventoryFromTsv - Processing inventory: " + form.getBarcode());
+                
+                // Check if inventory already exists for this product
+                InventoryPojo existingInventory = null;
+                try {
+                    existingInventory = inventoryFlow.getByProductBarcode(form.getBarcode());
+                } catch (Exception e) {
+                    // Inventory doesn't exist, which is fine - we'll create a new one
+                    System.out.println("InventoryDto.uploadInventoryFromTsv - No existing inventory found for: " + form.getBarcode());
+                }
+                
+                if (existingInventory != null) {
+                    // Update existing inventory by adding the new quantity
+                    System.out.println("InventoryDto.uploadInventoryFromTsv - Updating existing inventory for: " + form.getBarcode() + " (current: " + existingInventory.getQuantity() + ", adding: " + form.getQuantity() + ")");
+                    inventoryFlow.addStock(form.getBarcode(), form.getQuantity());
+                    result.addWarning("Updated existing inventory for product '" + form.getBarcode() + "' (added " + form.getQuantity() + " to existing stock)");
+                } else {
+                    // Create new inventory record
+                    System.out.println("InventoryDto.uploadInventoryFromTsv - Creating new inventory for: " + form.getBarcode());
+                    InventoryPojo entity = convertFormToEntity(form);
+                    inventoryFlow.add(entity);
+                }
+                
+                result.incrementSuccessful();
+                System.out.println("InventoryDto.uploadInventoryFromTsv - Successfully processed inventory: " + form.getBarcode());
+            } catch (Exception e) {
+                System.out.println("InventoryDto.uploadInventoryFromTsv - Unexpected error processing inventory '" + form.getBarcode() + "': " + e.getMessage());
+                result.addError("Unexpected error processing inventory '" + form.getBarcode() + "': " + e.getMessage());
+                result.incrementFailed();
+            }
+        }
+        
+        System.out.println("InventoryDto.uploadInventoryFromTsv - Final result: " + result.getSummary());
+        return result;
+    }
+
+
 
     // Validation helpers
     private void validateBarcode(String barcode) {

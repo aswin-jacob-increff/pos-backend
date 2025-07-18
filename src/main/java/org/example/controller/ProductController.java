@@ -142,21 +142,45 @@ public class ProductController {
     @Operation(summary = "Upload products via TSV file")
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @org.springframework.transaction.annotation.Transactional
-    public ResponseEntity<String> uploadProductsFromTsv(@RequestParam("file") MultipartFile file, Authentication authentication) {
+    public ResponseEntity<org.example.model.data.TsvUploadResult> uploadProductsFromTsv(@RequestParam("file") MultipartFile file, Authentication authentication) {
         System.out.println("=== SUPERVISOR PRODUCT UPLOAD TSV ENDPOINT ===");
         System.out.println("Authentication: " + authentication);
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        System.out.println("File received: " + (file != null ? "YES" : "NO"));
+        if (file != null) {
+            System.out.println("File name: " + file.getOriginalFilename());
+            System.out.println("File size: " + file.getSize());
+            System.out.println("File content type: " + file.getContentType());
+            System.out.println("File is empty: " + file.isEmpty());
+        }
         
         try {
-            String result = productDto.uploadProductsFromTsv(file);
-            return ResponseEntity.ok(result);
-        } catch (ApiException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            org.example.model.data.TsvUploadResult result = productDto.uploadProductsFromTsv(file);
+            System.out.println("Upload result summary: " + result.getSummary());
+            System.out.println("Successful rows: " + result.getSuccessfulRows());
+            System.out.println("Failed rows: " + result.getFailedRows());
+            System.out.println("Errors: " + result.getErrors());
+            System.out.println("Warnings: " + result.getWarnings());
+            
+            // Return appropriate status based on the result
+            if (result.hasErrors()) {
+                // If there are validation errors, return 400 Bad Request
+                return ResponseEntity.badRequest().body(result);
+            } else if (result.getSuccessfulRows() == 0) {
+                // If no successful rows, return 400 Bad Request
+                return ResponseEntity.badRequest().body(result);
+            } else {
+                // If there are successful rows, return 200 OK
+                return ResponseEntity.ok(result);
+            }
         } catch (Exception e) {
+            System.out.println("Exception: " + e.getMessage());
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error while processing file: " + e.getMessage());
+            org.example.model.data.TsvUploadResult errorResult = new org.example.model.data.TsvUploadResult();
+            errorResult.addError("Unexpected error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResult);
         }
     }
+
 
 }

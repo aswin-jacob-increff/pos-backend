@@ -1,47 +1,72 @@
 package org.example.exception;
 
+import org.example.model.data.ApiError;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-@RestControllerAdvice
-public class GlobalExceptionHandler {
+import jakarta.servlet.http.HttpServletRequest;
 
-    static class ErrorResponse {
-        public String message;
-        public String errorType;
-        public ErrorResponse(String message) { 
-            this.message = message; 
-            this.errorType = "ERROR";
-        }
-        public ErrorResponse(String message, String errorType) { 
-            this.message = message; 
-            this.errorType = errorType;
-        }
-    }
-
-    // Existing exception handlers
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse("Duplicate entry detected: " + extractConstraintMessage(ex)));
-    }
+@ControllerAdvice
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ErrorResponse> handleApiException(ApiException ex) {
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(ex.getMessage()));
+    public ResponseEntity<ApiError> handleApiException(ApiException ex, HttpServletRequest request) {
+        ApiError error = new ApiError(
+            HttpStatus.BAD_REQUEST.value(),
+            ex.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
+        String message = extractConstraintMessage(ex);
+        ApiError error = new ApiError(
+            HttpStatus.CONFLICT.value(),
+            message,
+            request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ApiError> handleMultipartException(MultipartException ex, HttpServletRequest request) {
+        System.out.println("=== MULTIPART EXCEPTION CAUGHT ===");
+        System.out.println("Request URI: " + request.getRequestURI());
+        System.out.println("Request method: " + request.getMethod());
+        System.out.println("Content type: " + request.getContentType());
+        System.out.println("Exception message: " + ex.getMessage());
+        ex.printStackTrace();
+        
+        ApiError error = new ApiError(
+            HttpStatus.BAD_REQUEST.value(),
+            "Failed to parse multipart request: " + ex.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity.badRequest().body(error);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse("An unexpected error occurred: " + ex.getMessage()));
+    public ResponseEntity<ApiError> handleGenericException(Exception ex, HttpServletRequest request) {
+        System.out.println("=== GENERIC EXCEPTION CAUGHT ===");
+        System.out.println("Request URI: " + request.getRequestURI());
+        System.out.println("Request method: " + request.getMethod());
+        System.out.println("Exception type: " + ex.getClass().getSimpleName());
+        System.out.println("Exception message: " + ex.getMessage());
+        ex.printStackTrace();
+        
+        ApiError error = new ApiError(
+            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            "An unexpected error occurred: " + ex.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 
     private String extractConstraintMessage(DataIntegrityViolationException ex) {

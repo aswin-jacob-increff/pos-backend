@@ -1,22 +1,24 @@
 package org.example.dto;
 
+import org.example.exception.ApiException;
 import org.example.model.form.ProductForm;
 import org.example.model.data.ProductData;
+import org.example.model.data.TsvUploadResult;
 import org.example.pojo.ProductPojo;
 import org.example.flow.ProductFlow;
+import org.example.api.ProductApi;
 import org.example.api.ClientApi;
-import org.example.exception.ApiException;
+import org.example.util.StringUtil;
 import org.example.util.FileValidationUtil;
 import org.example.util.ProductTsvParser;
-import org.example.util.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
-import jakarta.validation.Valid;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.example.pojo.ClientPojo;
+import jakarta.validation.Valid;
 
 @Component
 public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductData> {
@@ -116,27 +118,75 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
                 .collect(Collectors.toList());
     }
 
-    public String uploadProductsFromTsv(MultipartFile file) {
+    public TsvUploadResult uploadProductsFromTsv(MultipartFile file) {
+        System.out.println("ProductDto.uploadProductsFromTsv - Starting");
         // Validate file
         FileValidationUtil.validateTsvFile(file);
+        System.out.println("ProductDto.uploadProductsFromTsv - File validation passed");
+        
+        TsvUploadResult result;
         try {
-            List<ProductForm> productForms = ProductTsvParser.parse(file.getInputStream());
-            FileValidationUtil.validateFileSize(productForms.size());
-            // Only add if all are valid
-            int count = 0;
-            for (ProductForm form : productForms) {
-                add(form);
-                count++;
-            }
-            return "Successfully uploaded " + count + " products.";
-        } catch (ApiException e) {
-            // Propagate parser validation errors
-            throw e;
+            System.out.println("ProductDto.uploadProductsFromTsv - Starting parse with complete validation");
+            result = ProductTsvParser.parseWithCompleteValidation(file.getInputStream(), (ProductApi) api, clientApi);
+            System.out.println("ProductDto.uploadProductsFromTsv - Parse completed. Total: " + result.getTotalRows() + ", Successful: " + result.getSuccessfulRows() + ", Failed: " + result.getFailedRows());
         } catch (Exception e) {
+            System.out.println("ProductDto.uploadProductsFromTsv - Parse failed: " + e.getMessage());
             e.printStackTrace();
-            throw new ApiException("Error while processing file: " + e.getMessage());
+            result = new TsvUploadResult();
+            result.addError("Failed to parse file: " + e.getMessage());
+            return result;
         }
+        
+        // Check if we have any forms to process
+        if (result.getSuccessfulRows() == 0) {
+            System.out.println("ProductDto.uploadProductsFromTsv - No successful rows to process");
+            return result;
+        }
+        
+        // Validate file size
+        try {
+            FileValidationUtil.validateFileSize(result.getSuccessfulRows());
+            System.out.println("ProductDto.uploadProductsFromTsv - File size validation passed");
+        } catch (ApiException e) {
+            System.out.println("ProductDto.uploadProductsFromTsv - File size validation failed: " + e.getMessage());
+            result.addError("File size validation failed: " + e.getMessage());
+            return result;
+        }
+        
+        // Get the parsed forms from the result
+        List<ProductForm> forms = result.getParsedForms();
+        if (forms == null || forms.isEmpty()) {
+            System.out.println("ProductDto.uploadProductsFromTsv - No valid forms found to process");
+            result.addError("No valid forms found to process");
+            return result;
+        }
+        
+        System.out.println("ProductDto.uploadProductsFromTsv - Processing " + forms.size() + " forms");
+        
+        // Reset counters for actual processing
+        result.setSuccessfulRows(0);
+        
+        // Process only the valid forms (already validated by parser)
+        for (ProductForm form : forms) {
+            try {
+                System.out.println("ProductDto.uploadProductsFromTsv - Adding product: " + form.getBarcode());
+                // Use the flow directly since validation is already done
+                ProductPojo entity = convertFormToEntity(form);
+                productFlow.add(entity);
+                result.incrementSuccessful();
+                System.out.println("ProductDto.uploadProductsFromTsv - Successfully added product: " + form.getBarcode());
+            } catch (Exception e) {
+                System.out.println("ProductDto.uploadProductsFromTsv - Unexpected error adding product '" + form.getBarcode() + "': " + e.getMessage());
+                result.addError("Unexpected error adding product '" + form.getBarcode() + "': " + e.getMessage());
+                result.incrementFailed();
+            }
+        }
+        
+        System.out.println("ProductDto.uploadProductsFromTsv - Final result: " + result.getSummary());
+        return result;
     }
+
+
 
     public String getProductImageUrl(Integer id) {
         ProductData product = get(id);
