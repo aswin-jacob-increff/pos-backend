@@ -158,7 +158,7 @@ class ProductDtoFlowApiIntegrationTest {
         testProduct.setId(1);
         testProduct.setName("Test Product");
         testProduct.setBarcode("TEST123");
-        testProduct.setClientName("test client");
+        testProduct.setClientId(1);
         testProduct.setMrp(100.0);
         testProduct.setImageUrl("http://example.com/image.jpg");
 
@@ -241,6 +241,7 @@ class ProductDtoFlowApiIntegrationTest {
     void testDtoToFlowToApi_AddProduct() {
         // Arrange
         when(clientApi.getByName("test client")).thenReturn(testClient);
+        when(clientApi.get(1)).thenReturn(testClient);
         when(productDao.selectByBarcode("TEST123")).thenReturn(null);
         doNothing().when(productDao).insert(any(ProductPojo.class));
 
@@ -311,6 +312,7 @@ class ProductDtoFlowApiIntegrationTest {
         when(productDao.select(1)).thenReturn(testProduct);
         // Removed unnecessary stubbing of selectByBarcode
         when(clientApi.getByName("test client")).thenReturn(testClient);
+        when(clientApi.get(1)).thenReturn(testClient);
         doNothing().when(productDao).update(any(Integer.class), any(ProductPojo.class));
 
         // Simulate the update (since the mock doesn't persist changes)
@@ -358,10 +360,12 @@ class ProductDtoFlowApiIntegrationTest {
         product2.setId(2);
         product2.setName("Test Product 2");
         product2.setBarcode("TEST456");
-        product2.setClientName("test client");
+        product2.setClientId(1);
         product2.setMrp(150.0);
         
         when(productDao.selectAll()).thenReturn(Arrays.asList(testProduct, product2));
+        when(clientApi.getByName("test client")).thenReturn(testClient);
+        when(clientApi.get(1)).thenReturn(testClient);
 
         // Act
         List<ProductData> results = productDto.getByClientName("test client");
@@ -432,6 +436,7 @@ class ProductDtoFlowApiIntegrationTest {
     void testDtoToFlowToApi_Validation_ProductAlreadyExists() {
         // Arrange
         when(clientApi.getByName("test client")).thenReturn(testClient);
+        when(clientApi.get(1)).thenReturn(testClient);
         when(productDao.selectByBarcode("TEST123")).thenReturn(testProduct);
 
         // Act & Assert

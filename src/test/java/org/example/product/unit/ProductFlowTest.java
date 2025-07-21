@@ -43,7 +43,7 @@ class ProductFlowTest {
         testProduct.setName("Test Product");
         testProduct.setBarcode("TEST123");
         testProduct.setMrp(100.0);
-        testProduct.setClientName("Test Client");
+        testProduct.setClientId(1);
         testProduct.setImageUrl("test-image.jpg");
 
         testInventory = new InventoryPojo();
@@ -94,7 +94,7 @@ class ProductFlowTest {
         existingProduct.setName("Old Product");
         existingProduct.setBarcode("OLD123");
         existingProduct.setMrp(100.0);
-        existingProduct.setClientName("Old Client");
+        existingProduct.setClientId(1);
         existingProduct.setImageUrl("old-image.jpg");
 
         ProductPojo updatedProduct = new ProductPojo();
@@ -102,7 +102,7 @@ class ProductFlowTest {
         updatedProduct.setName("New Product");
         updatedProduct.setBarcode("NEW123");
         updatedProduct.setMrp(150.0);
-        updatedProduct.setClientName("New Client");
+        updatedProduct.setClientId(1);
         updatedProduct.setImageUrl("new-image.jpg");
 
         InventoryPojo inventory = new InventoryPojo();

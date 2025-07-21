@@ -23,7 +23,7 @@ class ProductApiTest {
         testProduct.setId(1);
         testProduct.setName("Test Product");
         testProduct.setBarcode("TEST123");
-        testProduct.setClientName("TestClient");
+        testProduct.setClientId(1);
         testProduct.setMrp(100.0);
 
         testClient = new ClientPojo();
@@ -49,7 +49,7 @@ class ProductApiTest {
         assertEquals(1, testProduct.getId());
         assertEquals("Test Product", testProduct.getName());
         assertEquals("TEST123", testProduct.getBarcode());
-        assertEquals("TestClient", testProduct.getClientName());
+        assertEquals(1, testProduct.getClientId());
         assertEquals(100.0, testProduct.getMrp());
     }
 

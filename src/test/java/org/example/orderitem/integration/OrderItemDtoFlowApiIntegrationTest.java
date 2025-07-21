@@ -214,7 +214,7 @@ class OrderItemDtoFlowApiIntegrationTest {
         testProduct.setId(1);
         testProduct.setName("Test Product");
         testProduct.setBarcode("TEST123");
-        testProduct.setClientName("test client");
+        testProduct.setClientId(1);
         testProduct.setMrp(50.0);
         testProduct.setImageUrl("http://example.com/image.jpg");
 

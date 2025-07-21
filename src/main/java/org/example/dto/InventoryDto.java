@@ -32,6 +32,9 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
     @Autowired
     private ProductApi productApi;
 
+    @Autowired
+    private ClientApi clientApi;
+
     @Override
     protected String getEntityName() {
         return "Inventory";
@@ -47,7 +50,22 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
         try {
             var product = productApi.getByBarcode(inventoryForm.getBarcode());
             inventoryPojo.setProductName(product.getName());
-            inventoryPojo.setClientName(StringUtil.format(product.getClientName()));
+            
+            // Get client name from the client relationship
+            String clientName = null;
+            if (product.getClientId() != null && product.getClientId() > 0) {
+                // Always use clientApi to get client name to avoid lazy loading issues
+                try {
+                    org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                    if (client != null) {
+                        clientName = client.getClientName();
+                    }
+                } catch (Exception e) {
+                    // Client not found, continue with null
+                }
+            }
+            inventoryPojo.setClientName(StringUtil.format(clientName));
+            
             inventoryPojo.setProductMrp(product.getMrp());
             inventoryPojo.setProductImageUrl(product.getImageUrl());
         } catch (Exception e) {
@@ -142,9 +160,25 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
         return convertEntityToData(inventoryFlow.getByProductBarcode(barcode));
     }
 
+    public List<InventoryData> getByProductBarcodeLike(String barcode) {
+        validateBarcode(barcode);
+        List<InventoryPojo> entities = inventoryFlow.getByProductBarcodeLike(barcode);
+        return entities.stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+    }
+
     public InventoryData getByProductName(String productName) {
         validateProductName(productName);
         return convertEntityToData(inventoryFlow.getByProductName(productName));
+    }
+
+    public List<InventoryData> getByProductNameLike(String productName) {
+        validateProductName(productName);
+        List<InventoryPojo> entities = inventoryFlow.getByProductNameLike(productName);
+        return entities.stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -303,8 +337,112 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
         try {
             Base64.getDecoder().decode(str);
             return true;
-        } catch (IllegalArgumentException e) {
+        } catch (Exception e) {
             return false;
         }
+    }
+
+    // ========== PAGINATION METHODS ==========
+
+    /**
+     * Get all inventory items with pagination support.
+     */
+    public org.example.model.data.PaginationResponse<InventoryData> getAllPaginated(org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<InventoryPojo> paginatedEntities = inventoryFlow.getAllPaginated(request);
+        
+        // Get all products in one query to avoid N+1 queries
+        List<org.example.pojo.ProductPojo> allProducts = productApi.getAll();
+        java.util.Map<String, Integer> barcodeToProductIdMap = new java.util.HashMap<>();
+
+        // Create a map of barcode to product ID for efficient lookup
+        for (org.example.pojo.ProductPojo product : allProducts) {
+            if (product.getBarcode() != null) {
+                barcodeToProductIdMap.put(product.getBarcode(), product.getId());
+            }
+        }
+
+        // Convert entities to data with efficient product ID lookup
+        List<InventoryData> dataList = paginatedEntities.getContent().stream()
+                .map(entity -> {
+                    InventoryData inventoryData = new InventoryData();
+                    inventoryData.setId(entity.getId());
+                    inventoryData.setProductName(entity.getProductName());
+                    inventoryData.setBarcode(entity.getProductBarcode());
+                    inventoryData.setQuantity(entity.getQuantity());
+                    inventoryData.setMrp(entity.getProductMrp());
+                    inventoryData.setImageUrl(entity.getProductImageUrl());
+
+                    // Look up product ID from the map
+                    Integer productId = barcodeToProductIdMap.get(entity.getProductBarcode());
+                    inventoryData.setProductId(productId);
+
+                    return inventoryData;
+                })
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    /**
+     * Get inventory by product name with pagination support.
+     */
+    public org.example.model.data.PaginationResponse<InventoryData> getByProductNamePaginated(String productName, org.example.model.form.PaginationRequest request) {
+        // Get all inventory for the product name (since we don't have direct pagination by product name in the flow)
+        List<InventoryData> allInventory = getByProductNameLike(productName);
+        
+        // Apply pagination manually
+        int totalElements = allInventory.size();
+        int pageSize = request.getPageSize();
+        int pageNumber = request.getPageNumber();
+        int startIndex = pageNumber * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, totalElements);
+        
+        List<InventoryData> paginatedContent;
+        if (startIndex >= totalElements) {
+            paginatedContent = List.of();
+        } else {
+            paginatedContent = allInventory.subList(startIndex, endIndex);
+        }
+        
+        return new org.example.model.data.PaginationResponse<>(
+            paginatedContent,
+            totalElements,
+            pageNumber,
+            pageSize
+        );
+    }
+
+    /**
+     * Get inventory by product barcode with pagination support.
+     */
+    public org.example.model.data.PaginationResponse<InventoryData> getByProductBarcodePaginated(String barcode, org.example.model.form.PaginationRequest request) {
+        // Get all inventory for the product barcode (since we don't have direct pagination by barcode in the flow)
+        List<InventoryData> allInventory = getByProductBarcodeLike(barcode);
+        
+        // Apply pagination manually
+        int totalElements = allInventory.size();
+        int pageSize = request.getPageSize();
+        int pageNumber = request.getPageNumber();
+        int startIndex = pageNumber * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, totalElements);
+        
+        List<InventoryData> paginatedContent;
+        if (startIndex >= totalElements) {
+            paginatedContent = List.of();
+        } else {
+            paginatedContent = allInventory.subList(startIndex, endIndex);
+        }
+        
+        return new org.example.model.data.PaginationResponse<>(
+            paginatedContent,
+            totalElements,
+            pageNumber,
+            pageSize
+        );
     }
 }

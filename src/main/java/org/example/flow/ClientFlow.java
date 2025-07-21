@@ -5,6 +5,8 @@ import org.example.pojo.ProductPojo;
 import org.example.api.ClientApi;
 import org.example.api.ProductApi;
 import org.example.exception.ApiException;
+import org.example.model.form.PaginationRequest;
+import org.example.model.data.PaginationResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,33 +53,42 @@ public class ClientFlow extends AbstractFlow<ClientPojo> {
             throw new ApiException("Client with ID " + id + " not found");
         }
         
-        // If the client name has changed, find all products with the old client name FIRST
-        List<ProductPojo> productsToUpdate = null;
-        // Compare the actual stored values (both should be in lowercase due to StringUtil.format)
-        if (!Objects.equals(existingClient.getClientName(), clientPojo.getClientName())) {
-            String oldClientName = existingClient.getClientName();
-            System.out.println("Client name changed from '" + oldClientName + "' to '" + clientPojo.getClientName() + "'");
-            productsToUpdate = productApi.getByClientName(oldClientName);
-            System.out.println("Found " + (productsToUpdate != null ? productsToUpdate.size() : 0) + " products to update");
-        }
-        
         // Update the client
         api.update(id, clientPojo);
         
-        // Now update all products with the new client name
-        if (productsToUpdate != null && !productsToUpdate.isEmpty()) {
-            String newClientName = clientPojo.getClientName();
-            System.out.println("Updating " + productsToUpdate.size() + " products with new client name: '" + newClientName + "'");
-            for (ProductPojo product : productsToUpdate) {
-                System.out.println("Updating product ID " + product.getId() + " client name from '" + product.getClientName() + "' to '" + newClientName + "'");
-                product.setClientName(newClientName);
-                productApi.update(product.getId(), product);
-            }
-        }
+        // Note: Products now use clientId instead of clientName, so no need to update products
+        // when client name changes. The relationship is maintained through the clientId.
     }
 
     public ClientPojo getByName(String name) {
         return api.getByName(name);
+    }
+
+    public List<ClientPojo> getByNameLike(String name) {
+        return api.getByNameLike(name);
+    }
+
+    // ========== PAGINATION METHODS ==========
+
+    /**
+     * Get all clients with pagination support.
+     */
+    public PaginationResponse<ClientPojo> getAllPaginated(PaginationRequest request) {
+        return api.getAllPaginated(request);
+    }
+
+    /**
+     * Get clients by name with pagination support.
+     */
+    public PaginationResponse<ClientPojo> getByNamePaginated(String name, PaginationRequest request) {
+        return api.getByNamePaginated(name, request);
+    }
+
+    /**
+     * Get clients by name with partial matching and pagination support.
+     */
+    public PaginationResponse<ClientPojo> getByNameLikePaginated(String name, PaginationRequest request) {
+        return api.getByNameLikePaginated(name, request);
     }
 
     public ClientPojo get(Integer id) {

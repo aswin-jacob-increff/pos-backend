@@ -4,8 +4,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.example.exception.ApiException;
 import java.util.Objects;
+import java.util.List;
 import org.example.dao.InventoryDao;
 import org.example.pojo.InventoryPojo;
+import org.example.model.form.PaginationRequest;
+import org.example.model.data.PaginationResponse;
 
 @Service
 public class InventoryApi extends AbstractApi<InventoryPojo> {
@@ -73,8 +76,53 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
         return inventoryDao.getByProductName(productName);
     }
 
+    public List<InventoryPojo> getByProductNameLike(String productName) {
+        return inventoryDao.getByProductNameLike(productName);
+    }
+
     public InventoryPojo getByProductBarcode(String barcode) {
         return inventoryDao.getByProductBarcode(barcode);
+    }
+
+    public List<InventoryPojo> getByProductBarcodeLike(String barcode) {
+        return inventoryDao.getByProductBarcodeLike(barcode);
+    }
+
+    // ========== PAGINATION METHODS ==========
+
+    /**
+     * Get all inventory items with pagination support.
+     */
+    public PaginationResponse<InventoryPojo> getAllPaginated(PaginationRequest request) {
+        return inventoryDao.getAllPaginated(request);
+    }
+
+    /**
+     * Get inventory by product name with pagination support.
+     */
+    public PaginationResponse<InventoryPojo> getByProductNamePaginated(String productName, PaginationRequest request) {
+        return inventoryDao.getByProductNamePaginated(productName, request);
+    }
+
+    /**
+     * Get inventory by product name with partial matching and pagination support.
+     */
+    public PaginationResponse<InventoryPojo> getByProductNameLikePaginated(String productName, PaginationRequest request) {
+        return inventoryDao.getByProductNameLikePaginated(productName, request);
+    }
+
+    /**
+     * Get inventory by product barcode with pagination support.
+     */
+    public PaginationResponse<InventoryPojo> getByProductBarcodePaginated(String barcode, PaginationRequest request) {
+        return inventoryDao.getByProductBarcodePaginated(barcode, request);
+    }
+
+    /**
+     * Get inventory by product barcode with partial matching and pagination support.
+     */
+    public PaginationResponse<InventoryPojo> getByProductBarcodeLikePaginated(String barcode, PaginationRequest request) {
+        return inventoryDao.getByProductBarcodeLikePaginated(barcode, request);
     }
 
     public InventoryPojo get(Integer id) {

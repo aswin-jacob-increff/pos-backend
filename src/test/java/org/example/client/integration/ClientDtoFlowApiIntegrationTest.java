@@ -272,7 +272,7 @@ class ClientDtoFlowApiIntegrationTest {
     void testDtoToFlowToApi_UpdateClient() {
         // Arrange
         ClientForm updateForm = new ClientForm();
-        updateForm.setClientName("Updated Client");
+        updateForm.setClientName("updated client");
         updateForm.setStatus(false);
 
         when(clientDao.select(1)).thenReturn(testClient);
@@ -284,7 +284,6 @@ class ClientDtoFlowApiIntegrationTest {
             return null;
         }).when(clientDao).update(eq(1), any(ClientPojo.class));
         when(clientDao.selectByName("updated client")).thenReturn(null);
-        when(productApi.getByClientName("test client")).thenReturn(Arrays.asList());
 
         // Act
         ClientData result = clientDto.update(1, updateForm);
@@ -304,7 +303,7 @@ class ClientDtoFlowApiIntegrationTest {
     void testDtoToFlowToApi_ToggleStatusById() {
         // Arrange
         when(clientDao.select(1)).thenReturn(testClient);
-        when(productApi.hasProductsByClientName("test client")).thenReturn(false);
+        when(productApi.hasProductsByClientId(1)).thenReturn(false);
         doNothing().when(clientDao).toggleStatus(1);
 
         // Act
@@ -319,7 +318,7 @@ class ClientDtoFlowApiIntegrationTest {
     void testDtoToFlowToApi_ToggleStatusByName() {
         // Arrange
         when(clientDao.selectByField("clientName", "test client")).thenReturn(testClient);
-        when(productApi.hasProductsByClientName("test client")).thenReturn(false);
+        when(productApi.hasProductsByClientId(1)).thenReturn(false);
         doNothing().when(clientDao).toggleStatusByName("test client");
 
         // Act
@@ -402,7 +401,7 @@ class ClientDtoFlowApiIntegrationTest {
     void testDtoToFlowToApi_Validation_ToggleStatusWithProducts() {
         // Arrange
         when(clientDao.select(1)).thenReturn(testClient);
-        when(productApi.hasProductsByClientName("test client")).thenReturn(true);
+        when(productApi.hasProductsByClientId(1)).thenReturn(true);
 
         // Act & Assert
         ApiException exception = assertThrows(ApiException.class, () -> {
@@ -413,7 +412,7 @@ class ClientDtoFlowApiIntegrationTest {
         
         // Verify DAO was called for validation but not for toggle
         verify(clientDao, times(2)).select(1);
-        verify(productApi).hasProductsByClientName("test client");
+        verify(productApi).hasProductsByClientId(1);
         verify(clientDao, never()).toggleStatus(anyInt());
     }
 } 

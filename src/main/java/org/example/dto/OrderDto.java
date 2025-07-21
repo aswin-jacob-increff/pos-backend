@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Objects;
 import java.time.format.DateTimeFormatter;
 import org.example.api.ProductApi;
+import java.util.stream.Collectors;
 
 @Component
 public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
@@ -373,9 +374,133 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
      * Format date for invoice in "Date: dd/mm/yyyy. Time: hh:mm" format
      */
     private String formatDateForInvoice(java.time.LocalDateTime dateTime) {
-        if (dateTime == null) return null;
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-        return "Date: " + dateTime.format(dateFormatter) + ". Time: " + dateTime.format(timeFormatter);
+        if (dateTime == null) {
+            return null;
+        }
+        return dateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+    }
+
+    // ========== PAGINATION METHODS ==========
+
+    /**
+     * Get all orders with pagination support.
+     */
+    public org.example.model.data.PaginationResponse<OrderData> getAllPaginated(org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<OrderPojo> paginatedEntities = orderFlow.getAllPaginated(request);
+        
+        List<OrderData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    /**
+     * Get orders by user ID with pagination support.
+     */
+    public org.example.model.data.PaginationResponse<OrderData> getOrdersByUserIdPaginated(String userId, org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<OrderPojo> paginatedEntities = orderFlow.getByUserIdPaginated(userId, request);
+        
+        List<OrderData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    /**
+     * Get orders by date range with pagination support.
+     */
+    public org.example.model.data.PaginationResponse<OrderData> getOrdersByDateRangePaginated(java.time.LocalDate startDate, java.time.LocalDate endDate, org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<OrderPojo> paginatedEntities = orderFlow.getByDateRangePaginated(startDate, endDate, request);
+        
+        List<OrderData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    // ========== SUBSTRING SEARCH METHODS ==========
+
+    /**
+     * Find orders by ID substring matching.
+     * This allows finding orders where the search term appears exactly as a substring in the order ID.
+     * 
+     * @param searchId The ID substring to search for
+     * @param maxResults Maximum number of results to return
+     * @return List of orders where the search term appears as a substring in the ID
+     */
+    public List<OrderData> findOrdersBySubstringId(String searchId, int maxResults) {
+        if (searchId == null || searchId.trim().isEmpty()) {
+            throw new ApiException("Search ID cannot be null or empty");
+        }
+        if (maxResults <= 0) {
+            throw new ApiException("Max results must be positive");
+        }
+        
+        List<OrderPojo> matchingOrders = orderFlow.findOrdersBySubstringId(searchId, maxResults);
+        return matchingOrders.stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Find orders by ID substring with pagination support.
+     * 
+     * @param searchId The ID substring to search for
+     * @param request Pagination request
+     * @return Paginated response with orders containing the substring
+     */
+    public org.example.model.data.PaginationResponse<OrderData> findOrdersBySubstringIdPaginated(
+            String searchId, 
+            org.example.model.form.PaginationRequest request) {
+        if (searchId == null || searchId.trim().isEmpty()) {
+            throw new ApiException("Search ID cannot be null or empty");
+        }
+        if (request == null) {
+            request = new org.example.model.form.PaginationRequest();
+        }
+        
+        org.example.model.data.PaginationResponse<OrderPojo> paginatedEntities = orderFlow.findOrdersBySubstringIdPaginated(searchId, request);
+        
+        List<OrderData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    /**
+     * Count orders by ID substring.
+     * 
+     * @param searchId The ID substring to search for
+     * @return Number of orders containing the substring
+     */
+    public long countOrdersBySubstringId(String searchId) {
+        if (searchId == null || searchId.trim().isEmpty()) {
+            throw new ApiException("Search ID cannot be null or empty");
+        }
+        return orderFlow.countOrdersBySubstringId(searchId);
     }
 }

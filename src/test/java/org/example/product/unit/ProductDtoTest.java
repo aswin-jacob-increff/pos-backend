@@ -58,7 +58,7 @@ class ProductDtoTest {
         testProduct.setId(1);
         testProduct.setName("Test Product");
         testProduct.setBarcode("TEST123");
-        testProduct.setClientName("testclient");
+        testProduct.setClientId(1);
         testProduct.setMrp(100.0);
 
         // Inject the productFlow field
@@ -80,6 +80,7 @@ class ProductDtoTest {
     @Test
     void testAdd_Success() {
         // Arrange
+        when(clientApi.getByName("testclient")).thenReturn(testClient);
         doNothing().when(productApi).add(any(ProductPojo.class));
 
         // Act
@@ -103,7 +104,7 @@ class ProductDtoTest {
     void testGet_Success() {
         // Arrange
         when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.getByName("testclient")).thenReturn(testClient);
+        when(clientApi.get(1)).thenReturn(testClient);
 
         // Act
         ProductData result = productDto.get(1);
@@ -114,7 +115,7 @@ class ProductDtoTest {
         assertEquals(testProduct.getName(), result.getName());
         assertEquals(testClient.getId(), result.getClientId());
         verify(productApi).get(1);
-        verify(clientApi).getByName("testclient");
+        verify(clientApi).get(1);
     }
 
     @Test
@@ -129,7 +130,7 @@ class ProductDtoTest {
         // Given
         List<ProductPojo> products = Arrays.asList(testProduct);
         when(productFlow.getAll()).thenReturn(products);
-        when(clientApi.getByName("testclient")).thenReturn(testClient);
+        when(clientApi.get(1)).thenReturn(testClient);
 
         // When
         List<ProductData> result = productDto.getAll();
@@ -138,7 +139,7 @@ class ProductDtoTest {
         assertEquals(1, result.size());
         assertEquals(testClient.getId(), result.get(0).getClientId());
         verify(productFlow).getAll();
-        verify(clientApi).getByName("testclient");
+        verify(clientApi).get(1);
     }
 
     @Test
@@ -154,15 +155,16 @@ class ProductDtoTest {
         existingProduct.setId(1);
         existingProduct.setName("Original Product");
         existingProduct.setBarcode("ORIG123");
-        existingProduct.setClientName("testclient");
+        existingProduct.setClientId(1);
 
         ProductPojo updatedProduct = new ProductPojo();
         updatedProduct.setId(1);
         updatedProduct.setName("Updated Product");
         updatedProduct.setBarcode("UPD123");
-        updatedProduct.setClientName("test client");
+        updatedProduct.setClientId(1);
 
         when(productApi.get(1)).thenReturn(updatedProduct);
+        when(clientApi.get(1)).thenReturn(testClient);
         when(clientApi.getByName("test client")).thenReturn(testClient);
         doNothing().when(productFlow).update(eq(1), any(ProductPojo.class));
 
@@ -195,7 +197,7 @@ class ProductDtoTest {
     void testGetByBarcode_Success() {
         // Given
         when(productFlow.getByBarcode("TEST123")).thenReturn(testProduct);
-        when(clientApi.getByName("testclient")).thenReturn(testClient);
+        when(clientApi.get(1)).thenReturn(testClient);
 
         // When
         ProductData result = productDto.getByBarcode("TEST123");
@@ -205,7 +207,7 @@ class ProductDtoTest {
         assertEquals("TEST123", result.getBarcode());
         assertEquals(testClient.getId(), result.getClientId());
         verify(productFlow).getByBarcode("TEST123");
-        verify(clientApi).getByName("testclient");
+        verify(clientApi).get(1);
     }
 
     @Test
@@ -228,6 +230,7 @@ class ProductDtoTest {
         List<ProductPojo> products = Arrays.asList(testProduct);
         when(productFlow.getAll()).thenReturn(products);
         when(clientApi.getByName("testclient")).thenReturn(testClient);
+        when(clientApi.get(1)).thenReturn(testClient);
 
         // When
         List<ProductData> result = productDto.getByClientName("testclient");
@@ -237,6 +240,7 @@ class ProductDtoTest {
         assertEquals(testClient.getId(), result.get(0).getClientId());
         verify(productFlow).getAll();
         verify(clientApi).getByName("testclient");
+        verify(clientApi).get(1);
     }
 
     @Test

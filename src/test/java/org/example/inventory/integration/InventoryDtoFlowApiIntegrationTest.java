@@ -163,7 +163,7 @@ class InventoryDtoFlowApiIntegrationTest {
         testProduct.setId(1);
         testProduct.setName("Test Product");
         testProduct.setBarcode("TEST123");
-        testProduct.setClientName("test client");
+        testProduct.setClientId(1);
         testProduct.setMrp(100.0);
         testProduct.setImageUrl("http://example.com/image.jpg");
 
@@ -222,6 +222,10 @@ class InventoryDtoFlowApiIntegrationTest {
             productApiDtoField.setAccessible(true);
             productApiDtoField.set(inventoryDto, productApi);
 
+            var clientApiDtoField = InventoryDto.class.getDeclaredField("clientApi");
+            clientApiDtoField.setAccessible(true);
+            clientApiDtoField.set(inventoryDto, clientApi);
+
             // Inject inventoryApi into inventoryDto (inherited from AbstractDto)
             var abstractApiField = org.example.dto.AbstractDto.class.getDeclaredField("api");
             abstractApiField.setAccessible(true);
@@ -237,6 +241,7 @@ class InventoryDtoFlowApiIntegrationTest {
         // Arrange
         when(productApi.getByBarcode("TEST123")).thenReturn(testProduct);
         when(clientApi.getByName("test client")).thenReturn(testClient);
+        when(clientApi.get(1)).thenReturn(testClient);
         doAnswer(invocation -> {
             InventoryPojo inventory = invocation.getArgument(0);
             inventory.setId(1); // Set the ID as if it was inserted
@@ -312,6 +317,7 @@ class InventoryDtoFlowApiIntegrationTest {
         when(inventoryDao.select(1)).thenReturn(testInventory);
         when(productApi.getByBarcode("TEST123")).thenReturn(testProduct);
         when(clientApi.getByName("test client")).thenReturn(testClient);
+        when(clientApi.get(1)).thenReturn(testClient);
         doAnswer(invocation -> {
             Integer id = invocation.getArgument(0);
             InventoryPojo updatedInventory = invocation.getArgument(1);

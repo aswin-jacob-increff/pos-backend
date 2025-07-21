@@ -71,8 +71,79 @@ public class InventoryController {
         }
     }
 
+    @GetMapping("/paginated")
+    public ResponseEntity<org.example.model.data.PaginationResponse<InventoryData>> getAllInventoryPaginated(
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDirection,
+            Authentication authentication) {
+        System.out.println("=== SUPERVISOR INVENTORY GET ALL PAGINATED ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        System.out.println("Page: " + page + ", Size: " + size + ", SortBy: " + sortBy + ", SortDirection: " + sortDirection);
+        
+        try {
+            org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
+            org.example.model.data.PaginationResponse<InventoryData> response = inventoryDto.getAllPaginated(request);
+            return ResponseEntity.ok(response);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get all inventory: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/product/name/{productName}/paginated")
+    public ResponseEntity<org.example.model.data.PaginationResponse<InventoryData>> getByProductNamePaginated(
+            @PathVariable String productName,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDirection,
+            Authentication authentication) {
+        System.out.println("=== SUPERVISOR INVENTORY GET BY PRODUCT NAME PAGINATED ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        System.out.println("ProductName: " + productName + ", Page: " + page + ", Size: " + size);
+        
+        try {
+            org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
+            org.example.model.data.PaginationResponse<InventoryData> response = inventoryDto.getByProductNamePaginated(productName, request);
+            return ResponseEntity.ok(response);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get inventory by product name: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/product/barcode/{barcode}/paginated")
+    public ResponseEntity<org.example.model.data.PaginationResponse<InventoryData>> getByProductBarcodePaginated(
+            @PathVariable String barcode,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDirection,
+            Authentication authentication) {
+        System.out.println("=== SUPERVISOR INVENTORY GET BY PRODUCT BARCODE PAGINATED ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        System.out.println("Barcode: " + barcode + ", Page: " + page + ", Size: " + size);
+        
+        try {
+            org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
+            org.example.model.data.PaginationResponse<InventoryData> response = inventoryDto.getByProductBarcodePaginated(barcode, request);
+            return ResponseEntity.ok(response);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get inventory by product barcode: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/byProduct")
-    public InventoryData getInventoryByAny(
+    public List<InventoryData> getInventoryByAny(
             @RequestParam(required = false) Integer id,
             @RequestParam(required = false) String barcode,
             @RequestParam(required = false) String name,
@@ -82,24 +153,24 @@ public class InventoryController {
         System.out.println("Authentication: " + authentication);
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
-        InventoryData inventoryData = new InventoryData();
+        List<InventoryData> inventoryDataList;
 
         if (id != null) {
             // For now, we'll require barcode instead of product ID
             throw new ApiException("Please use product barcode instead of product ID for inventory lookup");
         } else if (barcode != null && !barcode.trim().isEmpty()) {
-            inventoryData = inventoryDto.getByProductBarcode(barcode.trim());
+            inventoryDataList = inventoryDto.getByProductBarcodeLike(barcode.trim());
         } else if (name != null && !name.trim().isEmpty()) {
-            inventoryData = inventoryDto.getByProductName(name.trim());
+            inventoryDataList = inventoryDto.getByProductNameLike(name.trim());
         } else {
             throw new ApiException("Requires either of product name, product id or product barcode");
         }
 
-        if (inventoryData == null) {
-            throw new ApiException("Inventory not found for the provided input.");
+        if (inventoryDataList == null || inventoryDataList.isEmpty()) {
+            throw new ApiException("No inventory found for the provided input.");
         }
 
-        return inventoryData;
+        return inventoryDataList;
     }
 
     @PutMapping("/{id}")
@@ -130,6 +201,36 @@ public class InventoryController {
             throw e;
         } catch (Exception e) {
             throw new ApiException("Failed to get inventory by product barcode: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/product/barcode/search/{productBarcode}")
+    public List<InventoryData> searchByProductBarcode(@PathVariable String productBarcode, Authentication authentication) {
+        System.out.println("=== SUPERVISOR INVENTORY SEARCH BY PRODUCT BARCODE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            return inventoryDto.getByProductBarcodeLike(productBarcode);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to search inventory by product barcode: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/product/name/search/{productName}")
+    public List<InventoryData> searchByProductName(@PathVariable String productName, Authentication authentication) {
+        System.out.println("=== SUPERVISOR INVENTORY SEARCH BY PRODUCT NAME ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            return inventoryDto.getByProductNameLike(productName);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to search inventory by product name: " + e.getMessage());
         }
     }
     

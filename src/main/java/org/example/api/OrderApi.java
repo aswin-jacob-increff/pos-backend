@@ -130,4 +130,88 @@ public class OrderApi extends AbstractApi<OrderPojo> {
     public List<OrderPojo> findByUserId(String userId) {
         return orderDao.findByUserId(userId);
     }
+
+    // ========== SUBSTRING SEARCH METHODS ==========
+
+    /**
+     * Find orders by ID substring matching.
+     * This allows finding orders where the search term appears exactly as a substring in the order ID.
+     * 
+     * @param searchId The ID substring to search for
+     * @param maxResults Maximum number of results to return
+     * @return List of orders where the search term appears as a substring in the ID
+     */
+    public List<OrderPojo> findOrdersBySubstringId(String searchId, int maxResults) {
+        if (searchId == null || searchId.trim().isEmpty()) {
+            throw new ApiException("Search ID cannot be null or empty");
+        }
+        if (maxResults <= 0) {
+            throw new ApiException("Max results must be positive");
+        }
+        return orderDao.findOrdersBySubstringId(searchId, maxResults);
+    }
+
+    /**
+     * Find orders by ID substring with pagination support.
+     * 
+     * @param searchId The ID substring to search for
+     * @param request Pagination request
+     * @return Paginated response with orders containing the substring
+     */
+    public org.example.model.data.PaginationResponse<OrderPojo> findOrdersBySubstringIdPaginated(
+            String searchId, 
+            org.example.model.form.PaginationRequest request) {
+        if (searchId == null || searchId.trim().isEmpty()) {
+            throw new ApiException("Search ID cannot be null or empty");
+        }
+        if (request == null) {
+            request = new org.example.model.form.PaginationRequest();
+        }
+        return orderDao.findOrdersBySubstringIdPaginated(searchId, request);
+    }
+
+    /**
+     * Count orders by ID substring.
+     * 
+     * @param searchId The ID substring to search for
+     * @return Number of orders containing the substring
+     */
+    public long countOrdersBySubstringId(String searchId) {
+        if (searchId == null || searchId.trim().isEmpty()) {
+            throw new ApiException("Search ID cannot be null or empty");
+        }
+        return orderDao.countOrdersBySubstringId(searchId);
+    }
+
+    // ========== PAGINATION METHODS ==========
+
+    /**
+     * Get all orders with pagination support, ordered by date descending (most recent first).
+     */
+    public org.example.model.data.PaginationResponse<OrderPojo> getAllPaginated(org.example.model.form.PaginationRequest request) {
+        return orderDao.getAllPaginated(request);
+    }
+
+    /**
+     * Get orders by user ID with pagination support, ordered by date descending (most recent first).
+     */
+    public org.example.model.data.PaginationResponse<OrderPojo> getByUserIdPaginated(String userId, org.example.model.form.PaginationRequest request) {
+        if (userId == null || userId.trim().isEmpty()) {
+            throw new ApiException("User ID cannot be null or empty");
+        }
+        return orderDao.getByUserIdPaginated(userId, request);
+    }
+
+    /**
+     * Get orders by date range with pagination support, ordered by date descending (most recent first).
+     */
+    public org.example.model.data.PaginationResponse<OrderPojo> getByDateRangePaginated(java.time.LocalDate startDate, java.time.LocalDate endDate, org.example.model.form.PaginationRequest request) {
+        if (startDate == null || endDate == null) {
+            throw new ApiException("Start date and end date cannot be null");
+        }
+        if (endDate.isBefore(startDate)) {
+            throw new ApiException("End date cannot be before start date");
+        }
+        return orderDao.getByDateRangePaginated(startDate, endDate, request);
+    }
 } 

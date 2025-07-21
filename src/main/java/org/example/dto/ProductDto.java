@@ -37,7 +37,15 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
     @Override
     protected ProductPojo convertFormToEntity(ProductForm productForm) {
         ProductPojo productPojo = new ProductPojo();
-        productPojo.setClientName(StringUtil.format(productForm.getClientName()));
+        
+        // Get client ID from client name
+        String clientName = StringUtil.format(productForm.getClientName());
+        Integer clientId = getClientIdByName(clientName);
+        if (clientId == null) {
+            throw new ApiException("Client with name '" + clientName + "' not found");
+        }
+        productPojo.setClientId(clientId);
+        
         productPojo.setName(productForm.getName());
         productPojo.setMrp(productForm.getMrp());
         productPojo.setBarcode(productForm.getBarcode());
@@ -54,9 +62,23 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         productData.setId(productPojo.getId());
         productData.setName(productPojo.getName());
         
-        // Debug client ID lookup
-        String clientName = productPojo.getClientName();
-        Integer clientId = getClientIdByName(clientName);
+        // Get client information from clientId
+        Integer clientId = productPojo.getClientId();
+        String clientName = null;
+        
+        if (clientId != null && clientId > 0) {
+            // Always use clientApi to get client name to avoid lazy loading issues
+            try {
+                ClientPojo client = clientApi.get(clientId);
+                if (client != null) {
+                    clientName = client.getClientName();
+                }
+            } catch (Exception e) {
+                // Client not found or invalid, continue with null clientName
+                System.out.println("Warning: Client with ID " + clientId + " not found for product " + productPojo.getId());
+            }
+        }
+        
         System.out.println("Product " + productPojo.getId() + " - Client name: '" + clientName + "', Client ID: " + clientId);
         
         productData.setClientId(clientId);
@@ -206,6 +228,37 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         }
         return convertEntityToData(product);
     }
+
+    public List<ProductData> getByBarcodeLike(String barcode) {
+        if (barcode == null || barcode.trim().isEmpty()) {
+            throw new ApiException("Barcode cannot be null or empty");
+        }
+        List<ProductPojo> products = productFlow.getByBarcodeLike(barcode);
+        return products.stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+    }
+
+    public ProductData getByName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new ApiException("Product name cannot be null or empty");
+        }
+        ProductPojo product = productFlow.getByName(name);
+        if (product == null) {
+            throw new ApiException("Product with name '" + name + "' not found");
+        }
+        return convertEntityToData(product);
+    }
+
+    public List<ProductData> getByNameLike(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new ApiException("Product name cannot be null or empty");
+        }
+        List<ProductPojo> products = productFlow.getByNameLike(name);
+        return products.stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+    }
     
     /**
      * Get products by client ID
@@ -215,13 +268,10 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
             throw new ApiException("Client ID cannot be null");
         }
         
-        try {
-            // Get client by ID first to get the client name
-            ClientPojo client = clientApi.get(clientId);
-            return getByClientName(client.getClientName());
-        } catch (Exception e) {
-            throw new ApiException("Client with ID " + clientId + " not found");
-        }
+        return productFlow.getAll().stream()
+                .filter(product -> clientId.equals(product.getClientId()))
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
     }
     
     /**
@@ -232,10 +282,13 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
             throw new ApiException("Client name cannot be null or empty");
         }
         
-        return productFlow.getAll().stream()
-                .filter(product -> clientName.equalsIgnoreCase(product.getClientName()))
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
+        // Get client ID from client name
+        Integer clientId = getClientIdByName(clientName);
+        if (clientId == null) {
+            throw new ApiException("Client with name '" + clientName + "' not found");
+        }
+        
+        return getByClientId(clientId);
     }
     
     /**
@@ -267,9 +320,78 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
     private boolean isValidUrl(String url) {
         try {
             new java.net.URL(url);
-            return url.startsWith("http://") || url.startsWith("https://");
+            return true;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    // ========== PAGINATION METHODS ==========
+
+    /**
+     * Get all products with pagination support.
+     */
+    public org.example.model.data.PaginationResponse<ProductData> getAllPaginated(org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = productFlow.getAllPaginated(request);
+        
+        List<ProductData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    /**
+     * Get products by name with partial matching and pagination support.
+     */
+    public org.example.model.data.PaginationResponse<ProductData> getByNameLikePaginated(String name, org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = productFlow.getByNameLikePaginated(name, request);
+        
+        List<ProductData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    /**
+     * Get products by client ID with pagination support.
+     */
+    public org.example.model.data.PaginationResponse<ProductData> getByClientIdPaginated(Integer clientId, org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = productFlow.getByClientIdPaginated(clientId, request);
+        
+        List<ProductData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    /**
+     * Get products by client name with pagination support.
+     */
+    public org.example.model.data.PaginationResponse<ProductData> getByClientNamePaginated(String clientName, org.example.model.form.PaginationRequest request) {
+        // Get client ID from client name first
+        Integer clientId = getClientIdByName(clientName);
+        if (clientId == null) {
+            throw new ApiException("Client with name '" + clientName + "' not found");
+        }
+        
+        return getByClientIdPaginated(clientId, request);
     }
 }

@@ -4,6 +4,8 @@ import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.example.dao.AbstractDao;
+import org.example.model.form.PaginationRequest;
+import org.example.model.data.PaginationResponse;
 import java.util.List;
 import java.util.Objects;
 
@@ -99,5 +101,37 @@ public abstract class AbstractApi<T> {
      */
     public List<T> getByFields(String[] fieldNames, Object[] values) {
         return dao.selectByFields(fieldNames, values);
+    }
+
+    // ========== PAGINATION METHODS ==========
+
+    /**
+     * Get all entities with pagination support.
+     */
+    public PaginationResponse<T> getAllPaginated(PaginationRequest request) {
+        if (request == null) {
+            request = new PaginationRequest();
+        }
+        return dao.selectAllPaginated(request);
+    }
+
+    /**
+     * Get entities by field value with pagination support.
+     */
+    public PaginationResponse<T> getByFieldPaginated(String fieldName, Object value, PaginationRequest request) {
+        if (request == null) {
+            request = new PaginationRequest();
+        }
+        return dao.selectByFieldPaginated(fieldName, value, request);
+    }
+
+    /**
+     * Get entities by field value with partial string matching and pagination support.
+     */
+    public PaginationResponse<T> getByFieldLikePaginated(String fieldName, String searchPattern, PaginationRequest request) {
+        if (request == null) {
+            request = new PaginationRequest();
+        }
+        return dao.selectByFieldLikePaginated(fieldName, searchPattern, request);
     }
 } 

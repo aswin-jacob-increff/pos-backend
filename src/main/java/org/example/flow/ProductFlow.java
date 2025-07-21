@@ -5,11 +5,15 @@ import org.example.pojo.ProductPojo;
 import org.example.api.ProductApi;
 import org.example.api.InventoryApi;
 import org.example.exception.ApiException;
+import org.example.model.form.PaginationRequest;
+import org.example.model.data.PaginationResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Objects;
+import org.example.pojo.ClientPojo;
+import org.example.api.ClientApi;
 
 @Service
 @Transactional
@@ -20,6 +24,9 @@ public class ProductFlow extends AbstractFlow<ProductPojo> {
 
     @Autowired
     private InventoryApi inventoryApi;
+
+    @Autowired
+    private ClientApi clientApi;
 
     public ProductFlow() {
         super(ProductPojo.class);
@@ -46,14 +53,13 @@ public class ProductFlow extends AbstractFlow<ProductPojo> {
     @Override
     @org.springframework.transaction.annotation.Transactional
     public void update(Integer id, ProductPojo productPojo) {
-        if (Objects.isNull(id)) {
+        if (id == null) {
             throw new ApiException("Product ID cannot be null");
-    }
-        if (Objects.isNull(productPojo)) {
+        }
+        if (productPojo == null) {
             throw new ApiException("Product cannot be null");
         }
         
-        // Get the existing product to compare changes
         ProductPojo existingProduct = api.get(id);
         if (existingProduct == null) {
             throw new ApiException("Product with ID " + id + " not found");
@@ -67,14 +73,18 @@ public class ProductFlow extends AbstractFlow<ProductPojo> {
         String newName = productPojo.getName();
         Double oldMrp = existingProduct.getMrp();
         Double newMrp = productPojo.getMrp();
-        String oldClientName = existingProduct.getClientName();
-        String newClientName = productPojo.getClientName();
+        Integer oldClientId = existingProduct.getClientId();
+        Integer newClientId = productPojo.getClientId();
+        
+        // Get client names for comparison
+        String oldClientName = getClientNameById(oldClientId);
+        String newClientName = getClientNameById(newClientId);
         
         // Check if any inventory-related fields have changed
         if (!Objects.equals(oldBarcode, newBarcode) ||
             !Objects.equals(oldName, newName) ||
             !Objects.equals(oldMrp, newMrp) ||
-            !Objects.equals(oldClientName.toLowerCase(), newClientName.toLowerCase())) {
+            !Objects.equals(oldClientId, newClientId)) {
             
             inventoryNeedsUpdate = true;
         }
@@ -100,12 +110,29 @@ public class ProductFlow extends AbstractFlow<ProductPojo> {
             if (!Objects.equals(oldMrp, newMrp)) {
                 inventoryToUpdate.setProductMrp(newMrp);
             }
-            if (!Objects.equals(oldClientName, newClientName)) {
+            if (!Objects.equals(oldClientId, newClientId)) {
                 inventoryToUpdate.setClientName(newClientName);
             }
             
             // Update the inventory
             inventoryApi.update(inventoryToUpdate.getId(), inventoryToUpdate);
+        }
+    }
+    
+    /**
+     * Helper method to get client name by client ID
+     */
+    private String getClientNameById(Integer clientId) {
+        if (clientId == null) {
+            return null;
+        }
+        
+        try {
+            // Get client name from client API
+            ClientPojo client = clientApi.get(clientId);
+            return client != null ? client.getClientName() : null;
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -125,5 +152,95 @@ public class ProductFlow extends AbstractFlow<ProductPojo> {
             throw new ApiException("Barcode cannot be null or empty");
         }
         return api.getByBarcode(barcode);
+    }
+
+    public List<ProductPojo> getByBarcodeLike(String barcode) {
+        if (barcode == null || barcode.trim().isEmpty()) {
+            throw new ApiException("Barcode cannot be null or empty");
+        }
+        return api.getByBarcodeLike(barcode);
+    }
+
+    public ProductPojo getByName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new ApiException("Product name cannot be null or empty");
+        }
+        return api.getByName(name);
+    }
+
+    public List<ProductPojo> getByNameLike(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new ApiException("Product name cannot be null or empty");
+        }
+        return api.getByNameLike(name);
+    }
+
+    // ========== PAGINATION METHODS ==========
+
+    /**
+     * Get all products with pagination support.
+     */
+    public PaginationResponse<ProductPojo> getAllPaginated(PaginationRequest request) {
+        return api.getAllPaginated(request);
+    }
+
+    /**
+     * Get products by barcode with pagination support.
+     */
+    public PaginationResponse<ProductPojo> getByBarcodePaginated(String barcode, PaginationRequest request) {
+        if (barcode == null || barcode.trim().isEmpty()) {
+            throw new ApiException("Barcode cannot be null or empty");
+        }
+        return api.getByBarcodePaginated(barcode, request);
+    }
+
+    /**
+     * Get products by barcode with partial matching and pagination support.
+     */
+    public PaginationResponse<ProductPojo> getByBarcodeLikePaginated(String barcode, PaginationRequest request) {
+        if (barcode == null || barcode.trim().isEmpty()) {
+            throw new ApiException("Barcode cannot be null or empty");
+        }
+        return api.getByBarcodeLikePaginated(barcode, request);
+    }
+
+    /**
+     * Get products by name with pagination support.
+     */
+    public PaginationResponse<ProductPojo> getByNamePaginated(String name, PaginationRequest request) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new ApiException("Product name cannot be null or empty");
+        }
+        return api.getByNamePaginated(name, request);
+    }
+
+    /**
+     * Get products by name with partial matching and pagination support.
+     */
+    public PaginationResponse<ProductPojo> getByNameLikePaginated(String name, PaginationRequest request) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new ApiException("Product name cannot be null or empty");
+        }
+        return api.getByNameLikePaginated(name, request);
+    }
+
+    /**
+     * Get products by client ID with pagination support.
+     */
+    public PaginationResponse<ProductPojo> getByClientIdPaginated(Integer clientId, PaginationRequest request) {
+        if (clientId == null) {
+            throw new ApiException("Client ID cannot be null");
+        }
+        return api.getByClientIdPaginated(clientId, request);
+    }
+
+    /**
+     * Get products by client name with pagination support.
+     */
+    public PaginationResponse<ProductPojo> getByClientNamePaginated(String clientName, PaginationRequest request) {
+        if (clientName == null || clientName.trim().isEmpty()) {
+            throw new ApiException("Client name cannot be null or empty");
+        }
+        return api.getByClientNamePaginated(clientName, request);
     }
 }

@@ -7,7 +7,10 @@ import org.springframework.stereotype.Service;
 import org.example.dao.ClientDao;
 import org.example.pojo.ClientPojo;
 import org.example.util.StringUtil;
+import org.example.model.form.PaginationRequest;
+import org.example.model.data.PaginationResponse;
 import java.util.Objects;
+import java.util.List;
 
 @Service
 @Transactional
@@ -50,7 +53,45 @@ public class ClientApi extends AbstractApi<ClientPojo> {
         }
         // Format the name consistently with how it's stored
         String formattedName = StringUtil.format(name);
-        return getByField("clientName", formattedName);
+        return findByField("clientName", formattedName);
+    }
+
+    public List<ClientPojo> getByNameLike(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new ApiException("Client name cannot be null or empty");
+        }
+        return dao.selectByNameLike(name);
+    }
+
+    // ========== PAGINATION METHODS ==========
+
+    /**
+     * Get all clients with pagination support.
+     */
+    public PaginationResponse<ClientPojo> getAllPaginated(PaginationRequest request) {
+        return dao.getAllPaginated(request);
+    }
+
+    /**
+     * Get clients by name with pagination support.
+     */
+    public PaginationResponse<ClientPojo> getByNamePaginated(String name, PaginationRequest request) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new ApiException("Client name cannot be null or empty");
+        }
+        // Format the name consistently with how it's stored
+        String formattedName = StringUtil.format(name);
+        return dao.selectByNamePaginated(formattedName, request);
+    }
+
+    /**
+     * Get clients by name with partial matching and pagination support.
+     */
+    public PaginationResponse<ClientPojo> getByNameLikePaginated(String name, PaginationRequest request) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new ApiException("Client name cannot be null or empty");
+        }
+        return dao.selectByNameLikePaginated(name, request);
     }
 
     public ClientPojo get(Integer id) {
@@ -73,7 +114,7 @@ public class ClientApi extends AbstractApi<ClientPojo> {
         // Check if we're trying to set status to false (inactive)
         if (client.getStatus()) {
             // Client is currently active, check if it has products before deactivating
-            if (productApi.hasProductsByClientName(client.getClientName())) {
+            if (productApi.hasProductsByClientId(client.getId())) {
                 throw new ApiException("Client status toggle failed. Client has products.");
             }
         }
@@ -90,7 +131,7 @@ public class ClientApi extends AbstractApi<ClientPojo> {
         // Check if we're trying to set status to false (inactive)
         if (client.getStatus()) {
             // Client is currently active, check if it has products before deactivating
-            if (productApi.hasProductsByClientName(client.getClientName())) {
+            if (productApi.hasProductsByClientId(client.getId())) {
                 throw new ApiException("Client status toggle failed. Client has products.");
             }
         }

@@ -53,6 +53,34 @@ public class UserController {
         }
     }
 
+    @GetMapping("/orders/paginated")
+    public ResponseEntity<org.example.model.data.PaginationResponse<OrderData>> getMyOrdersPaginated(
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDirection,
+            Authentication authentication) {
+        System.out.println("=== USER ORDERS PAGINATED ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        System.out.println("Page: " + page + ", Size: " + size + ", SortBy: " + sortBy + ", SortDirection: " + sortDirection);
+        
+        try {
+            if (authentication != null && authentication.isAuthenticated()) {
+                String userEmail = authentication.getName();
+                org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
+                org.example.model.data.PaginationResponse<OrderData> response = orderDto.getOrdersByUserIdPaginated(userEmail, request);
+                return ResponseEntity.ok(response);
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get user orders: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/orders/by-date-range")
     public List<OrderData> getMyOrdersByDateRange(
             @RequestParam String startDate,

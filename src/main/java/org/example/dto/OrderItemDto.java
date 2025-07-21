@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Objects;
 import jakarta.validation.Valid;
 import org.example.util.TimeUtil;
+import org.example.api.ClientApi;
 
 @Component
 public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, OrderItemData> {
@@ -26,6 +27,9 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
 
     @Autowired
     private ProductApi productApi;
+
+    @Autowired
+    private ClientApi clientApi;
 
     @Override
     protected String getEntityName() {
@@ -70,7 +74,22 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
         }
         orderItemPojo.setProductBarcode(product.getBarcode());
         orderItemPojo.setProductName(product.getName());
-        orderItemPojo.setClientName(product.getClientName());
+        
+        // Get client name from the client relationship
+        String clientName = null;
+        if (product.getClientId() != null && product.getClientId() > 0) {
+            // Always use clientApi to get client name to avoid lazy loading issues
+            try {
+                org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                if (client != null) {
+                    clientName = client.getClientName();
+                }
+            } catch (Exception e) {
+                // Client not found, continue with null
+            }
+        }
+        orderItemPojo.setClientName(clientName);
+        
         orderItemPojo.setProductMrp(product.getMrp());
         
         // Use form's image if provided, otherwise use product's image URL

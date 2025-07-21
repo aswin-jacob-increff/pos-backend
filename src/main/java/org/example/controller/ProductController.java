@@ -69,6 +69,36 @@ public class ProductController {
         }
     }
 
+    @GetMapping("/barcode/search/{barcode}")
+    public List<ProductData> searchByBarcode(@PathVariable String barcode, Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT SEARCH BY BARCODE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            return productDto.getByBarcodeLike(barcode);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to search products by barcode: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/name/search/{name}")
+    public List<ProductData> searchByName(@PathVariable String name, Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT SEARCH BY NAME ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            return productDto.getByNameLike(name);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to search products by name: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/client/{clientId}")
     public List<ProductData> getByClientId(@PathVariable Integer clientId, Authentication authentication) {
         System.out.println("=== SUPERVISOR PRODUCT GET BY CLIENT ID ENDPOINT ===");
@@ -107,6 +137,77 @@ public class ProductController {
         
         List<ProductData> products = productDto.getAll();
         return ResponseEntity.ok(products);
+    }
+
+    @GetMapping("/paginated")
+    public ResponseEntity<org.example.model.data.PaginationResponse<ProductData>> getAllProductsPaginated(
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDirection,
+            Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT GET ALL PAGINATED ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        System.out.println("Page: " + page + ", Size: " + size + ", SortBy: " + sortBy + ", SortDirection: " + sortDirection);
+        
+        org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
+        org.example.model.data.PaginationResponse<ProductData> response = productDto.getAllPaginated(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/name/search/{name}/paginated")
+    public ResponseEntity<org.example.model.data.PaginationResponse<ProductData>> searchByNamePaginated(
+            @PathVariable String name,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDirection,
+            Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT SEARCH BY NAME PAGINATED ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        System.out.println("Name: " + name + ", Page: " + page + ", Size: " + size);
+        
+        org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
+        org.example.model.data.PaginationResponse<ProductData> response = productDto.getByNameLikePaginated(name, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/client/{clientId}/paginated")
+    public ResponseEntity<org.example.model.data.PaginationResponse<ProductData>> getByClientIdPaginated(
+            @PathVariable Integer clientId,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDirection,
+            Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT GET BY CLIENT ID PAGINATED ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        System.out.println("ClientId: " + clientId + ", Page: " + page + ", Size: " + size);
+        
+        org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
+        org.example.model.data.PaginationResponse<ProductData> response = productDto.getByClientIdPaginated(clientId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/client/name/{clientName}/paginated")
+    public ResponseEntity<org.example.model.data.PaginationResponse<ProductData>> getByClientNamePaginated(
+            @PathVariable String clientName,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDirection,
+            Authentication authentication) {
+        System.out.println("=== SUPERVISOR PRODUCT GET BY CLIENT NAME PAGINATED ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        System.out.println("ClientName: " + clientName + ", Page: " + page + ", Size: " + size);
+        
+        org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
+        org.example.model.data.PaginationResponse<ProductData> response = productDto.getByClientNamePaginated(clientName, request);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")

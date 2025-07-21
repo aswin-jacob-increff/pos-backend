@@ -9,6 +9,8 @@ import org.example.exception.ApiException;
 import org.example.flow.InventoryFlow;
 import org.example.api.InventoryApi;
 import org.example.api.ProductApi;
+import org.example.api.ClientApi;
+import org.example.pojo.ClientPojo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +38,9 @@ class InventoryDtoTest {
     @Mock
     private ProductApi productApi;
 
+    @Mock
+    private ClientApi clientApi;
+
     @InjectMocks
     private InventoryDto inventoryDto;
 
@@ -43,6 +48,7 @@ class InventoryDtoTest {
     private InventoryData testData;
     private InventoryForm testForm;
     private ProductPojo testProduct;
+    private ClientPojo testClient;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -72,8 +78,12 @@ class InventoryDtoTest {
         testProduct.setId(1);
         testProduct.setBarcode("TEST123");
         testProduct.setName("Test Product");
-        testProduct.setClientName("TestClient");
+        testProduct.setClientId(1);
         testProduct.setMrp(100.0);
+
+        testClient = new ClientPojo();
+        testClient.setId(1);
+        testClient.setClientName("TestClient");
 
         // Manually inject the api field using reflection
         Field apiField = inventoryDto.getClass().getSuperclass().getDeclaredField("api");
@@ -84,11 +94,17 @@ class InventoryDtoTest {
         Field productApiField = inventoryDto.getClass().getDeclaredField("productApi");
         productApiField.setAccessible(true);
         productApiField.set(inventoryDto, productApi);
+
+        // Manually inject the clientApi field using reflection
+        Field clientApiField = inventoryDto.getClass().getDeclaredField("clientApi");
+        clientApiField.setAccessible(true);
+        clientApiField.set(inventoryDto, clientApi);
     }
 
     @Test
     void testAdd_Success() {
         when(productApi.getByBarcode("TEST123")).thenReturn(testProduct);
+        when(clientApi.get(1)).thenReturn(testClient);
         doNothing().when(inventoryApi).add(any(InventoryPojo.class));
         InventoryData result = inventoryDto.add(testForm);
         assertNotNull(result);
@@ -173,10 +189,11 @@ class InventoryDtoTest {
         product.setId(1);
         product.setBarcode("UPD123");
         product.setName("Updated Product");
-        product.setClientName("test client");
+        product.setClientId(1);
 
         when(inventoryApi.get(1)).thenReturn(inventory);
         when(productApi.getByBarcode("UPD123")).thenReturn(product);
+        when(clientApi.get(1)).thenReturn(testClient);
         lenient().doNothing().when(inventoryApi).update(anyInt(), any(InventoryPojo.class));
 
         // When

@@ -123,6 +123,16 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         }
     }
 
+    public List<ClientData> getByNameLike(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new ApiException("Client name cannot be null or empty");
+        }
+        List<ClientPojo> clients = flow.getByNameLike(name);
+        return clients.stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+    }
+
     public TsvUploadResult uploadClientsFromTsv(MultipartFile file) {
         System.out.println("ClientDto.uploadClientsFromTsv - Starting");
         // Validate file
@@ -194,12 +204,56 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
 
 
     public void toggleStatus(Integer id, String name) {
-        if (id != null) {
-            toggleStatus(id);
-        } else if (name != null) {
-            toggleStatusByName(name);
-        } else {
-            throw new ApiException("Either 'id' or 'name' must be provided for status toggle");
+        if (Objects.isNull(id) && Objects.isNull(name)) {
+            throw new ApiException("Either ID or name must be provided for status toggle");
         }
+        
+        if (Objects.nonNull(id)) {
+            // Use ID-based toggle
+            flow.toggleStatus(id);
+        } else if (Objects.nonNull(name) && !name.trim().isEmpty()) {
+            // Use name-based toggle
+            flow.toggleStatusByName(StringUtil.format(name));
+        } else {
+            throw new ApiException("Valid ID or name must be provided for status toggle");
+        }
+    }
+
+    // ========== PAGINATION METHODS ==========
+
+    /**
+     * Get all clients with pagination support.
+     */
+    public org.example.model.data.PaginationResponse<ClientData> getAllPaginated(org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<ClientPojo> paginatedEntities = flow.getAllPaginated(request);
+        
+        List<ClientData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    /**
+     * Get clients by name with partial matching and pagination support.
+     */
+    public org.example.model.data.PaginationResponse<ClientData> getByNameLikePaginated(String name, org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<ClientPojo> paginatedEntities = flow.getByNameLikePaginated(name, request);
+        
+        List<ClientData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
     }
 }
