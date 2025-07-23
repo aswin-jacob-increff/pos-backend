@@ -30,7 +30,7 @@ class OrderItemApiTest {
 
         testInventory = new InventoryPojo();
         testInventory.setId(1);
-        testInventory.setProductBarcode("TEST123");
+        testInventory.setProductId(1); // Use productId instead of productBarcode
         testInventory.setQuantity(10);
 
         orderItemApi = new OrderItemApi();
@@ -62,7 +62,7 @@ class OrderItemApiTest {
         // Test basic POJO functionality
         assertNotNull(testInventory);
         assertEquals(1, testInventory.getId());
-        assertEquals("TEST123", testInventory.getProductBarcode());
+        assertEquals(1, testInventory.getProductId()); // Use productId instead of productBarcode
         assertEquals(10, testInventory.getQuantity());
     }
 } 

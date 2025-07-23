@@ -36,20 +36,8 @@ public class InventoryFlow extends AbstractFlow<InventoryPojo> {
         return "Inventory";
     }
 
-    public InventoryPojo getByProductName(String productName) {
-        return api.getByProductName(productName);
-    }
-
-    public List<InventoryPojo> getByProductNameLike(String productName) {
-        return api.getByProductNameLike(productName);
-    }
-
-    public InventoryPojo getByProductBarcode(String barcode) {
-        return api.getByProductBarcode(barcode);
-    }
-
-    public List<InventoryPojo> getByProductBarcodeLike(String barcode) {
-        return api.getByProductBarcodeLike(barcode);
+    public InventoryPojo getByProductId(Integer productId) {
+        return api.getByProductId(productId);
     }
 
     // ========== PAGINATION METHODS ==========
@@ -62,43 +50,22 @@ public class InventoryFlow extends AbstractFlow<InventoryPojo> {
     }
 
     /**
-     * Get inventory by product name with pagination support.
+     * Get inventory by product ID with pagination support.
      */
-    public PaginationResponse<InventoryPojo> getByProductNamePaginated(String productName, PaginationRequest request) {
-        return api.getByProductNamePaginated(productName, request);
+    public PaginationResponse<InventoryPojo> getByProductIdPaginated(Integer productId, PaginationRequest request) {
+        return api.getByProductIdPaginated(productId, request);
     }
 
-    /**
-     * Get inventory by product name with partial matching and pagination support.
-     */
-    public PaginationResponse<InventoryPojo> getByProductNameLikePaginated(String productName, PaginationRequest request) {
-        return api.getByProductNameLikePaginated(productName, request);
+    public void addStock(Integer productId, Integer quantity) {
+        api.addStock(productId, quantity);
     }
 
-    /**
-     * Get inventory by product barcode with pagination support.
-     */
-    public PaginationResponse<InventoryPojo> getByProductBarcodePaginated(String barcode, PaginationRequest request) {
-        return api.getByProductBarcodePaginated(barcode, request);
+    public void removeStock(Integer productId, Integer quantity) {
+        api.removeStock(productId, quantity);
     }
 
-    /**
-     * Get inventory by product barcode with partial matching and pagination support.
-     */
-    public PaginationResponse<InventoryPojo> getByProductBarcodeLikePaginated(String barcode, PaginationRequest request) {
-        return api.getByProductBarcodeLikePaginated(barcode, request);
-    }
-
-    public void addStock(String barcode, Integer quantity) {
-        api.addStock(barcode, quantity);
-    }
-
-    public void removeStock(String barcode, Integer quantity) {
-        api.removeStock(barcode, quantity);
-    }
-
-    public void setStock(String barcode, Integer quantity) {
-        api.setStock(barcode, quantity);
+    public void setStock(Integer productId, Integer quantity) {
+        api.setStock(productId, quantity);
     }
 
     @Override

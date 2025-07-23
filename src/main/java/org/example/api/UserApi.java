@@ -32,10 +32,9 @@ public class UserApi extends AbstractApi<UserPojo> implements UserDetailsService
     // Signup method that accepts a pre-constructed UserPojo (used by UserFlow)
     public void signup(UserPojo userPojo) {
         try {
-            // Normalize and hash password
-            userPojo.setEmail(userPojo.getEmail().toLowerCase().trim());
+            // Email is already normalized in DTO layer, just hash the password
             userPojo.setPassword(passwordEncoder.encode(userPojo.getPassword()));
-            // Role is already set on the pojo (from signup form)
+            // Role is already set in DTO layer based on supervisor email check
             // Save user
             userDao.insert(userPojo);
         } catch (Exception e) {

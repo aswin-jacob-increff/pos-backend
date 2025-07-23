@@ -22,24 +22,8 @@ public class InventoryPojo extends AbstractPojo {
     )
     private Integer id;
 
-    @Column(unique = true)
-    private String productBarcode;
-
     @Column(nullable = false)
-    private String productName;
-
-    @Column(nullable = false)
-    private String clientName;
-
-    private Double productMrp;
-    private String productImageUrl;
+    private Integer productId;
 
     private Integer quantity;
-
-    public void setProductMrp(Double productMrp) {
-        this.productMrp = productMrp == null ? null : org.example.util.TimeUtil.round2(productMrp);
-    }
-    public Double getProductMrp() {
-        return productMrp == null ? null : org.example.util.TimeUtil.round2(productMrp);
-    }
 }

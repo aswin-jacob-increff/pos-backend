@@ -1,10 +1,10 @@
 package org.example.product.unit;
 
+import org.example.api.ProductApi;
+import org.example.api.InventoryApi;
 import org.example.flow.ProductFlow;
 import org.example.pojo.ProductPojo;
 import org.example.pojo.InventoryPojo;
-import org.example.api.ProductApi;
-import org.example.api.InventoryApi;
 import org.example.exception.ApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,8 +14,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -48,11 +46,8 @@ class ProductFlowTest {
 
         testInventory = new InventoryPojo();
         testInventory.setId(1);
-        testInventory.setProductBarcode("TEST123");
-        testInventory.setProductName("Test Product");
-        testInventory.setProductMrp(100.0);
-        testInventory.setClientName("Test Client");
-        testInventory.setProductImageUrl("test-image.jpg");
+        testInventory.setProductId(1); // Use productId instead of productBarcode
+        testInventory.setQuantity(10);
 
         // Inject AbstractFlow's api field
         Field abstractApiField = productFlow.getClass().getSuperclass().getDeclaredField("api");
@@ -105,18 +100,8 @@ class ProductFlowTest {
         updatedProduct.setClientId(1);
         updatedProduct.setImageUrl("new-image.jpg");
 
-        InventoryPojo inventory = new InventoryPojo();
-        inventory.setId(1);
-        inventory.setProductBarcode("OLD123");
-        inventory.setProductName("Old Product");
-        inventory.setProductMrp(100.0);
-        inventory.setClientName("Old Client");
-        inventory.setProductImageUrl("old-image.jpg");
-
         when(api.get(1)).thenReturn(existingProduct);
         doNothing().when(api).update(1, updatedProduct);
-        when(inventoryApi.getByProductBarcode("OLD123")).thenReturn(inventory);
-        doNothing().when(inventoryApi).update(1, inventory);
 
         // When
         productFlow.update(1, updatedProduct);
@@ -124,8 +109,8 @@ class ProductFlowTest {
         // Then
         verify(api).get(1);
         verify(api).update(1, updatedProduct);
-        verify(inventoryApi).getByProductBarcode("OLD123");
-        verify(inventoryApi).update(1, inventory);
+        // Note: Inventory no longer needs to be updated when product details change
+        // because inventory now only stores productId and fetches product details dynamically
     }
 
     @Test
@@ -149,22 +134,99 @@ class ProductFlowTest {
 
         // When & Then
         assertThrows(ApiException.class, () -> productFlow.update(999, new ProductPojo()));
+        verify(api).get(999);
         verify(api, never()).update(any(), any());
     }
 
     @Test
     void testGetAll_Success() {
         // Given
-        List<ProductPojo> products = Arrays.asList(
-            new ProductPojo(), new ProductPojo()
-        );
-        when(api.getAll()).thenReturn(products);
+        when(api.getAll()).thenReturn(java.util.Arrays.asList(testProduct));
 
         // When
-        List<ProductPojo> result = productFlow.getAll();
+        java.util.List<ProductPojo> result = productFlow.getAll();
 
         // Then
-        assertEquals(2, result.size());
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(testProduct, result.get(0));
         verify(api).getAll();
+    }
+
+    @Test
+    void testGet_Success() {
+        // Given
+        when(api.get(1)).thenReturn(testProduct);
+
+        // When
+        ProductPojo result = productFlow.get(1);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(testProduct, result);
+        verify(api).get(1);
+    }
+
+    @Test
+    void testGet_NullId() {
+        // When & Then
+        assertThrows(ApiException.class, () -> productFlow.get(null));
+        verify(api, never()).get(any());
+    }
+
+    @Test
+    void testGetByBarcode_Success() {
+        // Given
+        when(api.getByBarcode("TEST123")).thenReturn(testProduct);
+
+        // When
+        ProductPojo result = productFlow.getByBarcode("TEST123");
+
+        // Then
+        assertNotNull(result);
+        assertEquals(testProduct, result);
+        verify(api).getByBarcode("TEST123");
+    }
+
+    @Test
+    void testGetByBarcode_NullBarcode() {
+        // When & Then
+        assertThrows(ApiException.class, () -> productFlow.getByBarcode(null));
+        verify(api, never()).getByBarcode(any());
+    }
+
+    @Test
+    void testGetByBarcode_EmptyBarcode() {
+        // When & Then
+        assertThrows(ApiException.class, () -> productFlow.getByBarcode(""));
+        verify(api, never()).getByBarcode(any());
+    }
+
+    @Test
+    void testGetByName_Success() {
+        // Given
+        when(api.getByName("Test Product")).thenReturn(testProduct);
+
+        // When
+        ProductPojo result = productFlow.getByName("Test Product");
+
+        // Then
+        assertNotNull(result);
+        assertEquals(testProduct, result);
+        verify(api).getByName("Test Product");
+    }
+
+    @Test
+    void testGetByName_NullName() {
+        // When & Then
+        assertThrows(ApiException.class, () -> productFlow.getByName(null));
+        verify(api, never()).getByName(any());
+    }
+
+    @Test
+    void testGetByName_EmptyName() {
+        // When & Then
+        assertThrows(ApiException.class, () -> productFlow.getByName(""));
+        verify(api, never()).getByName(any());
     }
 } 

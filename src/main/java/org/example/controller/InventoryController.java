@@ -17,6 +17,7 @@ import org.example.model.data.InventoryData;
 import org.example.model.form.InventoryForm;
 import org.example.dto.InventoryDto;
 import org.springframework.web.multipart.MultipartFile;
+import org.example.api.ProductApi;
 
 @RestController
 @RequestMapping(ApiEndpoints.Supervisor.INVENTORY)
@@ -24,6 +25,9 @@ public class InventoryController {
 
     @Autowired
     private InventoryDto inventoryDto;
+
+    @Autowired
+    private ProductApi productApi;
 
     @PostMapping
     @org.springframework.transaction.annotation.Transactional
@@ -105,11 +109,17 @@ public class InventoryController {
         System.out.println("=== SUPERVISOR INVENTORY GET BY PRODUCT NAME PAGINATED ENDPOINT ===");
         System.out.println("Authentication: " + authentication);
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("ProductName: " + productName + ", Page: " + page + ", Size: " + size);
+        System.out.println("Product Name: " + productName + ", Page: " + page + ", Size: " + size);
         
         try {
+            // Get product by name first, then get inventory by product ID
+            var product = productApi.getByName(productName);
+            if (product == null) {
+                throw new ApiException("Product with name '" + productName + "' not found");
+            }
+            
             org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
-            org.example.model.data.PaginationResponse<InventoryData> response = inventoryDto.getByProductNamePaginated(productName, request);
+            org.example.model.data.PaginationResponse<InventoryData> response = inventoryDto.getByProductIdPaginated(product.getId(), request);
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;
@@ -132,8 +142,14 @@ public class InventoryController {
         System.out.println("Barcode: " + barcode + ", Page: " + page + ", Size: " + size);
         
         try {
+            // Get product by barcode first, then get inventory by product ID
+            var product = productApi.getByBarcode(barcode);
+            if (product == null) {
+                throw new ApiException("Product with barcode '" + barcode + "' not found");
+            }
+            
             org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
-            org.example.model.data.PaginationResponse<InventoryData> response = inventoryDto.getByProductBarcodePaginated(barcode, request);
+            org.example.model.data.PaginationResponse<InventoryData> response = inventoryDto.getByProductIdPaginated(product.getId(), request);
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;
@@ -156,12 +172,25 @@ public class InventoryController {
         List<InventoryData> inventoryDataList;
 
         if (id != null) {
-            // For now, we'll require barcode instead of product ID
-            throw new ApiException("Please use product barcode instead of product ID for inventory lookup");
+            // Get inventory by product ID directly
+            InventoryData inventory = inventoryDto.getByProductId(id);
+            inventoryDataList = inventory != null ? List.of(inventory) : List.of();
         } else if (barcode != null && !barcode.trim().isEmpty()) {
-            inventoryDataList = inventoryDto.getByProductBarcodeLike(barcode.trim());
+            // Get product by barcode first, then get inventory by product ID
+            var product = productApi.getByBarcode(barcode.trim());
+            if (product == null) {
+                throw new ApiException("Product with barcode '" + barcode.trim() + "' not found");
+            }
+            InventoryData inventory = inventoryDto.getByProductId(product.getId());
+            inventoryDataList = inventory != null ? List.of(inventory) : List.of();
         } else if (name != null && !name.trim().isEmpty()) {
-            inventoryDataList = inventoryDto.getByProductNameLike(name.trim());
+            // Get product by name first, then get inventory by product ID
+            var product = productApi.getByName(name.trim());
+            if (product == null) {
+                throw new ApiException("Product with name '" + name.trim() + "' not found");
+            }
+            InventoryData inventory = inventoryDto.getByProductId(product.getId());
+            inventoryDataList = inventory != null ? List.of(inventory) : List.of();
         } else {
             throw new ApiException("Requires either of product name, product id or product barcode");
         }
@@ -196,7 +225,12 @@ public class InventoryController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            return inventoryDto.getByProductBarcode(productBarcode);
+            // Get product by barcode first, then get inventory by product ID
+            var product = productApi.getByBarcode(productBarcode);
+            if (product == null) {
+                throw new ApiException("Product with barcode '" + productBarcode + "' not found");
+            }
+            return inventoryDto.getByProductId(product.getId());
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -211,7 +245,13 @@ public class InventoryController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            return inventoryDto.getByProductBarcodeLike(productBarcode);
+            // Get product by barcode first, then get inventory by product ID
+            var product = productApi.getByBarcode(productBarcode);
+            if (product == null) {
+                throw new ApiException("Product with barcode '" + productBarcode + "' not found");
+            }
+            InventoryData inventory = inventoryDto.getByProductId(product.getId());
+            return inventory != null ? List.of(inventory) : List.of();
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -226,7 +266,13 @@ public class InventoryController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            return inventoryDto.getByProductNameLike(productName);
+            // Get product by name first, then get inventory by product ID
+            var product = productApi.getByName(productName);
+            if (product == null) {
+                throw new ApiException("Product with name '" + productName + "' not found");
+            }
+            InventoryData inventory = inventoryDto.getByProductId(product.getId());
+            return inventory != null ? List.of(inventory) : List.of();
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -256,9 +302,20 @@ public class InventoryController {
         
         System.out.println("Adding stock for barcode: '" + productId + "', quantity: " + quantity);
         
-        return inventoryDto.addStock(productId.trim(), quantity);
+        try {
+            // Get product by barcode first, then add stock using product ID
+            var product = productApi.getByBarcode(productId.trim());
+            if (product == null) {
+                throw new ApiException("Product with barcode '" + productId.trim() + "' not found");
+            }
+            return inventoryDto.addStock(product.getId(), quantity);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to add stock: " + e.getMessage());
+        }
     }
-    
+
     @PutMapping("/{productId}/removeStock")
     @org.springframework.transaction.annotation.Transactional
     public InventoryData removeStock(
@@ -281,9 +338,20 @@ public class InventoryController {
         
         System.out.println("Removing stock for barcode: '" + productId + "', quantity: " + quantity);
         
-        return inventoryDto.removeStock(productId.trim(), quantity);
+        try {
+            // Get product by barcode first, then remove stock using product ID
+            var product = productApi.getByBarcode(productId.trim());
+            if (product == null) {
+                throw new ApiException("Product with barcode '" + productId.trim() + "' not found");
+            }
+            return inventoryDto.removeStock(product.getId(), quantity);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to remove stock: " + e.getMessage());
+        }
     }
-    
+
     @PutMapping("/{productId}/setStock")
     @org.springframework.transaction.annotation.Transactional
     public InventoryData setStock(
@@ -306,7 +374,18 @@ public class InventoryController {
         
         System.out.println("Setting stock for barcode: '" + productId + "', quantity: " + quantity);
         
-        return inventoryDto.setStock(productId.trim(), quantity);
+        try {
+            // Get product by barcode first, then set stock using product ID
+            var product = productApi.getByBarcode(productId.trim());
+            if (product == null) {
+                throw new ApiException("Product with barcode '" + productId.trim() + "' not found");
+            }
+            return inventoryDto.setStock(product.getId(), quantity);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to set stock: " + e.getMessage());
+        }
     }
     
     @GetMapping("/{productId}/image")
@@ -316,7 +395,12 @@ public class InventoryController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            InventoryData inventory = inventoryDto.getByProductBarcode(productId);
+            // Get product by barcode first, then get inventory by product ID
+            var product = productApi.getByBarcode(productId);
+            if (product == null) {
+                throw new ApiException("Product with barcode '" + productId + "' not found");
+            }
+            InventoryData inventory = inventoryDto.getByProductId(product.getId());
             if (inventory.getImageUrl() == null || inventory.getImageUrl().trim().isEmpty()) {
                 return ResponseEntity.notFound().build();
             }

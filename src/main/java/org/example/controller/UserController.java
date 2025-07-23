@@ -12,6 +12,9 @@ import org.example.model.data.UserData;
 import org.example.model.form.UserForm;
 import org.example.model.data.ProductData;
 import org.example.model.data.InventoryData;
+import org.example.api.ProductApi;
+import org.example.api.UserApi;
+import org.example.pojo.UserPojo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -34,6 +37,12 @@ public class UserController {
 
     @Autowired
     private InventoryDto inventoryDto;
+
+    @Autowired
+    private ProductApi productApi;
+
+    @Autowired
+    private UserApi userApi;
 
     @GetMapping("/orders")
     public List<OrderData> getMyOrders(Authentication authentication) {
@@ -229,6 +238,8 @@ public class UserController {
 
 
 
+
+
     @GetMapping("/products/barcode/{barcode}")
     public ProductData getProductByBarcode(@PathVariable String barcode, Authentication authentication) {
         System.out.println("=== USER PRODUCT GET BY BARCODE ENDPOINT ===");
@@ -256,7 +267,12 @@ public class UserController {
         
         try {
             if (authentication != null && authentication.isAuthenticated()) {
-                return inventoryDto.getByProductBarcode(barcode);
+                // Get product by barcode first, then get inventory by product ID
+                var product = productApi.getByBarcode(barcode);
+                if (product == null) {
+                    throw new ApiException("Product with barcode '" + barcode + "' not found");
+                }
+                return inventoryDto.getByProductId(product.getId());
             } else {
                 throw new ApiException("User not authenticated");
             }
@@ -286,7 +302,11 @@ public class UserController {
                 }
                 
                 try {
-                    inventory = inventoryDto.getByProductBarcode(barcode);
+                    // Get product by barcode first, then get inventory by product ID
+                    var productPojo = productApi.getByBarcode(barcode);
+                    if (productPojo != null) {
+                        inventory = inventoryDto.getByProductId(productPojo.getId());
+                    }
                 } catch (Exception e) {
                     // Inventory not found
                 }

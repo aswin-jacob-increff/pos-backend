@@ -220,9 +220,7 @@ class OrderItemDtoFlowApiIntegrationTest {
 
         testInventory = new InventoryPojo();
         testInventory.setId(1);
-        testInventory.setProductBarcode("TEST123");
-        testInventory.setProductName("Test Product");
-        testInventory.setClientName("test client");
+        testInventory.setProductId(1); // Use productId instead of productBarcode
         testInventory.setQuantity(100);
 
         testOrderItem = new OrderItemPojo();
@@ -266,6 +264,10 @@ class OrderItemDtoFlowApiIntegrationTest {
             inventoryApiField.setAccessible(true);
             inventoryApiField.set(orderItemApi, inventoryApi);
 
+            var productApiField = OrderItemApi.class.getDeclaredField("productApi");
+            productApiField.setAccessible(true);
+            productApiField.set(orderItemApi, productApi);
+
             // Inject orderItemApi into orderItemFlow
             var apiField = OrderItemFlow.class.getDeclaredField("api");
             apiField.setAccessible(true);
@@ -298,8 +300,9 @@ class OrderItemDtoFlowApiIntegrationTest {
     void testDtoToFlowToApi_AddOrderItem() {
         // Arrange
         when(productApi.get(1)).thenReturn(testProduct);
-        when(inventoryApi.getByProductBarcode("TEST123")).thenReturn(testInventory);
-        doNothing().when(inventoryApi).removeStock("TEST123", 2);
+        when(productApi.getByBarcode("TEST123")).thenReturn(testProduct); // Add this mock
+        when(inventoryApi.getByProductId(1)).thenReturn(testInventory); // Use productId instead of barcode
+        doNothing().when(inventoryApi).removeStock(1, 2); // Use productId instead of barcode
         doNothing().when(orderItemDao).insert(any(OrderItemPojo.class));
 
         // Act
@@ -316,8 +319,9 @@ class OrderItemDtoFlowApiIntegrationTest {
         
         // Verify DAO was called
         verify(productApi, times(3)).get(1);
-        verify(inventoryApi).getByProductBarcode("TEST123");
-        verify(inventoryApi).removeStock("TEST123", 2);
+        verify(productApi, times(2)).getByBarcode("TEST123"); // Updated to 2 times
+        verify(inventoryApi).getByProductId(1); // Use productId instead of barcode
+        verify(inventoryApi).removeStock(1, 2); // Use productId instead of barcode
         verify(orderItemDao).insert(any(OrderItemPojo.class));
     }
 
@@ -382,9 +386,10 @@ class OrderItemDtoFlowApiIntegrationTest {
 
         when(orderItemDao.select(1)).thenReturn(testOrderItem);
         when(productApi.get(1)).thenReturn(testProduct);
-        when(inventoryApi.getByProductBarcode("TEST123")).thenReturn(testInventory);
-        doNothing().when(inventoryApi).addStock("TEST123", 2);
-        doNothing().when(inventoryApi).removeStock("TEST123", 3);
+        when(productApi.getByBarcode("TEST123")).thenReturn(testProduct); // Add this mock
+        when(inventoryApi.getByProductId(1)).thenReturn(testInventory); // Use productId instead of barcode
+        doNothing().when(inventoryApi).addStock(1, 2); // Use productId instead of barcode
+        doNothing().when(inventoryApi).removeStock(1, 3); // Use productId instead of barcode
         doNothing().when(orderItemDao).update(eq(1), any(OrderItemPojo.class));
 
         // Act
@@ -399,9 +404,10 @@ class OrderItemDtoFlowApiIntegrationTest {
         // Verify DAO was called
         verify(orderItemDao, times(2)).select(1);
         verify(productApi, times(3)).get(1);
-        verify(inventoryApi).getByProductBarcode("TEST123");
-        verify(inventoryApi).addStock("TEST123", 2);
-        verify(inventoryApi).removeStock("TEST123", 3);
+        verify(productApi, times(2)).getByBarcode("TEST123"); // Updated to 2 times
+        verify(inventoryApi).getByProductId(1); // Use productId instead of barcode
+        verify(inventoryApi).addStock(1, 2); // Use productId instead of barcode
+        verify(inventoryApi).removeStock(1, 3); // Use productId instead of barcode
         verify(orderItemDao).update(eq(1), any(OrderItemPojo.class));
     }
 
@@ -469,7 +475,8 @@ class OrderItemDtoFlowApiIntegrationTest {
         // Arrange
         testInventory.setQuantity(1);
         when(productApi.get(1)).thenReturn(testProduct);
-        when(inventoryApi.getByProductBarcode("TEST123")).thenReturn(testInventory);
+        when(productApi.getByBarcode("TEST123")).thenReturn(testProduct); // Add this mock
+        when(inventoryApi.getByProductId(1)).thenReturn(testInventory); // Use productId instead of barcode
 
         // Act & Assert
         ApiException exception = assertThrows(ApiException.class, () -> {
@@ -478,7 +485,10 @@ class OrderItemDtoFlowApiIntegrationTest {
         
         assertEquals("Insufficient stock. Available: 1, Requested: 2", exception.getMessage());
         
-        // Verify DAO was not called
+        // Verify DAO was called for validation but not for insert
+        verify(productApi, times(3)).get(1); // Updated to 3 times
+        verify(productApi).getByBarcode("TEST123"); // Add this verification
+        verify(inventoryApi).getByProductId(1); // Use productId instead of barcode
         verify(orderItemDao, never()).insert(any());
     }
 

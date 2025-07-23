@@ -5,8 +5,8 @@ import org.example.model.data.UserData;
 import org.example.model.enums.Role;
 import org.example.model.form.UserForm;
 import org.example.pojo.UserPojo;
+import org.example.model.constants.Supervisors;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
@@ -19,9 +19,6 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
     @Autowired
     private UserFlow userFlow;
 
-    @Value("${supervisor.email:admin@example.com}")
-    private String supervisorEmail;
-
     @Override
     protected String getEntityName() {
         return "User";
@@ -29,7 +26,7 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
 
     @Override
     protected void preprocess(UserForm form) {
-        // Cross-field/entity logic: email normalization
+        // Normalize email and password
         if (form.getEmail() != null) {
             form.setEmail(form.getEmail().trim().toLowerCase());
         }
@@ -41,12 +38,15 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
     @Override
     protected UserPojo convertFormToEntity(UserForm form) {
         UserPojo pojo = new UserPojo();
-        pojo.setEmail(form.getEmail().toLowerCase().trim());
-        pojo.setPassword(form.getPassword().trim());
+        pojo.setEmail(form.getEmail());
+        pojo.setPassword(form.getPassword());
         
-        // Automatically set role to USER for all signups
-        // Supervisor accounts are only created via application.properties
-        pojo.setRole(Role.USER);
+        // Simple role assignment: check if email matches supervisor email
+        if (form.getEmail() != null && form.getEmail().equals(Supervisors.ADMIN.toLowerCase())) {
+            pojo.setRole(Role.SUPERVISOR);
+        } else {
+            pojo.setRole(Role.USER);
+        }
         
         return pojo;
     }
@@ -61,7 +61,7 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public UserData update(Integer id, @Valid UserForm form) {
         return super.update(id, form);
     }
@@ -69,12 +69,6 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
     @Transactional
     public void signup(@Valid UserForm form) {
         preprocess(form);
-        
-        // Prevent creation of supervisor accounts via signup
-        if (form.getEmail().equalsIgnoreCase(supervisorEmail)) {
-            throw new RuntimeException("Cannot create supervisor account via signup. Supervisor accounts are pre-configured.");
-        }
-        
         UserPojo pojo = convertFormToEntity(form);
         userFlow.signup(pojo);
     }
@@ -91,6 +85,9 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
 
     /**
      * Get all users with pagination support.
+     * Note: This implementation loads all users into memory.
+     * For better performance with large datasets, consider implementing
+     * pagination at the DAO level.
      */
     public org.example.model.data.PaginationResponse<UserData> getAllPaginated(org.example.model.form.PaginationRequest request) {
         // Since UserFlow doesn't have pagination methods yet, we'll implement manual pagination

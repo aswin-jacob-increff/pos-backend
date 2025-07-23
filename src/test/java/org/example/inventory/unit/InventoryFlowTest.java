@@ -1,8 +1,7 @@
 package org.example.inventory.unit;
 
-import org.example.flow.InventoryFlow;
 import org.example.api.InventoryApi;
-import org.example.api.AbstractApi;
+import org.example.flow.InventoryFlow;
 import org.example.pojo.InventoryPojo;
 import org.example.exception.ApiException;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +16,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,8 +34,7 @@ class InventoryFlowTest {
     void setUp() throws Exception {
         testInventory = new InventoryPojo();
         testInventory.setId(1);
-        testInventory.setProductName("Test Product");
-        testInventory.setProductBarcode("123456789");
+        testInventory.setProductId(1); // Use productId instead of productName/barcode
         testInventory.setQuantity(10);
 
         // Inject AbstractFlow's api field
@@ -75,11 +74,8 @@ class InventoryFlowTest {
         // Given
         InventoryPojo inventory = new InventoryPojo();
         inventory.setId(1);
-        inventory.setProductBarcode("TEST123");
-        inventory.setProductName("Test Product");
+        inventory.setProductId(1); // Use productId instead of productBarcode
         inventory.setQuantity(50);
-        inventory.setProductMrp(100.0);
-        inventory.setClientName("Test Client");
 
         doNothing().when(api).update(1, inventory);
 
@@ -121,66 +117,65 @@ class InventoryFlowTest {
     }
 
     @Test
-    void testGetByProductName_Success() {
+    void testGetByProductId_Success() {
         // Arrange
-        when(api.getByProductName("Test Product")).thenReturn(testInventory);
+        when(api.getByProductId(1)).thenReturn(testInventory);
 
         // Act
-        InventoryPojo result = inventoryFlow.getByProductName("Test Product");
+        InventoryPojo result = inventoryFlow.getByProductId(1);
 
         // Assert
         assertNotNull(result);
         assertEquals(testInventory.getId(), result.getId());
-        verify(api).getByProductName("Test Product");
+        verify(api).getByProductId(1);
     }
 
     @Test
-    void testGetByProductBarcode_Success() {
+    void testGetByProductId_NotFound() {
         // Arrange
-        when(api.getByProductBarcode("123456789")).thenReturn(testInventory);
+        when(api.getByProductId(999)).thenReturn(null);
 
         // Act
-        InventoryPojo result = inventoryFlow.getByProductBarcode("123456789");
+        InventoryPojo result = inventoryFlow.getByProductId(999);
 
         // Assert
-        assertNotNull(result);
-        assertEquals(testInventory.getId(), result.getId());
-        verify(api).getByProductBarcode("123456789");
+        assertNull(result);
+        verify(api).getByProductId(999);
     }
 
     @Test
     void testAddStock_Success() {
         // Arrange
-        doNothing().when(api).addStock("123456789", 5);
+        doNothing().when(api).addStock(1, 5);
 
         // Act
-        inventoryFlow.addStock("123456789", 5);
+        inventoryFlow.addStock(1, 5);
 
         // Assert
-        verify(api).addStock("123456789", 5);
+        verify(api).addStock(1, 5);
     }
 
     @Test
     void testRemoveStock_Success() {
         // Arrange
-        doNothing().when(api).removeStock("123456789", 3);
+        doNothing().when(api).removeStock(1, 3);
 
         // Act
-        inventoryFlow.removeStock("123456789", 3);
+        inventoryFlow.removeStock(1, 3);
 
         // Assert
-        verify(api).removeStock("123456789", 3);
+        verify(api).removeStock(1, 3);
     }
 
     @Test
     void testSetStock_Success() {
         // Arrange
-        doNothing().when(api).setStock("123456789", 15);
+        doNothing().when(api).setStock(1, 20);
 
         // Act
-        inventoryFlow.setStock("123456789", 15);
+        inventoryFlow.setStock(1, 20);
 
         // Assert
-        verify(api).setStock("123456789", 15);
+        verify(api).setStock(1, 20);
     }
 } 

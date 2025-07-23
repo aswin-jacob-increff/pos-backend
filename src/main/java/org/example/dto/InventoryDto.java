@@ -43,31 +43,12 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
     @Override
     protected InventoryPojo convertFormToEntity(InventoryForm inventoryForm) {
         InventoryPojo inventoryPojo = new InventoryPojo();
-        inventoryPojo.setProductBarcode(inventoryForm.getBarcode());
         inventoryPojo.setQuantity(inventoryForm.getQuantity());
         
-        // Get product details to populate null fields
+        // Get product ID from barcode
         try {
             var product = productApi.getByBarcode(inventoryForm.getBarcode());
-            inventoryPojo.setProductName(product.getName());
-            
-            // Get client name from the client relationship
-            String clientName = null;
-            if (product.getClientId() != null && product.getClientId() > 0) {
-                // Always use clientApi to get client name to avoid lazy loading issues
-                try {
-                    org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
-                    if (client != null) {
-                        clientName = client.getClientName();
-                    }
-                } catch (Exception e) {
-                    // Client not found, continue with null
-                }
-            }
-            inventoryPojo.setClientName(StringUtil.format(clientName));
-            
-            inventoryPojo.setProductMrp(product.getMrp());
-            inventoryPojo.setProductImageUrl(product.getImageUrl());
+            inventoryPojo.setProductId(product.getId());
         } catch (Exception e) {
             throw new ApiException("Product with barcode '" + inventoryForm.getBarcode() + "' not found");
         }
@@ -79,22 +60,26 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
     protected InventoryData convertEntityToData(InventoryPojo inventoryPojo) {
         InventoryData inventoryData = new InventoryData();
         inventoryData.setId(inventoryPojo.getId());
-        inventoryData.setProductName(inventoryPojo.getProductName());
-        inventoryData.setBarcode(inventoryPojo.getProductBarcode());
+        inventoryData.setProductId(inventoryPojo.getProductId());
+        inventoryData.setQuantity(inventoryPojo.getQuantity());
         
-        // Try to get product ID, but don't fail if product not found
-        // This avoids N+1 queries and handles cases where products might be deleted
+        // Get product details from productId
         try {
-            var product = productApi.getByBarcode(inventoryPojo.getProductBarcode());
-            inventoryData.setProductId(product != null ? product.getId() : null);
+            var product = productApi.get(inventoryPojo.getProductId());
+            inventoryData.setProductName(product.getName());
+            inventoryData.setBarcode(product.getBarcode());
+            inventoryData.setMrp(product.getMrp());
+            inventoryData.setImageUrl(product.getImageUrl());
+            
+
         } catch (Exception e) {
-            // If product not found, set to null - this is acceptable for denormalized data
-            inventoryData.setProductId(null);
+            // If product not found, set fields to null
+            inventoryData.setProductName(null);
+            inventoryData.setBarcode(null);
+            inventoryData.setMrp(null);
+            inventoryData.setImageUrl(null);
         }
         
-        inventoryData.setQuantity(inventoryPojo.getQuantity());
-        inventoryData.setMrp(inventoryPojo.getProductMrp());
-        inventoryData.setImageUrl(inventoryPojo.getProductImageUrl());
         return inventoryData;
     }
 
@@ -132,53 +117,40 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
 
     // Custom methods for stock management
     @org.springframework.transaction.annotation.Transactional
-    public InventoryData addStock(String barcode, Integer quantity) {
-        validateBarcode(barcode);
+    public InventoryData addStock(Integer productId, Integer quantity) {
+        if (productId == null) {
+            throw new ApiException("Product ID cannot be null");
+        }
         validateQuantity(quantity, "Quantity to add");
-        inventoryFlow.addStock(barcode, quantity);
-        return getByProductBarcode(barcode);
+        inventoryFlow.addStock(productId, quantity);
+        return getByProductId(productId);
     }
 
     @org.springframework.transaction.annotation.Transactional
-    public InventoryData removeStock(String barcode, Integer quantity) {
-        validateBarcode(barcode);
+    public InventoryData removeStock(Integer productId, Integer quantity) {
+        if (productId == null) {
+            throw new ApiException("Product ID cannot be null");
+        }
         validateQuantity(quantity, "Quantity to remove");
-        inventoryFlow.removeStock(barcode, quantity);
-        return getByProductBarcode(barcode);
+        inventoryFlow.removeStock(productId, quantity);
+        return getByProductId(productId);
     }
 
     @org.springframework.transaction.annotation.Transactional
-    public InventoryData setStock(String barcode, Integer quantity) {
-        validateBarcode(barcode);
+    public InventoryData setStock(Integer productId, Integer quantity) {
+        if (productId == null) {
+            throw new ApiException("Product ID cannot be null");
+        }
         validateSetStockQuantity(quantity);
-        inventoryFlow.setStock(barcode, quantity);
-        return getByProductBarcode(barcode);
+        inventoryFlow.setStock(productId, quantity);
+        return getByProductId(productId);
     }
 
-    public InventoryData getByProductBarcode(String barcode) {
-        validateBarcode(barcode);
-        return convertEntityToData(inventoryFlow.getByProductBarcode(barcode));
-    }
-
-    public List<InventoryData> getByProductBarcodeLike(String barcode) {
-        validateBarcode(barcode);
-        List<InventoryPojo> entities = inventoryFlow.getByProductBarcodeLike(barcode);
-        return entities.stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-    }
-
-    public InventoryData getByProductName(String productName) {
-        validateProductName(productName);
-        return convertEntityToData(inventoryFlow.getByProductName(productName));
-    }
-
-    public List<InventoryData> getByProductNameLike(String productName) {
-        validateProductName(productName);
-        List<InventoryPojo> entities = inventoryFlow.getByProductNameLike(productName);
-        return entities.stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
+    public InventoryData getByProductId(Integer productId) {
+        if (productId == null) {
+            throw new ApiException("Product ID cannot be null");
+        }
+        return convertEntityToData(inventoryFlow.getByProductId(productId));
     }
 
     @Override
@@ -201,15 +173,23 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
         for (InventoryPojo entity : entities) {
             InventoryData inventoryData = new InventoryData();
             inventoryData.setId(entity.getId());
-            inventoryData.setProductName(entity.getProductName());
-            inventoryData.setBarcode(entity.getProductBarcode());
+            inventoryData.setProductId(entity.getProductId());
             inventoryData.setQuantity(entity.getQuantity());
-            inventoryData.setMrp(entity.getProductMrp());
-            inventoryData.setImageUrl(entity.getProductImageUrl());
 
-            // Look up product ID from the map
-            Integer productId = barcodeToProductIdMap.get(entity.getProductBarcode());
-            inventoryData.setProductId(productId);
+            // Get product details from productId
+            try {
+                var product = productApi.get(entity.getProductId());
+                inventoryData.setProductName(product.getName());
+                inventoryData.setBarcode(product.getBarcode());
+                inventoryData.setMrp(product.getMrp());
+                inventoryData.setImageUrl(product.getImageUrl());
+            } catch (Exception e) {
+                // If product not found, set fields to null
+                inventoryData.setProductName(null);
+                inventoryData.setBarcode(null);
+                inventoryData.setMrp(null);
+                inventoryData.setImageUrl(null);
+            }
 
             dataList.add(inventoryData);
         }
@@ -270,23 +250,32 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
             try {
                 System.out.println("InventoryDto.uploadInventoryFromTsv - Processing inventory: " + form.getBarcode());
                 
+                // Get product ID from barcode
+                Integer productId = null;
+                try {
+                    var product = productApi.getByBarcode(form.getBarcode());
+                    productId = product.getId();
+                } catch (Exception e) {
+                    throw new ApiException("Product with barcode '" + form.getBarcode() + "' not found");
+                }
+                
                 // Check if inventory already exists for this product
                 InventoryPojo existingInventory = null;
                 try {
-                    existingInventory = inventoryFlow.getByProductBarcode(form.getBarcode());
+                    existingInventory = inventoryFlow.getByProductId(productId);
                 } catch (Exception e) {
                     // Inventory doesn't exist, which is fine - we'll create a new one
-                    System.out.println("InventoryDto.uploadInventoryFromTsv - No existing inventory found for: " + form.getBarcode());
+                    System.out.println("InventoryDto.uploadInventoryFromTsv - No existing inventory found for product ID: " + productId);
                 }
                 
                 if (existingInventory != null) {
                     // Update existing inventory by adding the new quantity
-                    System.out.println("InventoryDto.uploadInventoryFromTsv - Updating existing inventory for: " + form.getBarcode() + " (current: " + existingInventory.getQuantity() + ", adding: " + form.getQuantity() + ")");
-                    inventoryFlow.addStock(form.getBarcode(), form.getQuantity());
+                    System.out.println("InventoryDto.uploadInventoryFromTsv - Updating existing inventory for product ID: " + productId + " (current: " + existingInventory.getQuantity() + ", adding: " + form.getQuantity() + ")");
+                    inventoryFlow.addStock(productId, form.getQuantity());
                     result.addWarning("Updated existing inventory for product '" + form.getBarcode() + "' (added " + form.getQuantity() + " to existing stock)");
                 } else {
                     // Create new inventory record
-                    System.out.println("InventoryDto.uploadInventoryFromTsv - Creating new inventory for: " + form.getBarcode());
+                    System.out.println("InventoryDto.uploadInventoryFromTsv - Creating new inventory for product ID: " + productId);
                     InventoryPojo entity = convertFormToEntity(form);
                     inventoryFlow.add(entity);
                 }
@@ -366,15 +355,23 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
                 .map(entity -> {
                     InventoryData inventoryData = new InventoryData();
                     inventoryData.setId(entity.getId());
-                    inventoryData.setProductName(entity.getProductName());
-                    inventoryData.setBarcode(entity.getProductBarcode());
+                    inventoryData.setProductId(entity.getProductId());
                     inventoryData.setQuantity(entity.getQuantity());
-                    inventoryData.setMrp(entity.getProductMrp());
-                    inventoryData.setImageUrl(entity.getProductImageUrl());
 
-                    // Look up product ID from the map
-                    Integer productId = barcodeToProductIdMap.get(entity.getProductBarcode());
-                    inventoryData.setProductId(productId);
+                    // Get product details from productId
+                    try {
+                        var product = productApi.get(entity.getProductId());
+                        inventoryData.setProductName(product.getName());
+                        inventoryData.setBarcode(product.getBarcode());
+                        inventoryData.setMrp(product.getMrp());
+                        inventoryData.setImageUrl(product.getImageUrl());
+                    } catch (Exception e) {
+                        // If product not found, set fields to null
+                        inventoryData.setProductName(null);
+                        inventoryData.setBarcode(null);
+                        inventoryData.setMrp(null);
+                        inventoryData.setImageUrl(null);
+                    }
 
                     return inventoryData;
                 })
@@ -389,60 +386,28 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
     }
 
     /**
-     * Get inventory by product name with pagination support.
+     * Get inventory by product ID with pagination support.
      */
-    public org.example.model.data.PaginationResponse<InventoryData> getByProductNamePaginated(String productName, org.example.model.form.PaginationRequest request) {
-        // Get all inventory for the product name (since we don't have direct pagination by product name in the flow)
-        List<InventoryData> allInventory = getByProductNameLike(productName);
+    public org.example.model.data.PaginationResponse<InventoryData> getByProductIdPaginated(Integer productId, org.example.model.form.PaginationRequest request) {
+        if (productId == null) {
+            throw new ApiException("Product ID cannot be null");
+        }
         
-        // Apply pagination manually
-        int totalElements = allInventory.size();
-        int pageSize = request.getPageSize();
-        int pageNumber = request.getPageNumber();
-        int startIndex = pageNumber * pageSize;
-        int endIndex = Math.min(startIndex + pageSize, totalElements);
+        // Get the specific inventory for the product ID
+        InventoryData inventory = getByProductId(productId);
         
         List<InventoryData> paginatedContent;
-        if (startIndex >= totalElements) {
-            paginatedContent = List.of();
+        if (inventory != null) {
+            paginatedContent = List.of(inventory);
         } else {
-            paginatedContent = allInventory.subList(startIndex, endIndex);
+            paginatedContent = List.of();
         }
         
         return new org.example.model.data.PaginationResponse<>(
             paginatedContent,
-            totalElements,
-            pageNumber,
-            pageSize
-        );
-    }
-
-    /**
-     * Get inventory by product barcode with pagination support.
-     */
-    public org.example.model.data.PaginationResponse<InventoryData> getByProductBarcodePaginated(String barcode, org.example.model.form.PaginationRequest request) {
-        // Get all inventory for the product barcode (since we don't have direct pagination by barcode in the flow)
-        List<InventoryData> allInventory = getByProductBarcodeLike(barcode);
-        
-        // Apply pagination manually
-        int totalElements = allInventory.size();
-        int pageSize = request.getPageSize();
-        int pageNumber = request.getPageNumber();
-        int startIndex = pageNumber * pageSize;
-        int endIndex = Math.min(startIndex + pageSize, totalElements);
-        
-        List<InventoryData> paginatedContent;
-        if (startIndex >= totalElements) {
-            paginatedContent = List.of();
-        } else {
-            paginatedContent = allInventory.subList(startIndex, endIndex);
-        }
-        
-        return new org.example.model.data.PaginationResponse<>(
-            paginatedContent,
-            totalElements,
-            pageNumber,
-            pageSize
+            paginatedContent.size(),
+            request.getPageNumber(),
+            request.getPageSize()
         );
     }
 }

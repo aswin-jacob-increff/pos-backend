@@ -59,14 +59,14 @@ public class ProductFlow extends AbstractFlow<ProductPojo> {
         if (productPojo == null) {
             throw new ApiException("Product cannot be null");
         }
-        
+
+        // Get the existing product to compare changes
         ProductPojo existingProduct = api.get(id);
         if (existingProduct == null) {
             throw new ApiException("Product with ID " + id + " not found");
         }
-        
-        // Check if any inventory-related fields have changed
-        boolean inventoryNeedsUpdate = false;
+
+        // Store old values for comparison
         String oldBarcode = existingProduct.getBarcode();
         String newBarcode = productPojo.getBarcode();
         String oldName = existingProduct.getName();
@@ -75,48 +75,22 @@ public class ProductFlow extends AbstractFlow<ProductPojo> {
         Double newMrp = productPojo.getMrp();
         Integer oldClientId = existingProduct.getClientId();
         Integer newClientId = productPojo.getClientId();
-        
-        // Get client names for comparison
-        String oldClientName = getClientNameById(oldClientId);
+
+        // Get client name for the new client ID
         String newClientName = getClientNameById(newClientId);
-        
+
         // Check if any inventory-related fields have changed
-        if (!Objects.equals(oldBarcode, newBarcode) ||
-            !Objects.equals(oldName, newName) ||
-            !Objects.equals(oldMrp, newMrp) ||
-            !Objects.equals(oldClientId, newClientId)) {
-            
-            inventoryNeedsUpdate = true;
-        }
-        
-        // If inventory needs to be updated, find the inventory record FIRST
-        InventoryPojo inventoryToUpdate = null;
-        if (inventoryNeedsUpdate) {
-            inventoryToUpdate = inventoryApi.getByProductBarcode(oldBarcode);
-        }
-        
+        boolean inventoryNeedsUpdate = !Objects.equals(oldBarcode, newBarcode) ||
+                                     !Objects.equals(oldName, newName) ||
+                                     !Objects.equals(oldMrp, newMrp) ||
+                                     !Objects.equals(oldClientId, newClientId);
+
         // Update the product
         api.update(id, productPojo);
         
-        // Now update the inventory if needed
-        if (inventoryToUpdate != null) {
-            // Update inventory fields to match the product changes
-            if (!Objects.equals(oldBarcode, newBarcode)) {
-                inventoryToUpdate.setProductBarcode(newBarcode);
-            }
-            if (!Objects.equals(oldName, newName)) {
-                inventoryToUpdate.setProductName(newName);
-            }
-            if (!Objects.equals(oldMrp, newMrp)) {
-                inventoryToUpdate.setProductMrp(newMrp);
-            }
-            if (!Objects.equals(oldClientId, newClientId)) {
-                inventoryToUpdate.setClientName(newClientName);
-            }
-            
-            // Update the inventory
-            inventoryApi.update(inventoryToUpdate.getId(), inventoryToUpdate);
-        }
+        // Note: Inventory no longer needs to be updated when product details change
+        // because inventory now only stores productId and fetches product details
+        // dynamically through the product API
     }
     
     /**

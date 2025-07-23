@@ -1,11 +1,11 @@
 package org.example.api;
 
-import org.example.pojo.InventoryPojo;
-import org.example.pojo.OrderItemPojo;
 import org.example.dao.OrderItemDao;
 import org.example.exception.ApiException;
-import org.springframework.stereotype.Service;
+import org.example.pojo.OrderItemPojo;
+import org.example.pojo.InventoryPojo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Objects;
 
@@ -17,6 +17,9 @@ public class OrderItemApi extends AbstractApi<OrderItemPojo> {
 
     @Autowired
     private InventoryApi inventoryApi;
+
+    @Autowired
+    private ProductApi productApi;
 
     @Override
     protected String getEntityName() {
@@ -33,7 +36,14 @@ public class OrderItemApi extends AbstractApi<OrderItemPojo> {
         if (Objects.isNull(productBarcode) || productBarcode.trim().isEmpty()) {
             throw new ApiException("Product barcode cannot be null or empty");
         }
-        InventoryPojo inventoryPojo = inventoryApi.getByProductBarcode(productBarcode);
+        
+        // Get product ID from barcode
+        var product = productApi.getByBarcode(productBarcode);
+        if (product == null) {
+            throw new ApiException("Product with barcode " + productBarcode + " not found");
+        }
+        
+        InventoryPojo inventoryPojo = inventoryApi.getByProductId(product.getId());
         if (Objects.isNull(inventoryPojo)) {
             throw new ApiException("No inventory found for product barcode: " + productBarcode);
         }
@@ -44,7 +54,7 @@ public class OrderItemApi extends AbstractApi<OrderItemPojo> {
         double amount = orderItemPojo.getSellingPrice() * orderItemPojo.getQuantity();
         orderItemPojo.setAmount(amount);
         // Update inventory
-        inventoryApi.removeStock(productBarcode, orderItemPojo.getQuantity());
+        inventoryApi.removeStock(product.getId(), orderItemPojo.getQuantity());
         orderItemDao.insert(orderItemPojo);
     }
 
@@ -72,7 +82,14 @@ public class OrderItemApi extends AbstractApi<OrderItemPojo> {
         if (Objects.isNull(existingOrderItem)) {
             throw new ApiException("Order item with ID " + id + " not found");
         }
-        InventoryPojo inventoryPojo = inventoryApi.getByProductBarcode(existingOrderItem.getProductBarcode());
+        
+        // Get product ID from existing barcode
+        var existingProduct = productApi.getByBarcode(existingOrderItem.getProductBarcode());
+        if (existingProduct == null) {
+            throw new ApiException("Product with barcode " + existingOrderItem.getProductBarcode() + " not found");
+        }
+        
+        InventoryPojo inventoryPojo = inventoryApi.getByProductId(existingProduct.getId());
         if (Objects.isNull(inventoryPojo)) {
             throw new ApiException("No inventory found for product barcode: " + existingOrderItem.getProductBarcode());
         }
@@ -84,8 +101,8 @@ public class OrderItemApi extends AbstractApi<OrderItemPojo> {
             throw new ApiException("Insufficient stock. Available: " + available + ", Requested: " + newQty);
         }
         // Update inventory - first restore old quantity, then remove new quantity
-        inventoryApi.addStock(existingOrderItem.getProductBarcode(), oldQty);
-        inventoryApi.removeStock(existingOrderItem.getProductBarcode(), newQty);
+        inventoryApi.addStock(existingProduct.getId(), oldQty);
+        inventoryApi.removeStock(existingProduct.getId(), newQty);
         // Update item and recalculate amount
         existingOrderItem.setOrderId(updatedOrderItem.getOrderId());
         existingOrderItem.setProductBarcode(updatedOrderItem.getProductBarcode());

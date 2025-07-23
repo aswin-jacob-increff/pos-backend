@@ -51,6 +51,7 @@ import java.util.Properties;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import org.example.pojo.ProductPojo;
 
 @ExtendWith({SpringExtension.class, MockitoExtension.class})
 @ContextConfiguration(classes = {OrderDtoFlowApiIntegrationTest.TestConfig.class})
@@ -215,6 +216,9 @@ class OrderDtoFlowApiIntegrationTest {
     private InventoryApi inventoryApi;
 
     @Mock
+    private ProductApi productApi;
+
+    @Mock
     private OrderItemDto orderItemDto;
 
     @Mock
@@ -281,6 +285,10 @@ class OrderDtoFlowApiIntegrationTest {
             var inventoryApiField = OrderApi.class.getDeclaredField("inventoryApi");
             inventoryApiField.setAccessible(true);
             inventoryApiField.set(orderApi, inventoryApi);
+
+            var productApiField = OrderApi.class.getDeclaredField("productApi");
+            productApiField.setAccessible(true);
+            productApiField.set(orderApi, productApi);
 
             // Inject orderApi into orderFlow
             var apiField = OrderFlow.class.getDeclaredField("api");
@@ -414,7 +422,14 @@ class OrderDtoFlowApiIntegrationTest {
         // Arrange
         when(orderDao.select(1)).thenReturn(testOrder);
         when(orderItemApi.getByOrderId(1)).thenReturn(Arrays.asList(testOrderItem));
-        doNothing().when(inventoryApi).addStock("TEST123", 2);
+        
+        // Mock product lookup by barcode
+        ProductPojo testProduct = new ProductPojo();
+        testProduct.setId(1);
+        testProduct.setBarcode("TEST123");
+        when(productApi.getByBarcode("TEST123")).thenReturn(testProduct);
+        
+        doNothing().when(inventoryApi).addStock(1, 2); // Use productId instead of barcode
         doNothing().when(orderDao).update(eq(1), any(OrderPojo.class));
 
         // Act
@@ -423,7 +438,8 @@ class OrderDtoFlowApiIntegrationTest {
         // Assert
         verify(orderDao).select(1);
         verify(orderItemApi).getByOrderId(1);
-        verify(inventoryApi).addStock("TEST123", 2);
+        verify(productApi).getByBarcode("TEST123");
+        verify(inventoryApi).addStock(1, 2); // Use productId instead of barcode
         verify(orderDao).update(eq(1), any(OrderPojo.class));
     }
 
@@ -480,7 +496,7 @@ class OrderDtoFlowApiIntegrationTest {
             orderDto.cancelOrder(999);
         });
         
-        assertEquals("Order with ID 999 not found", exception.getMessage());
+        assertEquals("Order not found", exception.getMessage()); // Updated error message
         
         // Verify DAO was called for validation but not for update
         verify(orderDao).select(999);

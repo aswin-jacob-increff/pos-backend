@@ -138,30 +138,32 @@ public class ReportsDto {
                 if (Objects.isNull(order) || Objects.isNull(order.getDate())) continue;
                 // Convert order date (Instant) to IST LocalDate
                 LocalDate orderDateIST = TimeUtil.toIST(order.getDate()).toLocalDate();
-                if (orderDateIST.isBefore(start) || orderDateIST.isAfter(end)) continue;
-                String brand = item.getClientName() != null ? item.getClientName() : null;
-                String category = item.getProductName() != null ? item.getProductName() : null;
-                // Filtering logic
-                boolean brandMatch = (form.getBrand() == null || form.getBrand().isEmpty() || (brand != null && form.getBrand().equalsIgnoreCase(brand)));
-                boolean categoryMatch = (form.getCategory() == null || form.getCategory().isEmpty() || (category != null && form.getCategory().equalsIgnoreCase(category)));
-                if (!brandMatch || !categoryMatch) continue;
-                // Grouping key: both present -> brand|category, only brand -> brand|, only category -> |category, neither -> |
-                String key = (brand != null ? brand : "") + "|" + (category != null ? category : "");
-                CustomDateRangeSalesData data = resultMap.getOrDefault(key, new CustomDateRangeSalesData());
-                if (data.getBrand() == null && brand != null) data.setBrand(brand);
-                if (data.getCategory() == null && category != null) data.setCategory(category);
-                if (data.getTotalAmount() == null) data.setTotalAmount(0.0);
-                if (data.getTotalOrders() == null) data.setTotalOrders(0);
-                if (data.getTotalItems() == null) data.setTotalItems(0);
-                data.setTotalAmount(data.getTotalAmount() + (Objects.nonNull(item.getAmount()) ? item.getAmount() : 0.0));
-                data.setTotalItems(data.getTotalItems() + (Objects.nonNull(item.getQuantity()) ? item.getQuantity() : 0));
-                // Count unique orders per group
-                processedOrders.putIfAbsent(key, new HashMap<>());
-                if (!processedOrders.get(key).containsKey(order.getId())) {
-                    data.setTotalOrders(data.getTotalOrders() + 1);
-                    processedOrders.get(key).put(order.getId(), true);
+                // Use inclusive date range filtering (same as getSalesReport)
+                if ((orderDateIST.isEqual(start) || orderDateIST.isAfter(start)) && orderDateIST.isBefore(end.plusDays(1))) {
+                    String brand = item.getClientName() != null ? item.getClientName() : null;
+                    String category = item.getProductName() != null ? item.getProductName() : null;
+                    // Filtering logic
+                    boolean brandMatch = (form.getBrand() == null || form.getBrand().isEmpty() || (brand != null && form.getBrand().equalsIgnoreCase(brand)));
+                    boolean categoryMatch = (form.getCategory() == null || form.getCategory().isEmpty() || (category != null && form.getCategory().equalsIgnoreCase(category)));
+                    if (!brandMatch || !categoryMatch) continue;
+                    // Grouping key: both present -> brand|category, only brand -> brand|, only category -> |category, neither -> |
+                    String key = (brand != null ? brand : "") + "|" + (category != null ? category : "");
+                    CustomDateRangeSalesData data = resultMap.getOrDefault(key, new CustomDateRangeSalesData());
+                    if (data.getBrand() == null && brand != null) data.setBrand(brand);
+                    if (data.getCategory() == null && category != null) data.setCategory(category);
+                    if (data.getTotalAmount() == null) data.setTotalAmount(0.0);
+                    if (data.getTotalOrders() == null) data.setTotalOrders(0);
+                    if (data.getTotalItems() == null) data.setTotalItems(0);
+                    data.setTotalAmount(data.getTotalAmount() + (Objects.nonNull(item.getAmount()) ? item.getAmount() : 0.0));
+                    data.setTotalItems(data.getTotalItems() + (Objects.nonNull(item.getQuantity()) ? item.getQuantity() : 0));
+                    // Count unique orders per group
+                    processedOrders.putIfAbsent(key, new HashMap<>());
+                    if (!processedOrders.get(key).containsKey(order.getId())) {
+                        data.setTotalOrders(data.getTotalOrders() + 1);
+                        processedOrders.get(key).put(order.getId(), true);
+                    }
+                    resultMap.put(key, data);
                 }
-                resultMap.put(key, data);
             }
             return resultMap.values().stream().collect(Collectors.toList());
         } catch (Exception e) {
