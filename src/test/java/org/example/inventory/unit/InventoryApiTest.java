@@ -21,7 +21,10 @@ class InventoryApiTest {
     void setUp() {
         testPojo = new InventoryPojo();
         testPojo.setId(1);
-        testPojo.setProductId(1);
+        testPojo.setProductBarcode("TEST123");
+        testPojo.setProductName("Test Product");
+        testPojo.setClientName("TestClient");
+        testPojo.setProductMrp(100.0);
         testPojo.setQuantity(10);
 
         testClient = new ClientPojo();
@@ -45,7 +48,10 @@ class InventoryApiTest {
         // Test basic POJO functionality
         assertNotNull(testPojo);
         assertEquals(1, testPojo.getId());
-        assertEquals(1, testPojo.getProductId());
+        assertEquals("TEST123", testPojo.getProductBarcode());
+        assertEquals("Test Product", testPojo.getProductName());
+        assertEquals("TestClient", testPojo.getClientName());
+        assertEquals(100.0, testPojo.getProductMrp());
         assertEquals(10, testPojo.getQuantity());
     }
 

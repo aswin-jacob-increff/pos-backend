@@ -26,9 +26,6 @@ public class OrderApi extends AbstractApi<OrderPojo> {
     @Autowired
     private InvoiceApi invoiceApi;
 
-    @Autowired
-    private ProductApi productApi;
-
     @Override
     protected String getEntityName() {
         return "Order";
@@ -78,22 +75,16 @@ public class OrderApi extends AbstractApi<OrderPojo> {
             throw new ApiException("Order ID cannot be null");
         }
         OrderPojo order = orderDao.select(orderId);
-        if (order == null) {
-            throw new ApiException("Order not found");
-        }
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            throw new ApiException("Order is already cancelled");
+        if (Objects.isNull(order)) {
+            throw new ApiException("Order with ID " + orderId + " not found");
         }
         // Restore inventory quantities for all order items
         List<OrderItemPojo> orderItems = orderItemApi.getByOrderId(orderId);
         for (OrderItemPojo orderItem : orderItems) {
             String productBarcode = orderItem.getProductBarcode();
             Integer quantityToRestore = orderItem.getQuantity();
-            // Get product ID from barcode and add the quantity back to inventory
-            org.example.pojo.ProductPojo product = productApi.getByBarcode(productBarcode);
-            if (product != null) {
-                inventoryApi.addStock(product.getId(), quantityToRestore);
-            }
+            // Add the quantity back to inventory
+            inventoryApi.addStock(productBarcode, quantityToRestore);
         }
         // Update order status to CANCELLED instead of deleting
         order.setStatus(OrderStatus.CANCELLED);

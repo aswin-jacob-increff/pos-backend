@@ -46,10 +46,4 @@ public class OrderPojo extends AbstractPojo {
         return org.example.util.TimeUtil.round2(this.total);
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-    public String getUserId() {
-        return userId;
-    }
 }
