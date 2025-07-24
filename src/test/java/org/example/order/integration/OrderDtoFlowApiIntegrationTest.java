@@ -242,14 +242,22 @@ class OrderDtoFlowApiIntegrationTest {
         testOrder.setStatus(OrderStatus.CREATED);
         testOrder.setUserId("user123");
 
-        testOrderItem = new OrderItemPojo();
-        testOrderItem.setId(1);
-        testOrderItem.setOrderId(1);
-        testOrderItem.setProductBarcode("TEST123");
-        testOrderItem.setProductName("Test Product");
-        testOrderItem.setQuantity(2);
-        testOrderItem.setSellingPrice(50.0);
-        testOrderItem.setAmount(100.0);
+        // Create test order items
+        OrderItemPojo orderItem1 = new OrderItemPojo();
+        orderItem1.setId(1);
+        orderItem1.setOrderId(1);
+        orderItem1.setProductId(1);
+        orderItem1.setQuantity(2);
+        orderItem1.setSellingPrice(50.0);
+        orderItem1.setAmount(100.0);
+
+        OrderItemPojo orderItem2 = new OrderItemPojo();
+        orderItem2.setId(2);
+        orderItem2.setOrderId(1);
+        orderItem2.setProductId(2);
+        orderItem2.setQuantity(1);
+        orderItem2.setSellingPrice(75.0);
+        orderItem2.setAmount(75.0);
 
         testForm = new OrderForm();
         testForm.setDate(LocalDateTime.now());

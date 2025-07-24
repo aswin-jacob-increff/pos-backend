@@ -48,8 +48,10 @@ class OrderFlowTest {
         testOrderItem = new OrderItemPojo();
         testOrderItem.setId(1);
         testOrderItem.setOrderId(1);
-        testOrderItem.setProductBarcode("TEST123");
+        testOrderItem.setProductId(1);
         testOrderItem.setQuantity(2);
+        testOrderItem.setSellingPrice(50.0);
+        testOrderItem.setAmount(100.0);
 
         // Inject AbstractFlow's api field
         Field abstractApiField = orderFlow.getClass().getSuperclass().getDeclaredField("api");

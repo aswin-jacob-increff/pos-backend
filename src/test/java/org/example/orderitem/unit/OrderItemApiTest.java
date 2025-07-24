@@ -14,47 +14,38 @@ import static org.junit.jupiter.api.Assertions.*;
 class OrderItemApiTest {
 
     private OrderItemApi orderItemApi;
-    private OrderItemPojo testOrderItem;
+    private OrderItemPojo testPojo;
     private InventoryPojo testInventory;
 
     @BeforeEach
     void setUp() {
-        testOrderItem = new OrderItemPojo();
-        testOrderItem.setId(1);
-        testOrderItem.setOrderId(1);
-        testOrderItem.setProductBarcode("TEST123");
-        testOrderItem.setProductName("Test Product");
-        testOrderItem.setQuantity(2);
-        testOrderItem.setSellingPrice(50.0);
-        testOrderItem.setAmount(100.0);
-
-        testInventory = new InventoryPojo();
-        testInventory.setId(1);
-        testInventory.setProductId(1); // Use productId instead of productBarcode
-        testInventory.setQuantity(10);
-
-        orderItemApi = new OrderItemApi();
+        testPojo = new OrderItemPojo();
+        testPojo.setId(1);
+        testPojo.setOrderId(1);
+        testPojo.setProductId(1);
+        testPojo.setQuantity(5);
+        testPojo.setSellingPrice(100.0);
+        testPojo.setAmount(500.0);
     }
 
     @Test
     void testBasicSetup() {
         // Simple test to verify the test class can be loaded and run
         assertNotNull(orderItemApi);
-        assertNotNull(testOrderItem);
+        assertNotNull(testPojo);
         assertNotNull(testInventory);
     }
 
     @Test
     void testOrderItemPojoProperties() {
         // Test basic POJO functionality
-        assertNotNull(testOrderItem);
-        assertEquals(1, testOrderItem.getId());
-        assertEquals(1, testOrderItem.getOrderId());
-        assertEquals("TEST123", testOrderItem.getProductBarcode());
-        assertEquals("Test Product", testOrderItem.getProductName());
-        assertEquals(2, testOrderItem.getQuantity());
-        assertEquals(50.0, testOrderItem.getSellingPrice());
-        assertEquals(100.0, testOrderItem.getAmount());
+        assertNotNull(testPojo);
+        assertEquals(1, testPojo.getId());
+        assertEquals(1, testPojo.getOrderId());
+        assertEquals(1, testPojo.getProductId());
+        assertEquals(5, testPojo.getQuantity());
+        assertEquals(100.0, testPojo.getSellingPrice());
+        assertEquals(500.0, testPojo.getAmount());
     }
 
     @Test

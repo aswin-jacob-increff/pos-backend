@@ -38,70 +38,43 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
 
     @Override
     protected void preprocess(OrderItemForm orderItemForm) {
-        // Cross-field/entity logic: orderId lookup, productId/productName/barcode lookup
+        // Cross-field/entity logic: orderId validation, productId validation
         if (Objects.isNull(orderItemForm.getOrderId())) {
             throw new ApiException("Order ID cannot be null");
         }
-        // No need to setDateTime here; handled in convert
+        
+        // Validate productId is provided
         if (Objects.isNull(orderItemForm.getProductId())) {
-            if (orderItemForm.getBarcode() == null || orderItemForm.getBarcode().trim().isEmpty()) {
-                if (orderItemForm.getProductName() == null || orderItemForm.getProductName().trim().isEmpty()) {
-                    throw new ApiException("One of the three (product id, name, barcode) must be present");
-                } else {
-                    orderItemForm.setProductId(productApi.getByName(orderItemForm.getProductName()).getId());
-                    orderItemForm.setBarcode(productApi.getByName(orderItemForm.getProductName()).getBarcode());
-                }
-            } else {
-                orderItemForm.setProductId(productApi.getByBarcode(orderItemForm.getBarcode()).getId());
-                orderItemForm.setProductName(productApi.getByBarcode(orderItemForm.getBarcode()).getName());
-            }
-        } else {
-            orderItemForm.setBarcode(productApi.get(orderItemForm.getProductId()).getBarcode());
-            orderItemForm.setProductName(productApi.get(orderItemForm.getProductId()).getName());
+            throw new ApiException("Product ID is required");
         }
-        // Image field can contain any string - no validation required
+        
+        // Validate that the product exists
+        try {
+            var product = productApi.get(orderItemForm.getProductId());
+            if (product == null) {
+                throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
+            }
+        } catch (Exception e) {
+            throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
+        }
     }
 
     @Override
     protected OrderItemPojo convertFormToEntity(OrderItemForm orderItemForm) {
         OrderItemPojo orderItemPojo = new OrderItemPojo();
         orderItemPojo.setOrderId(orderItemForm.getOrderId());
+        orderItemPojo.setProductId(orderItemForm.getProductId());
+        orderItemPojo.setQuantity(orderItemForm.getQuantity());
         
-        // Get product details and set denormalized fields
+        // Get product details for pricing
         var product = productApi.get(orderItemForm.getProductId());
         if (product == null) {
             throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
         }
-        orderItemPojo.setProductBarcode(product.getBarcode());
-        orderItemPojo.setProductName(product.getName());
         
-        // Get client name from the client relationship
-        String clientName = null;
-        if (product.getClientId() != null && product.getClientId() > 0) {
-            // Always use clientApi to get client name to avoid lazy loading issues
-            try {
-                org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
-                if (client != null) {
-                    clientName = client.getClientName();
-                }
-            } catch (Exception e) {
-                // Client not found, continue with null
-            }
-        }
-        orderItemPojo.setClientName(clientName);
-        
-        orderItemPojo.setProductMrp(product.getMrp());
-        
-        // Use form's image if provided, otherwise use product's image URL
-        if (orderItemForm.getImage() != null && !orderItemForm.getImage().trim().isEmpty()) {
-            orderItemPojo.setProductImageUrl(orderItemForm.getImage());
-        } else {
-            orderItemPojo.setProductImageUrl(product.getImageUrl());
-        }
-        
-        orderItemPojo.setQuantity(orderItemForm.getQuantity());
         orderItemPojo.setSellingPrice(product.getMrp());
         orderItemPojo.setAmount(product.getMrp() * orderItemForm.getQuantity());
+        
         return orderItemPojo;
     }
 
@@ -110,22 +83,37 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
         OrderItemData orderItemData = new OrderItemData();
         orderItemData.setId(orderItemPojo.getId());
         orderItemData.setOrderId(orderItemPojo.getOrderId());
-        
-        // Single product lookup - cache the result to avoid multiple queries
-        org.example.pojo.ProductPojo product = null;
-        try {
-            product = productApi.getByBarcode(orderItemPojo.getProductBarcode());
-        } catch (Exception e) {
-            // Product not found, continue with denormalized data
-        }
-        
-        // Set product ID if found, otherwise null
-        orderItemData.setProductId(product != null ? product.getId() : null);
-        orderItemData.setBarcode(orderItemPojo.getProductBarcode());
-        orderItemData.setProductName(orderItemPojo.getProductName());
+        orderItemData.setProductId(orderItemPojo.getProductId());
         orderItemData.setQuantity(orderItemPojo.getQuantity());
         orderItemData.setSellingPrice(orderItemPojo.getSellingPrice());
         orderItemData.setAmount(orderItemPojo.getAmount());
+        
+        // Fetch product information using productId
+        org.example.pojo.ProductPojo product = null;
+        try {
+            product = productApi.get(orderItemPojo.getProductId());
+        } catch (Exception e) {
+            // Product not found, continue with null values
+        }
+        
+        if (product != null) {
+            orderItemData.setBarcode(product.getBarcode());
+            orderItemData.setProductName(product.getName());
+            orderItemData.setImageUrl(product.getImageUrl());
+            orderItemData.setClientId(product.getClientId());
+            
+            // Fetch client information
+            if (product.getClientId() != null && product.getClientId() > 0) {
+                try {
+                    org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                    if (client != null) {
+                        orderItemData.setClientName(client.getClientName());
+                    }
+                } catch (Exception e) {
+                    // Client not found, continue with null
+                }
+            }
+        }
         
         // Get order date from the order
         try {
@@ -134,11 +122,6 @@ public class OrderItemDto extends AbstractDto<OrderItemPojo, OrderItemForm, Orde
         } catch (Exception e) {
             // If order not found, set to null
             orderItemData.setDateTime(null);
-        }
-        
-        // Set imageUrl - only use the actual stored image URL, don't auto-generate
-        if (orderItemPojo.getProductImageUrl() != null && !orderItemPojo.getProductImageUrl().trim().isEmpty()) {
-            orderItemData.setImageUrl(orderItemPojo.getProductImageUrl());
         }
         
         return orderItemData;

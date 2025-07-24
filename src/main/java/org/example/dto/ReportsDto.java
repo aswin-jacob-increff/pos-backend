@@ -12,6 +12,7 @@ import org.example.dao.DaySalesDao;
 import org.example.dao.OrderItemDao;
 import org.example.flow.OrderItemFlow;
 import org.example.flow.ProductFlow;
+import org.example.api.ClientApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.example.exception.ApiException;
@@ -40,6 +41,9 @@ public class ReportsDto {
     
     @Autowired
     private OrderItemDao orderItemDao;
+
+    @Autowired
+    private ClientApi clientApi;
 
     public List<SalesReportData> getSalesReport(SalesReportForm form) {
         // Validate input - dates are assumed to be in UTC from frontend
@@ -74,30 +78,61 @@ public class ReportsDto {
             // Filter by brand (clientName) if provided
             if (Objects.nonNull(form.getBrand()) && !form.getBrand().isEmpty()) {
                 filtered = filtered.stream().filter(item -> {
-                    return form.getBrand().equalsIgnoreCase(item.getClientName());
+                    try {
+                        org.example.pojo.ProductPojo product = productFlow.get(item.getProductId());
+                        if (product != null && product.getClientId() != null && product.getClientId() > 0) {
+                            org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                            return client != null && form.getBrand().equalsIgnoreCase(client.getClientName());
+                        }
+                    } catch (Exception e) {
+                        // Product or client not found, exclude from results
+                    }
+                    return false;
                 }).collect(Collectors.toList());
             }
             
             // Filter by category (product name) if provided
             if (Objects.nonNull(form.getCategory()) && !form.getCategory().isEmpty()) {
-                System.out.println("Filtering by category: " + form.getCategory());
                 filtered = filtered.stream().filter(item -> {
-                    if (Objects.isNull(item.getProductName())) return false;
-                    boolean matches = form.getCategory().equalsIgnoreCase(item.getProductName());
-                    if (matches) {
-                        System.out.println("Found matching product: " + item.getProductName());
+                    try {
+                        org.example.pojo.ProductPojo product = productFlow.get(item.getProductId());
+                        return product != null && form.getCategory().equalsIgnoreCase(product.getName());
+                    } catch (Exception e) {
+                        // Product not found, exclude from results
+                        return false;
                     }
-                    return matches;
                 }).collect(Collectors.toList());
-                System.out.println("After category filtering: " + filtered.size() + " items");
             }
             
-            // Aggregate by SKU (barcode) and product name
+            // Group by brand and category
             Map<String, SalesReportData> resultMap = new HashMap<>();
             for (OrderItemPojo item : filtered) {
-                String brand = item.getClientName() != null ? item.getClientName() : "Unknown";
-                String productName = item.getProductName() != null ? item.getProductName() : "Unknown";
-                String sku = item.getProductBarcode() != null ? item.getProductBarcode() : "Unknown";
+                String brand = "Unknown";
+                String productName = "Unknown";
+                String sku = "Unknown";
+                
+                try {
+                    org.example.pojo.ProductPojo product = productFlow.get(item.getProductId());
+                    if (product != null) {
+                        productName = product.getName() != null ? product.getName() : "Unknown";
+                        sku = product.getBarcode() != null ? product.getBarcode() : "Unknown";
+                        
+                        // Get client name
+                        if (product.getClientId() != null && product.getClientId() > 0) {
+                            try {
+                                org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                                if (client != null) {
+                                    brand = client.getClientName() != null ? client.getClientName() : "Unknown";
+                                }
+                            } catch (Exception e) {
+                                // Client not found, use "Unknown"
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    // Product not found, use "Unknown" values
+                }
+                
                 String key = brand + "|" + sku;
                 SalesReportData resp = resultMap.getOrDefault(key, new SalesReportData());
                 if (resp.getBrand() == null) {
@@ -138,30 +173,53 @@ public class ReportsDto {
                 if (Objects.isNull(order) || Objects.isNull(order.getDate())) continue;
                 // Convert order date (Instant) to IST LocalDate
                 LocalDate orderDateIST = TimeUtil.toIST(order.getDate()).toLocalDate();
-                if (orderDateIST.isBefore(start) || orderDateIST.isAfter(end)) continue;
-                String brand = item.getClientName() != null ? item.getClientName() : null;
-                String category = item.getProductName() != null ? item.getProductName() : null;
-                // Filtering logic
-                boolean brandMatch = (form.getBrand() == null || form.getBrand().isEmpty() || (brand != null && form.getBrand().equalsIgnoreCase(brand)));
-                boolean categoryMatch = (form.getCategory() == null || form.getCategory().isEmpty() || (category != null && form.getCategory().equalsIgnoreCase(category)));
-                if (!brandMatch || !categoryMatch) continue;
-                // Grouping key: both present -> brand|category, only brand -> brand|, only category -> |category, neither -> |
-                String key = (brand != null ? brand : "") + "|" + (category != null ? category : "");
-                CustomDateRangeSalesData data = resultMap.getOrDefault(key, new CustomDateRangeSalesData());
-                if (data.getBrand() == null && brand != null) data.setBrand(brand);
-                if (data.getCategory() == null && category != null) data.setCategory(category);
-                if (data.getTotalAmount() == null) data.setTotalAmount(0.0);
-                if (data.getTotalOrders() == null) data.setTotalOrders(0);
-                if (data.getTotalItems() == null) data.setTotalItems(0);
-                data.setTotalAmount(data.getTotalAmount() + (Objects.nonNull(item.getAmount()) ? item.getAmount() : 0.0));
-                data.setTotalItems(data.getTotalItems() + (Objects.nonNull(item.getQuantity()) ? item.getQuantity() : 0));
-                // Count unique orders per group
-                processedOrders.putIfAbsent(key, new HashMap<>());
-                if (!processedOrders.get(key).containsKey(order.getId())) {
-                    data.setTotalOrders(data.getTotalOrders() + 1);
-                    processedOrders.get(key).put(order.getId(), true);
+                // Use inclusive date range filtering (same as getSalesReport)
+                if ((orderDateIST.isEqual(start) || orderDateIST.isAfter(start)) && orderDateIST.isBefore(end.plusDays(1))) {
+                    // Fetch product and client information using productId
+                    String brand = null;
+                    String category = null;
+                    try {
+                        org.example.pojo.ProductPojo product = productFlow.get(item.getProductId());
+                        if (product != null) {
+                            category = product.getName();
+                            // Fetch client information
+                            if (product.getClientId() != null && product.getClientId() > 0) {
+                                try {
+                                    org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                                    if (client != null) {
+                                        brand = client.getClientName();
+                                    }
+                                } catch (Exception e) {
+                                    // Client not found, continue with null
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        // Product not found, continue with null values
+                    }
+                    
+                    // Filtering logic
+                    boolean brandMatch = (form.getBrand() == null || form.getBrand().isEmpty() || (brand != null && form.getBrand().equalsIgnoreCase(brand)));
+                    boolean categoryMatch = (form.getCategory() == null || form.getCategory().isEmpty() || (category != null && form.getCategory().equalsIgnoreCase(category)));
+                    if (!brandMatch || !categoryMatch) continue;
+                    // Grouping key: both present -> brand|category, only brand -> brand|, only category -> |category, neither -> |
+                    String key = (brand != null ? brand : "") + "|" + (category != null ? category : "");
+                    CustomDateRangeSalesData data = resultMap.getOrDefault(key, new CustomDateRangeSalesData());
+                    if (data.getBrand() == null && brand != null) data.setBrand(brand);
+                    if (data.getCategory() == null && category != null) data.setCategory(category);
+                    if (data.getTotalAmount() == null) data.setTotalAmount(0.0);
+                    if (data.getTotalOrders() == null) data.setTotalOrders(0);
+                    if (data.getTotalItems() == null) data.setTotalItems(0);
+                    data.setTotalAmount(data.getTotalAmount() + (Objects.nonNull(item.getAmount()) ? item.getAmount() : 0.0));
+                    data.setTotalItems(data.getTotalItems() + (Objects.nonNull(item.getQuantity()) ? item.getQuantity() : 0));
+                    // Count unique orders per group
+                    processedOrders.putIfAbsent(key, new HashMap<>());
+                    if (!processedOrders.get(key).containsKey(order.getId())) {
+                        data.setTotalOrders(data.getTotalOrders() + 1);
+                        processedOrders.get(key).put(order.getId(), true);
+                    }
+                    resultMap.put(key, data);
                 }
-                resultMap.put(key, data);
             }
             return resultMap.values().stream().collect(Collectors.toList());
         } catch (Exception e) {

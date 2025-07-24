@@ -27,28 +27,17 @@ class OrderItemFlowTest {
     @InjectMocks
     private OrderItemFlow orderItemFlow;
 
-    private OrderItemPojo testOrderItem;
+    private OrderItemPojo testPojo;
 
     @BeforeEach
-    void setUp() throws Exception {
-        testOrderItem = new OrderItemPojo();
-        testOrderItem.setId(1);
-        testOrderItem.setOrderId(1);
-        testOrderItem.setProductBarcode("TEST123");
-        testOrderItem.setProductName("Test Product");
-        testOrderItem.setQuantity(2);
-        testOrderItem.setSellingPrice(50.0);
-        testOrderItem.setAmount(100.0);
-
-        // Inject AbstractFlow's api field
-        Field abstractApiField = orderItemFlow.getClass().getSuperclass().getDeclaredField("api");
-        abstractApiField.setAccessible(true);
-        abstractApiField.set(orderItemFlow, api);
-        
-        // Inject OrderItemFlow's own api field
-        Field apiField = orderItemFlow.getClass().getDeclaredField("api");
-        apiField.setAccessible(true);
-        apiField.set(orderItemFlow, api);
+    void setUp() {
+        testPojo = new OrderItemPojo();
+        testPojo.setId(1);
+        testPojo.setOrderId(1);
+        testPojo.setProductId(1);
+        testPojo.setQuantity(5);
+        testPojo.setSellingPrice(100.0);
+        testPojo.setAmount(500.0);
     }
 
     @Test
@@ -57,13 +46,13 @@ class OrderItemFlowTest {
         doNothing().when(api).add(any(OrderItemPojo.class));
 
         // Act
-        OrderItemPojo result = orderItemFlow.add(testOrderItem);
+        OrderItemPojo result = orderItemFlow.add(testPojo);
 
         // Assert
         assertNotNull(result);
-        assertEquals(testOrderItem.getId(), result.getId());
-        assertEquals(100.0, result.getAmount()); // Amount should be calculated
-        verify(api).add(testOrderItem);
+        assertEquals(testPojo.getId(), result.getId());
+        assertEquals(500.0, result.getAmount()); // Amount should be calculated
+        verify(api).add(testPojo);
     }
 
     @Test
@@ -76,27 +65,27 @@ class OrderItemFlowTest {
     @Test
     void testAdd_NullSellingPrice() {
         // Arrange
-        testOrderItem.setSellingPrice(null);
+        testPojo.setSellingPrice(null);
 
         // Act & Assert
-        assertThrows(ApiException.class, () -> orderItemFlow.add(testOrderItem));
+        assertThrows(ApiException.class, () -> orderItemFlow.add(testPojo));
         verify(api, never()).add(any());
     }
 
     @Test
     void testAdd_NullQuantity() {
         // Arrange
-        testOrderItem.setQuantity(null);
+        testPojo.setQuantity(null);
 
         // Act & Assert
-        assertThrows(ApiException.class, () -> orderItemFlow.add(testOrderItem));
+        assertThrows(ApiException.class, () -> orderItemFlow.add(testPojo));
         verify(api, never()).add(any());
     }
 
     @Test
     void testGetAll_Success() {
         // Arrange
-        List<OrderItemPojo> orderItems = Arrays.asList(testOrderItem, testOrderItem);
+        List<OrderItemPojo> orderItems = Arrays.asList(testPojo, testPojo);
         when(api.getAll()).thenReturn(orderItems);
 
         // Act
@@ -114,7 +103,7 @@ class OrderItemFlowTest {
         OrderItemPojo orderItem = new OrderItemPojo();
         orderItem.setId(1);
         orderItem.setOrderId(1);
-        orderItem.setProductBarcode("TEST123");
+        orderItem.setProductId(1);
         orderItem.setQuantity(5);
         orderItem.setSellingPrice(10.0);
 
@@ -150,7 +139,7 @@ class OrderItemFlowTest {
     @Test
     void testGetByOrderId_Success() {
         // Arrange
-        List<OrderItemPojo> orderItems = Arrays.asList(testOrderItem);
+        List<OrderItemPojo> orderItems = Arrays.asList(testPojo);
         when(api.getByOrderId(1)).thenReturn(orderItems);
 
         // Act

@@ -26,26 +26,28 @@ public class OrderItemApi extends AbstractApi<OrderItemPojo> {
         return "OrderItem";
     }
 
-    // Unique add logic with inventory validation
+    // Unique add logic with inventory management
     @Override
     public void add(OrderItemPojo orderItemPojo) {
         if (Objects.isNull(orderItemPojo)) {
             throw new ApiException("Order item cannot be null");
         }
-        String productBarcode = orderItemPojo.getProductBarcode();
-        if (Objects.isNull(productBarcode) || productBarcode.trim().isEmpty()) {
-            throw new ApiException("Product barcode cannot be null or empty");
+        if (Objects.isNull(orderItemPojo.getOrderId())) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        if (Objects.isNull(orderItemPojo.getProductId())) {
+            throw new ApiException("Product ID cannot be null");
         }
         
-        // Get product ID from barcode
-        var product = productApi.getByBarcode(productBarcode);
+        // Get product from productId
+        var product = productApi.get(orderItemPojo.getProductId());
         if (product == null) {
-            throw new ApiException("Product with barcode " + productBarcode + " not found");
+            throw new ApiException("Product with ID " + orderItemPojo.getProductId() + " not found");
         }
         
         InventoryPojo inventoryPojo = inventoryApi.getByProductId(product.getId());
         if (Objects.isNull(inventoryPojo)) {
-            throw new ApiException("No inventory found for product barcode: " + productBarcode);
+            throw new ApiException("No inventory found for product ID: " + orderItemPojo.getProductId());
         }
         if (orderItemPojo.getQuantity() > inventoryPojo.getQuantity()) {
             throw new ApiException("Insufficient stock. Available: " + inventoryPojo.getQuantity() + ", Requested: " + orderItemPojo.getQuantity());
@@ -83,15 +85,15 @@ public class OrderItemApi extends AbstractApi<OrderItemPojo> {
             throw new ApiException("Order item with ID " + id + " not found");
         }
         
-        // Get product ID from existing barcode
-        var existingProduct = productApi.getByBarcode(existingOrderItem.getProductBarcode());
+        // Get product from existing productId
+        var existingProduct = productApi.get(existingOrderItem.getProductId());
         if (existingProduct == null) {
-            throw new ApiException("Product with barcode " + existingOrderItem.getProductBarcode() + " not found");
+            throw new ApiException("Product with ID " + existingOrderItem.getProductId() + " not found");
         }
         
         InventoryPojo inventoryPojo = inventoryApi.getByProductId(existingProduct.getId());
         if (Objects.isNull(inventoryPojo)) {
-            throw new ApiException("No inventory found for product barcode: " + existingOrderItem.getProductBarcode());
+            throw new ApiException("No inventory found for product ID: " + existingOrderItem.getProductId());
         }
         // Revert old quantity to inventory before check
         int oldQty = existingOrderItem.getQuantity();
@@ -105,15 +107,12 @@ public class OrderItemApi extends AbstractApi<OrderItemPojo> {
         inventoryApi.removeStock(existingProduct.getId(), newQty);
         // Update item and recalculate amount
         existingOrderItem.setOrderId(updatedOrderItem.getOrderId());
-        existingOrderItem.setProductBarcode(updatedOrderItem.getProductBarcode());
-        existingOrderItem.setProductName(updatedOrderItem.getProductName());
-        existingOrderItem.setClientName(updatedOrderItem.getClientName());
-        existingOrderItem.setProductMrp(updatedOrderItem.getProductMrp());
-        existingOrderItem.setProductImageUrl(updatedOrderItem.getProductImageUrl());
+        existingOrderItem.setProductId(updatedOrderItem.getProductId());
         existingOrderItem.setQuantity(newQty);
         existingOrderItem.setSellingPrice(updatedOrderItem.getSellingPrice());
         double amount = updatedOrderItem.getSellingPrice() * newQty;
         existingOrderItem.setAmount(amount);
+        
         orderItemDao.update(id, existingOrderItem);
     }
 
@@ -127,10 +126,10 @@ public class OrderItemApi extends AbstractApi<OrderItemPojo> {
         return result;
     }
 
-    public List<OrderItemPojo> getByProductBarcode(String barcode) {
-        if (Objects.isNull(barcode) || barcode.trim().isEmpty()) {
-            throw new ApiException("Product barcode cannot be null or empty");
+    public List<OrderItemPojo> getByProductId(Integer productId) {
+        if (Objects.isNull(productId)) {
+            throw new ApiException("Product ID cannot be null");
         }
-        return orderItemDao.selectByProductBarcode(barcode);
+        return orderItemDao.selectByProductId(productId);
     }
 } 

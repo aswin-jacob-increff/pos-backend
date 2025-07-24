@@ -202,7 +202,16 @@ class OrderItemDtoFlowApiIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // Create test data
+        // Create test order item
+        OrderItemPojo orderItem = new OrderItemPojo();
+        orderItem.setId(1);
+        orderItem.setOrderId(1);
+        orderItem.setProductId(1);
+        orderItem.setQuantity(5);
+        orderItem.setSellingPrice(100.0);
+        orderItem.setAmount(500.0);
+
+        // Create test order
         testOrder = new OrderPojo();
         testOrder.setId(1);
         testOrder.setDate(Instant.now());
@@ -210,6 +219,7 @@ class OrderItemDtoFlowApiIntegrationTest {
         testOrder.setStatus(OrderStatus.CREATED);
         testOrder.setUserId("user123");
 
+        // Create test product
         testProduct = new ProductPojo();
         testProduct.setId(1);
         testProduct.setName("Test Product");
@@ -218,26 +228,11 @@ class OrderItemDtoFlowApiIntegrationTest {
         testProduct.setMrp(50.0);
         testProduct.setImageUrl("http://example.com/image.jpg");
 
+        // Create test inventory
         testInventory = new InventoryPojo();
         testInventory.setId(1);
         testInventory.setProductId(1); // Use productId instead of productBarcode
         testInventory.setQuantity(100);
-
-        testOrderItem = new OrderItemPojo();
-        testOrderItem.setId(1);
-        testOrderItem.setOrderId(1);
-        testOrderItem.setProductBarcode("TEST123");
-        testOrderItem.setProductName("Test Product");
-        testOrderItem.setClientName("test client");
-        testOrderItem.setQuantity(2);
-        testOrderItem.setSellingPrice(50.0);
-        testOrderItem.setAmount(100.0);
-        testOrderItem.setProductImageUrl("http://example.com/image.jpg");
-
-        testForm = new OrderItemForm();
-        testForm.setOrderId(1);
-        testForm.setProductId(1);
-        testForm.setQuantity(2);
 
         // Get beans from Spring context
         orderItemDto = new OrderItemDto();
@@ -355,8 +350,7 @@ class OrderItemDtoFlowApiIntegrationTest {
         OrderItemPojo orderItem2 = new OrderItemPojo();
         orderItem2.setId(2);
         orderItem2.setOrderId(1);
-        orderItem2.setProductBarcode("TEST456");
-        orderItem2.setProductName("Test Product 2");
+        orderItem2.setProductId(2); // Changed to productId
         orderItem2.setQuantity(1);
         orderItem2.setSellingPrice(75.0);
         orderItem2.setAmount(75.0);

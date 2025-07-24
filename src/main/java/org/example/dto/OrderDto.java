@@ -55,6 +55,9 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     @Autowired
     private org.example.flow.OrderItemFlow orderItemFlow;
 
+    @Autowired
+    private org.example.api.ClientApi clientApi;
+
     @Override
     protected String getEntityName() {
         return "Order";
@@ -153,20 +156,41 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
             for (OrderItemPojo itemPojo : orderItems) {
                 InvoiceItemData itemData = new InvoiceItemData();
                 itemData.setId(itemPojo.getId());
+                itemData.setProductId(itemPojo.getProductId());
                 
-                // Get the actual product ID from the product using barcode
+                // Fetch product information using productId
+                String productName = "Unknown";
+                String productBarcode = "Unknown";
+                String clientName = "Unknown";
+                Integer clientId = null;
+                
                 try {
-                    org.example.pojo.ProductPojo product = productApi.getByBarcode(itemPojo.getProductBarcode());
-                    itemData.setProductId(product != null ? product.getId() : null);
+                    org.example.pojo.ProductPojo product = productApi.get(itemPojo.getProductId());
+                    if (product != null) {
+                        productName = product.getName() != null ? product.getName() : "Unknown";
+                        productBarcode = product.getBarcode() != null ? product.getBarcode() : "Unknown";
+                        clientId = product.getClientId();
+                        
+                        // Fetch client information
+                        if (product.getClientId() != null && product.getClientId() > 0) {
+                            try {
+                                org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                                if (client != null) {
+                                    clientName = client.getClientName() != null ? client.getClientName() : "Unknown";
+                                }
+                            } catch (Exception e) {
+                                // Client not found, use "Unknown"
+                            }
+                        }
+                    }
                 } catch (Exception e) {
-                    System.out.println("Warning: Could not find product for barcode " + itemPojo.getProductBarcode() + ", setting productId to null");
-                    itemData.setProductId(null);
+                    System.out.println("Warning: Could not find product for ID " + itemPojo.getProductId() + ", using default values");
                 }
                 
-                itemData.setProductName(itemPojo.getProductName());
-                itemData.setProductBarcode(itemPojo.getProductBarcode());
-                itemData.setClientId(null); // No longer have client ID reference
-                itemData.setClientName(itemPojo.getClientName());
+                itemData.setProductName(productName);
+                itemData.setProductBarcode(productBarcode);
+                itemData.setClientId(clientId);
+                itemData.setClientName(clientName);
                 itemData.setPrice(itemPojo.getSellingPrice());
                 itemData.setQuantity(itemPojo.getQuantity());
                 itemData.setAmount(itemPojo.getAmount());

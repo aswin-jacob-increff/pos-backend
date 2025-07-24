@@ -31,8 +31,10 @@ class OrderApiTest {
         testOrderItem = new OrderItemPojo();
         testOrderItem.setId(1);
         testOrderItem.setOrderId(1);
-        testOrderItem.setProductBarcode("TEST123");
+        testOrderItem.setProductId(1);
         testOrderItem.setQuantity(2);
+        testOrderItem.setSellingPrice(50.0);
+        testOrderItem.setAmount(100.0);
 
         orderApi = new OrderApi();
     }
@@ -61,7 +63,9 @@ class OrderApiTest {
         assertNotNull(testOrderItem);
         assertEquals(1, testOrderItem.getId());
         assertEquals(1, testOrderItem.getOrderId());
-        assertEquals("TEST123", testOrderItem.getProductBarcode());
+        assertEquals(1, testOrderItem.getProductId());
         assertEquals(2, testOrderItem.getQuantity());
+        assertEquals(50.0, testOrderItem.getSellingPrice());
+        assertEquals(100.0, testOrderItem.getAmount());
     }
 } 
