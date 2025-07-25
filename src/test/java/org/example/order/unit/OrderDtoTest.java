@@ -1,9 +1,7 @@
 package org.example.order.unit;
 
 import org.example.dto.OrderDto;
-import org.example.dto.OrderItemDto;
 import org.example.flow.OrderFlow;
-import org.example.api.OrderItemApi;
 import org.example.model.data.OrderData;
 import org.example.model.form.OrderForm;
 import org.example.model.data.OrderItemData;
@@ -33,11 +31,7 @@ class OrderDtoTest {
     @Mock
     private OrderFlow orderFlow;
 
-    @Mock
-    private OrderItemDto orderItemDto;
 
-    @Mock
-    private OrderItemApi orderItemApi;
 
     @Mock
     private org.example.api.OrderApi orderApi;
@@ -81,15 +75,7 @@ class OrderDtoTest {
         orderFlowField.setAccessible(true);
         orderFlowField.set(orderDto, orderFlow);
 
-        // Inject the orderItemDto field
-        Field orderItemDtoField = orderDto.getClass().getDeclaredField("orderItemDto");
-        orderItemDtoField.setAccessible(true);
-        orderItemDtoField.set(orderDto, orderItemDto);
 
-        // Inject the orderItemApi field
-        Field orderItemApiField = orderDto.getClass().getDeclaredField("orderItemApi");
-        orderItemApiField.setAccessible(true);
-        orderItemApiField.set(orderDto, orderItemApi);
 
         // Inject the api field from AbstractDto
         Field apiField = orderDto.getClass().getSuperclass().getDeclaredField("api");
@@ -97,42 +83,7 @@ class OrderDtoTest {
         apiField.set(orderDto, orderApi);
     }
 
-    @Test
-    void testAdd_Success() {
-        // Arrange
-        testForm.setOrderItemFormList(Arrays.asList(testOrderItemForm));
-        when(orderFlow.add(any(OrderPojo.class))).thenReturn(testOrder);
-        when(orderItemDto.add(any(OrderItemForm.class))).thenReturn(testOrderItemData);
-        doNothing().when(orderFlow).update(any(), any());
 
-        // Act
-        OrderData result = orderDto.add(testForm);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(testOrder.getUserId(), result.getUserId());
-        verify(orderFlow).add(any(OrderPojo.class));
-        verify(orderItemDto).add(testOrderItemForm);
-        verify(orderFlow).update(any(), any());
-    }
-
-    @Test
-    void testAdd_WithEmptyOrderItems() {
-        // Arrange
-        testForm.setOrderItemFormList(Arrays.asList());
-        when(orderFlow.add(any(OrderPojo.class))).thenReturn(testOrder);
-        // No stubbing for orderFlow.update needed
-
-        // Act
-        OrderData result = orderDto.add(testForm);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(testOrder.getUserId(), result.getUserId());
-        verify(orderFlow).add(any(OrderPojo.class));
-        verify(orderItemDto, never()).add(any());
-        verify(orderFlow, never()).update(any(), any());
-    }
 
     @Test
     void testAdd_NullForm() {

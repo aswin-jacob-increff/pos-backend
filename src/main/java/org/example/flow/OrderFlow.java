@@ -3,7 +3,7 @@ package org.example.flow;
 import org.example.model.enums.OrderStatus;
 import org.example.pojo.OrderPojo;
 import org.example.api.OrderApi;
-import org.example.api.OrderItemApi;
+
 import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,8 +18,7 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
     @Autowired
     private OrderApi api;
 
-    @Autowired
-    private OrderItemApi orderItemApi;
+
 
     public OrderFlow() {
         super(OrderPojo.class);

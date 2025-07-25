@@ -2,6 +2,7 @@ package org.example.api;
 
 import org.example.dao.DaySalesDao;
 import org.example.dao.OrderDao;
+import org.example.dao.OrderItemDao;
 import org.example.pojo.DaySalesPojo;
 import org.example.pojo.OrderItemPojo;
 import org.example.pojo.OrderPojo;
@@ -21,7 +22,7 @@ public class DaySalesScheduler {
     @Autowired
     private OrderDao orderDao;
     @Autowired
-    private OrderItemApi orderItemApi;
+    private OrderItemDao orderItemDao;
 
     // Runs every day at 11:59 PM IST (Asia/Kolkata timezone)
     @Scheduled(cron = "59 23 * * * *", zone = "Asia/Kolkata")
@@ -74,7 +75,7 @@ public class DaySalesScheduler {
         int itemsCount = 0;
         for (OrderPojo order : orders) {
             try {
-                List<OrderItemPojo> orderItems = orderItemApi.getByOrderId(order.getId());
+                List<OrderItemPojo> orderItems = orderItemDao.selectByOrderId(order.getId());
                 itemsCount += orderItems.stream()
                     .mapToInt(OrderItemPojo::getQuantity)
                     .sum();

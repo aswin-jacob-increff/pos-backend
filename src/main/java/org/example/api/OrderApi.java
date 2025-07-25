@@ -1,6 +1,7 @@
 package org.example.api;
 
 import org.example.dao.OrderDao;
+import org.example.dao.OrderItemDao;
 import org.example.exception.ApiException;
 import org.example.model.enums.OrderStatus;
 import org.example.pojo.OrderItemPojo;
@@ -18,7 +19,7 @@ public class OrderApi extends AbstractApi<OrderPojo> {
     private OrderDao orderDao;
 
     @Autowired
-    private OrderItemApi orderItemApi;
+    private OrderItemDao orderItemDao;
 
     @Autowired
     private InventoryApi inventoryApi;
@@ -82,7 +83,7 @@ public class OrderApi extends AbstractApi<OrderPojo> {
             throw new ApiException("Order is already cancelled");
         }
         // Restore inventory quantities for all order items
-        List<OrderItemPojo> orderItems = orderItemApi.getByOrderId(orderId);
+        List<OrderItemPojo> orderItems = orderItemDao.selectByOrderId(orderId);
         for (OrderItemPojo orderItem : orderItems) {
             Integer productId = orderItem.getProductId();
             Integer quantityToRestore = orderItem.getQuantity();

@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 import org.example.model.data.OrderData;
+import org.example.model.data.OrderItemData;
 import org.example.model.form.OrderForm;
+import org.example.model.form.OrderItemForm;
 
 @RestController
 @RequestMapping(ApiEndpoints.Supervisor.ORDERS)
@@ -287,6 +289,90 @@ public class OrderController {
             throw e;
         } catch (Exception e) {
             throw new ApiException("Failed to find orders by substring ID: " + e.getMessage());
+        }
+    }
+
+    // ========== ORDER ITEM ENDPOINTS ==========
+
+    /**
+     * Get order items for a specific order
+     */
+    @GetMapping("/{orderId}/items")
+    public List<OrderItemData> getOrderItems(@PathVariable Integer orderId, Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER ITEMS GET ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            return orderDto.getOrderItemsByOrderId(orderId);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get order items: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Add a new order item to an order
+     */
+    @PostMapping("/{orderId}/items")
+    @org.springframework.transaction.annotation.Transactional
+    public OrderItemData addOrderItem(
+            @PathVariable Integer orderId,
+            @RequestBody OrderItemForm orderItemForm,
+            Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER ITEM ADD ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            // Set the order ID from the path variable
+            orderItemForm.setOrderId(orderId);
+            return orderDto.addOrderItem(orderItemForm);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to add order item: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update an order item
+     */
+    @PutMapping("/items/{itemId}")
+    @org.springframework.transaction.annotation.Transactional
+    public OrderItemData updateOrderItem(
+            @PathVariable Integer itemId,
+            @RequestBody OrderItemForm orderItemForm,
+            Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER ITEM UPDATE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            return orderDto.updateOrderItem(itemId, orderItemForm);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to update order item: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get a specific order item by ID
+     */
+    @GetMapping("/items/{itemId}")
+    public OrderItemData getOrderItem(@PathVariable Integer itemId, Authentication authentication) {
+        System.out.println("=== SUPERVISOR ORDER ITEM GET ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            return orderDto.getOrderItem(itemId);
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get order item: " + e.getMessage());
         }
     }
 

@@ -10,7 +10,7 @@ import org.example.pojo.OrderPojo;
 import org.example.pojo.DaySalesPojo;
 import org.example.dao.DaySalesDao;
 import org.example.dao.OrderItemDao;
-import org.example.flow.OrderItemFlow;
+
 import org.example.flow.ProductFlow;
 import org.example.api.ClientApi;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,8 +29,7 @@ import org.example.util.TimeUtil;
 @Component
 public class ReportsDto {
     
-    @Autowired
-    private OrderItemFlow orderItemFlow;
+
     @Autowired
     private ProductFlow productFlow;
     @Autowired

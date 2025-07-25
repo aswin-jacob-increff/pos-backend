@@ -2,7 +2,7 @@ package org.example.order.unit;
 
 import org.example.flow.OrderFlow;
 import org.example.api.OrderApi;
-import org.example.api.OrderItemApi;
+
 import org.example.model.enums.OrderStatus;
 import org.example.pojo.OrderPojo;
 import org.example.pojo.OrderItemPojo;
@@ -28,8 +28,7 @@ class OrderFlowTest {
     @Mock
     private OrderApi api;
 
-    @Mock
-    private OrderItemApi orderItemApi;
+
 
     @InjectMocks
     private OrderFlow orderFlow;

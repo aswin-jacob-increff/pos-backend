@@ -47,13 +47,9 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     private InvoiceApi invoiceApi;
     
     @Autowired
-    private org.example.api.OrderItemApi orderItemApi;
+    private org.example.dao.OrderItemDao orderItemDao;
     
-    @Autowired
-    private org.example.dto.OrderItemDto orderItemDto;
     
-    @Autowired
-    private org.example.flow.OrderItemFlow orderItemFlow;
 
     @Autowired
     private org.example.api.ClientApi clientApi;
@@ -85,10 +81,10 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         orderData.setStatus(orderPojo.getStatus());
         orderData.setUserId(orderPojo.getUserId());
         
-        // Fetch order items for this order using OrderItemDto
+        // Fetch order items for this order using internal method
         try {
             System.out.println("Fetching order items for order ID: " + orderPojo.getId());
-            List<OrderItemData> orderItems = orderItemDto.getByOrderId(orderPojo.getId());
+            List<OrderItemData> orderItems = getOrderItemsByOrderId(orderPojo.getId());
             System.out.println("Found " + orderItems.size() + " order items for order " + orderPojo.getId());
             orderData.setOrderItemDataList(orderItems);
         } catch (Exception e) {
@@ -138,7 +134,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
             }
             
             // Get order items for this order
-            List<OrderItemPojo> orderItems = orderItemApi.getByOrderId(orderId);
+            List<OrderItemPojo> orderItems = orderItemDao.selectByOrderId(orderId);
             
             // Create InvoiceData object to send to invoice service
             InvoiceData invoiceData = new InvoiceData();
@@ -301,8 +297,8 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
                 // Set the order ID for each item
                 itemForm.setOrderId(orderPojo.getId());
                 
-                // Create order item using OrderItemDto - this will trigger preprocessing
-                OrderItemData orderItemData = orderItemDto.add(itemForm);
+                            // Create order item using internal method - this will trigger preprocessing
+            OrderItemData orderItemData = addOrderItem(itemForm);
                 totalAmount += orderItemData.getAmount();
             }
             
@@ -526,5 +522,163 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
             throw new ApiException("Search ID cannot be null or empty");
         }
         return orderFlow.countOrdersBySubstringId(searchId);
+    }
+
+    // ========== ORDER ITEM MANAGEMENT METHODS ==========
+
+    /**
+     * Get order items for a specific order
+     */
+    public List<OrderItemData> getOrderItemsByOrderId(Integer orderId) {
+        if (Objects.isNull(orderId)) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        if (orderId <= 0) {
+            throw new ApiException("Order ID must be positive");
+        }
+        System.out.println("OrderDto: Getting order items for order ID: " + orderId);
+        List<OrderItemPojo> orderItemPojoList = orderItemDao.selectByOrderId(orderId);
+        System.out.println("OrderDto: Found " + orderItemPojoList.size() + " order item POJOs for order " + orderId);
+        List<OrderItemData> orderItemDataList = new ArrayList<>();
+        for (OrderItemPojo orderItemPojo : orderItemPojoList) {
+            System.out.println("OrderDto: Converting order item POJO ID: " + orderItemPojo.getId());
+            orderItemDataList.add(convertOrderItemPojoToData(orderItemPojo));
+        }
+        System.out.println("OrderDto: Returning " + orderItemDataList.size() + " order item data objects");
+        return orderItemDataList;
+    }
+
+    /**
+     * Add a single order item
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public OrderItemData addOrderItem(OrderItemForm orderItemForm) {
+        if (Objects.isNull(orderItemForm)) {
+            throw new ApiException("Order item form cannot be null");
+        }
+        
+        // Validate orderId is provided
+        if (Objects.isNull(orderItemForm.getOrderId())) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        
+        // Validate productId is provided
+        if (Objects.isNull(orderItemForm.getProductId())) {
+            throw new ApiException("Product ID is required");
+        }
+        
+        // Validate that the product exists
+        try {
+            var product = productApi.get(orderItemForm.getProductId());
+            if (product == null) {
+                throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
+            }
+        } catch (Exception e) {
+            throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
+        }
+
+        OrderItemPojo orderItemPojo = convertOrderItemFormToPojo(orderItemForm);
+        orderItemDao.insert(orderItemPojo);
+        return convertOrderItemPojoToData(orderItemPojo);
+    }
+
+    /**
+     * Update an order item
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public OrderItemData updateOrderItem(Integer id, OrderItemForm orderItemForm) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("Order item ID cannot be null");
+        }
+        if (Objects.isNull(orderItemForm)) {
+            throw new ApiException("Order item form cannot be null");
+        }
+        
+        OrderItemPojo orderItemPojo = convertOrderItemFormToPojo(orderItemForm);
+        orderItemDao.update(id, orderItemPojo);
+        return convertOrderItemPojoToData(orderItemDao.select(id));
+    }
+
+    /**
+     * Get a single order item by ID
+     */
+    public OrderItemData getOrderItem(Integer id) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("Order item ID cannot be null");
+        }
+        OrderItemPojo orderItemPojo = orderItemDao.select(id);
+        return convertOrderItemPojoToData(orderItemPojo);
+    }
+
+    /**
+     * Convert OrderItemForm to OrderItemPojo
+     */
+    private OrderItemPojo convertOrderItemFormToPojo(OrderItemForm orderItemForm) {
+        OrderItemPojo orderItemPojo = new OrderItemPojo();
+        orderItemPojo.setOrderId(orderItemForm.getOrderId());
+        orderItemPojo.setProductId(orderItemForm.getProductId());
+        orderItemPojo.setQuantity(orderItemForm.getQuantity());
+        
+        // Get product details for pricing
+        var product = productApi.get(orderItemForm.getProductId());
+        if (product == null) {
+            throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
+        }
+        
+        orderItemPojo.setSellingPrice(product.getMrp());
+        orderItemPojo.setAmount(product.getMrp() * orderItemForm.getQuantity());
+        
+        return orderItemPojo;
+    }
+
+    /**
+     * Convert OrderItemPojo to OrderItemData
+     */
+    private OrderItemData convertOrderItemPojoToData(OrderItemPojo orderItemPojo) {
+        OrderItemData orderItemData = new OrderItemData();
+        orderItemData.setId(orderItemPojo.getId());
+        orderItemData.setOrderId(orderItemPojo.getOrderId());
+        orderItemData.setProductId(orderItemPojo.getProductId());
+        orderItemData.setQuantity(orderItemPojo.getQuantity());
+        orderItemData.setSellingPrice(orderItemPojo.getSellingPrice());
+        orderItemData.setAmount(orderItemPojo.getAmount());
+        
+        // Fetch product information using productId
+        org.example.pojo.ProductPojo product = null;
+        try {
+            product = productApi.get(orderItemPojo.getProductId());
+        } catch (Exception e) {
+            // Product not found, continue with null values
+        }
+        
+        if (product != null) {
+            orderItemData.setBarcode(product.getBarcode());
+            orderItemData.setProductName(product.getName());
+            orderItemData.setImageUrl(product.getImageUrl());
+            orderItemData.setClientId(product.getClientId());
+            
+            // Fetch client information
+            if (product.getClientId() != null && product.getClientId() > 0) {
+                try {
+                    org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                    if (client != null) {
+                        orderItemData.setClientName(client.getClientName());
+                    }
+                } catch (Exception e) {
+                    // Client not found, continue with null
+                }
+            }
+        }
+        
+        // Get order date from the order
+        try {
+            var order = api.get(orderItemPojo.getOrderId());
+            orderItemData.setDateTime(TimeUtil.toIST(order.getDate()));
+        } catch (Exception e) {
+            // If order not found, set to null
+            orderItemData.setDateTime(null);
+        }
+        
+        return orderItemData;
     }
 }

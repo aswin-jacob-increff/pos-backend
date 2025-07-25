@@ -7,7 +7,9 @@ import org.example.dto.InventoryDto;
 import org.example.exception.ApiException;
 import org.example.model.constants.ApiEndpoints;
 import org.example.model.data.OrderData;
+import org.example.model.data.OrderItemData;
 import org.example.model.form.OrderForm;
+import org.example.model.form.OrderItemForm;
 import org.example.model.data.UserData;
 import org.example.model.form.UserForm;
 import org.example.model.data.ProductData;
@@ -329,5 +331,133 @@ public class UserController {
         }
     }
 
+    // ========== ORDER ITEM ENDPOINTS ==========
+
+    /**
+     * Get order items for a specific order (user access)
+     */
+    @GetMapping("/orders/{orderId}/items")
+    public List<OrderItemData> getMyOrderItems(@PathVariable Integer orderId, Authentication authentication) {
+        System.out.println("=== USER ORDER ITEMS GET ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            if (authentication != null && authentication.isAuthenticated()) {
+                // Verify the order belongs to the authenticated user
+                String userEmail = authentication.getName();
+                OrderData order = orderDto.get(orderId);
+                if (!order.getUserId().equals(userEmail)) {
+                    throw new ApiException("Access denied: Order does not belong to user");
+                }
+                return orderDto.getOrderItemsByOrderId(orderId);
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get order items: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Add a new order item to an order (user access)
+     */
+    @PostMapping("/orders/{orderId}/items")
+    @org.springframework.transaction.annotation.Transactional
+    public OrderItemData addMyOrderItem(
+            @PathVariable Integer orderId,
+            @RequestBody OrderItemForm orderItemForm,
+            Authentication authentication) {
+        System.out.println("=== USER ORDER ITEM ADD ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            if (authentication != null && authentication.isAuthenticated()) {
+                // Verify the order belongs to the authenticated user
+                String userEmail = authentication.getName();
+                OrderData order = orderDto.get(orderId);
+                if (!order.getUserId().equals(userEmail)) {
+                    throw new ApiException("Access denied: Order does not belong to user");
+                }
+                
+                // Set the order ID from the path variable
+                orderItemForm.setOrderId(orderId);
+                return orderDto.addOrderItem(orderItemForm);
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to add order item: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update an order item (user access)
+     */
+    @PutMapping("/orders/items/{itemId}")
+    @org.springframework.transaction.annotation.Transactional
+    public OrderItemData updateMyOrderItem(
+            @PathVariable Integer itemId,
+            @RequestBody OrderItemForm orderItemForm,
+            Authentication authentication) {
+        System.out.println("=== USER ORDER ITEM UPDATE ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            if (authentication != null && authentication.isAuthenticated()) {
+                // Verify the order item belongs to the authenticated user
+                String userEmail = authentication.getName();
+                OrderItemData orderItem = orderDto.getOrderItem(itemId);
+                OrderData order = orderDto.get(orderItem.getOrderId());
+                if (!order.getUserId().equals(userEmail)) {
+                    throw new ApiException("Access denied: Order item does not belong to user");
+                }
+                
+                return orderDto.updateOrderItem(itemId, orderItemForm);
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to update order item: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get a specific order item by ID (user access)
+     */
+    @GetMapping("/orders/items/{itemId}")
+    public OrderItemData getMyOrderItem(@PathVariable Integer itemId, Authentication authentication) {
+        System.out.println("=== USER ORDER ITEM GET ENDPOINT ===");
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+        
+        try {
+            if (authentication != null && authentication.isAuthenticated()) {
+                // Verify the order item belongs to the authenticated user
+                String userEmail = authentication.getName();
+                OrderItemData orderItem = orderDto.getOrderItem(itemId);
+                OrderData order = orderDto.get(orderItem.getOrderId());
+                if (!order.getUserId().equals(userEmail)) {
+                    throw new ApiException("Access denied: Order item does not belong to user");
+                }
+                
+                return orderDto.getOrderItem(itemId);
+            } else {
+                throw new ApiException("User not authenticated");
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException("Failed to get order item: " + e.getMessage());
+        }
+    }
 
 } 
