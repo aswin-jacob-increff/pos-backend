@@ -5,7 +5,6 @@ import org.example.pojo.ClientPojo;
 import org.example.model.data.ClientData;
 import org.example.model.form.ClientForm;
 import org.example.exception.ApiException;
-import org.example.flow.ClientFlow;
 import org.example.api.ClientApi;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,9 +24,6 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ClientDtoTest {
-
-    @Mock
-    private ClientFlow clientFlow;
 
     @Mock
     private ClientApi clientApi;
@@ -144,14 +140,14 @@ class ClientDtoTest {
         List<ClientPojo> clients = Arrays.asList(
             new ClientPojo(), new ClientPojo()
         );
-        when(clientFlow.getAll()).thenReturn(clients);
+        when(clientApi.getAll()).thenReturn(clients);
 
         // When
         List<ClientData> result = clientDto.getAll();
 
         // Then
         assertEquals(2, result.size());
-        verify(clientFlow).getAll();
+        verify(clientApi).getAll();
     }
 
     @Test
@@ -167,7 +163,7 @@ class ClientDtoTest {
         client.setStatus(true);
 
         when(clientApi.get(1)).thenReturn(client);
-        doNothing().when(clientFlow).update(eq(1), any(ClientPojo.class));
+        doNothing().when(clientApi).update(eq(1), any(ClientPojo.class));
 
         // When
         ClientData result = clientDto.update(1, form);
@@ -175,7 +171,7 @@ class ClientDtoTest {
         // Then
         assertNotNull(result);
         assertEquals("updated client", result.getClientName());
-        verify(clientFlow).update(eq(1), any(ClientPojo.class));
+        verify(clientApi).update(eq(1), any(ClientPojo.class));
         verify(clientApi).get(1);
     }
 
@@ -196,32 +192,32 @@ class ClientDtoTest {
     @Test
     void testToggleStatusById_Success() {
         // Given
-        doNothing().when(clientFlow).toggleStatus(1);
+        doNothing().when(clientApi).toggleStatus(1);
 
         // When
         clientDto.toggleStatus(1);
 
         // Then
-        verify(clientFlow).toggleStatus(1);
+        verify(clientApi).toggleStatus(1);
     }
 
     @Test
     void testToggleStatusById_NullId() {
         // When & Then
         assertThrows(ApiException.class, () -> clientDto.toggleStatus((Integer) null));
-        verify(clientFlow, never()).toggleStatus(any());
+        verify(clientApi, never()).toggleStatus(any());
     }
 
     @Test
     void testToggleStatusByName_Success() {
         // Given
-        doNothing().when(clientFlow).toggleStatusByName("test client");
+        doNothing().when(clientApi).toggleStatusByName("test client");
 
         // When
         clientDto.toggleStatusByName("Test Client");
 
         // Then
-        verify(clientFlow).toggleStatusByName("test client");
+        verify(clientApi).toggleStatusByName("test client");
     }
 
     @Test
@@ -230,7 +226,7 @@ class ClientDtoTest {
         assertThrows(ApiException.class, () -> clientDto.toggleStatusByName(null));
         assertThrows(ApiException.class, () -> clientDto.toggleStatusByName(""));
         assertThrows(ApiException.class, () -> clientDto.toggleStatusByName("   "));
-        verify(clientFlow, never()).toggleStatusByName(any());
+        verify(clientApi, never()).toggleStatusByName(any());
     }
 
     @Test
@@ -305,27 +301,27 @@ class ClientDtoTest {
     @Test
     void testToggleStatus_WithId() {
         // Arrange
-        doNothing().when(clientFlow).toggleStatus(1);
+        doNothing().when(clientApi).toggleStatus(1);
 
         // Act
         clientDto.toggleStatus(1, "Test Client");
 
         // Assert
-        verify(clientFlow, times(1)).toggleStatus(1);
-        verify(clientFlow, never()).toggleStatusByName(anyString());
+        verify(clientApi, times(1)).toggleStatus(1);
+        verify(clientApi, never()).toggleStatusByName(anyString());
     }
 
     @Test
     void testToggleStatus_WithName() {
         // Arrange
-        doNothing().when(clientFlow).toggleStatusByName("test client");
+        doNothing().when(clientApi).toggleStatusByName("test client");
 
         // Act
         clientDto.toggleStatus(null, "Test Client");
 
         // Assert
-        verify(clientFlow, never()).toggleStatus(anyInt());
-        verify(clientFlow, times(1)).toggleStatusByName("test client");
+        verify(clientApi, never()).toggleStatus(anyInt());
+        verify(clientApi, times(1)).toggleStatusByName("test client");
     }
 
     @Test
@@ -333,8 +329,8 @@ class ClientDtoTest {
         // Act & Assert
         assertThrows(ApiException.class, () -> clientDto.toggleStatus(null, null));
         
-        verify(clientFlow, never()).toggleStatus(anyInt());
-        verify(clientFlow, never()).toggleStatusByName(anyString());
+        verify(clientApi, never()).toggleStatus(anyInt());
+        verify(clientApi, never()).toggleStatusByName(anyString());
     }
 
     @Test

@@ -31,7 +31,20 @@ class OrderDtoTest {
     @Mock
     private OrderFlow orderFlow;
 
+    @Mock
+    private org.example.api.ProductApi productApi;
 
+    @Mock
+    private org.example.api.ClientApi clientApi;
+
+    @Mock
+    private org.example.api.InvoiceApi invoiceApi;
+
+    @Mock
+    private org.example.dao.OrderItemDao orderItemDao;
+
+    @Mock
+    private org.springframework.web.client.RestTemplate restTemplate;
 
     @Mock
     private org.example.api.OrderApi orderApi;
@@ -75,7 +88,30 @@ class OrderDtoTest {
         orderFlowField.setAccessible(true);
         orderFlowField.set(orderDto, orderFlow);
 
+        // Inject the productApi field
+        Field productApiField = orderDto.getClass().getDeclaredField("productApi");
+        productApiField.setAccessible(true);
+        productApiField.set(orderDto, productApi);
 
+        // Inject the clientApi field
+        Field clientApiField = orderDto.getClass().getDeclaredField("clientApi");
+        clientApiField.setAccessible(true);
+        clientApiField.set(orderDto, clientApi);
+
+        // Inject the invoiceApi field
+        Field invoiceApiField = orderDto.getClass().getDeclaredField("invoiceApi");
+        invoiceApiField.setAccessible(true);
+        invoiceApiField.set(orderDto, invoiceApi);
+
+        // Inject the orderItemDao field
+        Field orderItemDaoField = orderDto.getClass().getDeclaredField("orderItemDao");
+        orderItemDaoField.setAccessible(true);
+        orderItemDaoField.set(orderDto, orderItemDao);
+
+        // Inject the restTemplate field
+        Field restTemplateField = orderDto.getClass().getDeclaredField("restTemplate");
+        restTemplateField.setAccessible(true);
+        restTemplateField.set(orderDto, restTemplate);
 
         // Inject the api field from AbstractDto
         Field apiField = orderDto.getClass().getSuperclass().getDeclaredField("api");

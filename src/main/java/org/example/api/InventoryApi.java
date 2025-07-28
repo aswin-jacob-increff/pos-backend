@@ -4,18 +4,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.example.exception.ApiException;
 import java.util.Objects;
-import java.util.List;
-import org.example.dao.InventoryDao;
 import org.example.pojo.InventoryPojo;
-import org.example.model.form.PaginationRequest;
-import org.example.model.data.PaginationResponse;
 import org.example.api.ProductApi;
 
 @Service
 public class InventoryApi extends AbstractApi<InventoryPojo> {
-
-    @Autowired
-    private InventoryDao inventoryDao;
 
     @Autowired
     private ClientApi clientApi;
@@ -30,26 +23,34 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
 
     @Override
     protected void validateAdd(InventoryPojo inventory) {
+        if (inventory == null) {
+            throw new ApiException("Inventory cannot be null");
+        }
+        
         // Check if productId is present
         if (inventory.getProductId() == null) {
             throw new ApiException("Product ID is required for inventory");
         }
-        // Check if the product exists and its client is active
+        
+        // Check if the product exists and is active
         try {
-            org.example.pojo.ProductPojo product = productApi.get(inventory.getProductId());
+            var product = productApi.get(inventory.getProductId());
             if (product == null) {
                 throw new ApiException("Product with ID '" + inventory.getProductId() + "' not found");
             }
+            
             // Check if the client is active
-            if (product.getClientId() != null && product.getClientId() > 0) {
+            if (product.getClientId() != null) {
                 try {
-                    org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                    var client = clientApi.get(product.getClientId());
                     if (client == null) {
-                        throw new ApiException("Client for product not found");
+                        throw new ApiException("Client with ID '" + product.getClientId() + "' not found");
                     }
                     if (!client.getStatus()) {
                         throw new ApiException("Client is not active");
                     }
+                } catch (ApiException e) {
+                    throw e;
                 } catch (Exception e) {
                     throw new ApiException("Error validating client: " + e.getMessage());
                 }
@@ -58,6 +59,12 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
             throw e;
         } catch (Exception e) {
             throw new ApiException("Error validating product: " + e.getMessage());
+        }
+        
+        // Check for duplicate inventory for the same product
+        InventoryPojo existingInventory = ((org.example.dao.InventoryDao) dao).getByProductId(inventory.getProductId());
+        if (existingInventory != null) {
+            throw new ApiException("Inventory for product ID '" + inventory.getProductId() + "' already exists");
         }
     }
 
@@ -95,34 +102,7 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
     }
 
     public InventoryPojo getByProductId(Integer productId) {
-        return inventoryDao.getByProductId(productId);
-    }
-
-    // ========== PAGINATION METHODS ==========
-
-    /**
-     * Get all inventory items with pagination support.
-     */
-    public PaginationResponse<InventoryPojo> getAllPaginated(PaginationRequest request) {
-        return inventoryDao.getAllPaginated(request);
-    }
-
-    /**
-     * Get inventory by product ID with pagination support.
-     */
-    public PaginationResponse<InventoryPojo> getByProductIdPaginated(Integer productId, PaginationRequest request) {
-        return inventoryDao.getByProductIdPaginated(productId, request);
-    }
-
-    public InventoryPojo get(Integer id) {
-        if (id == null) {
-            throw new ApiException("Inventory ID cannot be null");
-        }
-        InventoryPojo inventory = inventoryDao.select(id);
-        if (inventory == null) {
-            throw new ApiException("Inventory with ID " + id + " not found");
-        }
-        return inventory;
+        return ((org.example.dao.InventoryDao) dao).getByProductId(productId);
     }
 
     /**
@@ -161,7 +141,7 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
         InventoryPojo updatedInventory = new InventoryPojo();
         updatedInventory.setProductId(inventory.getProductId());
         updatedInventory.setQuantity(inventory.getQuantity() + quantityToAdd);
-        inventoryDao.update(inventory.getId(), updatedInventory);
+        dao.update(inventory.getId(), updatedInventory);
     }
 
     /**
@@ -203,7 +183,7 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
         InventoryPojo updatedInventory = new InventoryPojo();
         updatedInventory.setProductId(inventory.getProductId());
         updatedInventory.setQuantity(inventory.getQuantity() - quantityToRemove);
-        inventoryDao.update(inventory.getId(), updatedInventory);
+        dao.update(inventory.getId(), updatedInventory);
     }
 
     /**
@@ -242,22 +222,13 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
         InventoryPojo updatedInventory = new InventoryPojo();
         updatedInventory.setProductId(inventory.getProductId());
         updatedInventory.setQuantity(newQuantity);
-        inventoryDao.update(inventory.getId(), updatedInventory);
+        dao.update(inventory.getId(), updatedInventory);
     }
 
-    @Override
-    public void add(InventoryPojo inventory) {
-        if (Objects.isNull(inventory)) {
-            throw new ApiException("Inventory cannot be null");
+    public org.example.model.data.PaginationResponse<InventoryPojo> getByProductIdPaginated(Integer productId, org.example.model.form.PaginationRequest request) {
+        if (Objects.isNull(productId)) {
+            throw new ApiException("Product ID cannot be null");
         }
-        super.add(inventory);
-    }
-
-    @Override
-    public void update(Integer id, InventoryPojo updatedInventory) {
-        if (Objects.isNull(updatedInventory)) {
-            throw new ApiException("Inventory cannot be null");
-        }
-        super.update(id, updatedInventory);
+        return dao.selectByFieldPaginated("productId", productId, request);
     }
 } 

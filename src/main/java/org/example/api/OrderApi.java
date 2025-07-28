@@ -1,6 +1,5 @@
 package org.example.api;
 
-import org.example.dao.OrderDao;
 import org.example.dao.OrderItemDao;
 import org.example.exception.ApiException;
 import org.example.model.enums.OrderStatus;
@@ -14,9 +13,6 @@ import java.util.Objects;
 
 @Service
 public class OrderApi extends AbstractApi<OrderPojo> {
-
-    @Autowired
-    private OrderDao orderDao;
 
     @Autowired
     private OrderItemDao orderItemDao;
@@ -43,39 +39,17 @@ public class OrderApi extends AbstractApi<OrderPojo> {
         // Set status to CREATED when order is created
         orderPojo.setStatus(OrderStatus.CREATED);
         // Insert order first to get the ID
-        orderDao.insert(orderPojo);
+        dao.insert(orderPojo);
         
         // Note: Order items are now managed separately by the calling code
         // The order is created first, then items are added with orderId reference
-    }
-
-    public OrderPojo get(Integer id) {
-        if (id == null) {
-            throw new ApiException("Order ID cannot be null");
-        }
-        OrderPojo order = orderDao.select(id);
-        if (order == null) {
-            throw new ApiException("Order with ID " + id + " not found");
-        }
-        return order;
-    }
-
-    @Override
-    public void update(Integer id, OrderPojo orderPojo) {
-        if (Objects.isNull(id)) {
-            throw new ApiException("Order ID cannot be null");
-        }
-        if (Objects.isNull(orderPojo)) {
-            throw new ApiException("Order cannot be null");
-        }
-        super.update(id, orderPojo);
     }
 
     public void cancelOrder(Integer orderId) {
         if (Objects.isNull(orderId)) {
             throw new ApiException("Order ID cannot be null");
         }
-        OrderPojo order = orderDao.select(orderId);
+        OrderPojo order = dao.select(orderId);
         if (order == null) {
             throw new ApiException("Order not found");
         }
@@ -92,7 +66,7 @@ public class OrderApi extends AbstractApi<OrderPojo> {
         }
         // Update order status to CANCELLED instead of deleting
         order.setStatus(OrderStatus.CANCELLED);
-        orderDao.update(orderId, order);
+        dao.update(orderId, order);
     }
 
     public String generateInvoice(Integer orderId) throws Exception {
@@ -109,10 +83,10 @@ public class OrderApi extends AbstractApi<OrderPojo> {
         if (Objects.isNull(status)) {
             throw new ApiException("Order status cannot be null");
         }
-        OrderPojo order = orderDao.select(id);
+        OrderPojo order = dao.select(id);
         if (order == null) throw new ApiException("Order not found");
         order.setStatus(status);
-        orderDao.update(id, order);
+        dao.update(id, order);
     }
 
     /**
@@ -128,11 +102,11 @@ public class OrderApi extends AbstractApi<OrderPojo> {
         if (endDate.isBefore(startDate)) {
             throw new ApiException("End date cannot be before start date");
         }
-        return orderDao.findOrdersByDateRange(startDate, endDate);
+        return ((org.example.dao.OrderDao) dao).findOrdersByDateRange(startDate, endDate);
     }
 
     public List<OrderPojo> findByUserId(String userId) {
-        return orderDao.findByUserId(userId);
+        return ((org.example.dao.OrderDao) dao).findByUserId(userId);
     }
 
     // ========== SUBSTRING SEARCH METHODS ==========
@@ -152,7 +126,7 @@ public class OrderApi extends AbstractApi<OrderPojo> {
         if (maxResults <= 0) {
             throw new ApiException("Max results must be positive");
         }
-        return orderDao.findOrdersBySubstringId(searchId, maxResults);
+        return ((org.example.dao.OrderDao) dao).findOrdersBySubstringId(searchId, maxResults);
     }
 
     /**
@@ -171,7 +145,7 @@ public class OrderApi extends AbstractApi<OrderPojo> {
         if (request == null) {
             request = new org.example.model.form.PaginationRequest();
         }
-        return orderDao.findOrdersBySubstringIdPaginated(searchId, request);
+        return ((org.example.dao.OrderDao) dao).findOrdersBySubstringIdPaginated(searchId, request);
     }
 
     /**
@@ -184,7 +158,7 @@ public class OrderApi extends AbstractApi<OrderPojo> {
         if (searchId == null || searchId.trim().isEmpty()) {
             throw new ApiException("Search ID cannot be null or empty");
         }
-        return orderDao.countOrdersBySubstringId(searchId);
+        return ((org.example.dao.OrderDao) dao).countOrdersBySubstringId(searchId);
     }
 
     // ========== PAGINATION METHODS ==========
@@ -193,7 +167,7 @@ public class OrderApi extends AbstractApi<OrderPojo> {
      * Get all orders with pagination support, ordered by date descending (most recent first).
      */
     public org.example.model.data.PaginationResponse<OrderPojo> getAllPaginated(org.example.model.form.PaginationRequest request) {
-        return orderDao.getAllPaginated(request);
+        return ((org.example.dao.OrderDao) dao).getAllPaginated(request);
     }
 
     /**
@@ -203,7 +177,7 @@ public class OrderApi extends AbstractApi<OrderPojo> {
         if (userId == null || userId.trim().isEmpty()) {
             throw new ApiException("User ID cannot be null or empty");
         }
-        return orderDao.getByUserIdPaginated(userId, request);
+        return ((org.example.dao.OrderDao) dao).getByUserIdPaginated(userId, request);
     }
 
     /**
@@ -216,6 +190,6 @@ public class OrderApi extends AbstractApi<OrderPojo> {
         if (endDate.isBefore(startDate)) {
             throw new ApiException("End date cannot be before start date");
         }
-        return orderDao.getByDateRangePaginated(startDate, endDate, request);
+        return ((org.example.dao.OrderDao) dao).getByDateRangePaginated(startDate, endDate, request);
     }
 } 

@@ -15,7 +15,6 @@ public abstract class AbstractDto<T, F, D> {
     @Autowired
     protected AbstractApi<T> api;
 
-    @org.springframework.transaction.annotation.Transactional
     public D add(@Valid F form) {
         preprocess(form);
         T entity = convertFormToEntity(form);

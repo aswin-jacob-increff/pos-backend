@@ -1,7 +1,6 @@
 package org.example.product.unit;
 
 import org.example.dto.ProductDto;
-import org.example.flow.ProductFlow;
 import org.example.model.data.ProductData;
 import org.example.model.form.ProductForm;
 import org.example.pojo.ProductPojo;
@@ -24,9 +23,6 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ProductDtoTest {
-
-    @Mock
-    private ProductFlow productFlow;
 
     @Mock
     private org.example.api.ProductApi productApi;
@@ -61,11 +57,6 @@ class ProductDtoTest {
         testProduct.setClientId(1);
         testProduct.setMrp(100.0);
 
-        // Inject the productFlow field
-        Field productFlowField = productDto.getClass().getDeclaredField("productFlow");
-        productFlowField.setAccessible(true);
-        productFlowField.set(productDto, productFlow);
-
         // Inject the clientApi field
         Field clientApiField = productDto.getClass().getDeclaredField("clientApi");
         clientApiField.setAccessible(true);
@@ -80,7 +71,7 @@ class ProductDtoTest {
     @Test
     void testAdd_Success() {
         // Arrange
-        when(clientApi.getByName("testclient")).thenReturn(testClient);
+        lenient().when(clientApi.getByName("testclient")).thenReturn(testClient);
         doNothing().when(productApi).add(any(ProductPojo.class));
 
         // Act
@@ -129,7 +120,7 @@ class ProductDtoTest {
     void testGetAll_Success() {
         // Given
         List<ProductPojo> products = Arrays.asList(testProduct);
-        when(productFlow.getAll()).thenReturn(products);
+        when(productApi.getAll()).thenReturn(products);
         when(clientApi.get(1)).thenReturn(testClient);
 
         // When
@@ -138,7 +129,7 @@ class ProductDtoTest {
         // Then
         assertEquals(1, result.size());
         assertEquals(testClient.getId(), result.get(0).getClientId());
-        verify(productFlow).getAll();
+        verify(productApi).getAll();
         verify(clientApi).get(1);
     }
 
@@ -164,9 +155,9 @@ class ProductDtoTest {
         updatedProduct.setClientId(1);
 
         when(productApi.get(1)).thenReturn(updatedProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
-        when(clientApi.getByName("test client")).thenReturn(testClient);
-        doNothing().when(productFlow).update(eq(1), any(ProductPojo.class));
+        lenient().when(clientApi.get(1)).thenReturn(testClient);
+        lenient().when(clientApi.getByName("test client")).thenReturn(testClient);
+        doNothing().when(productApi).update(eq(1), any(ProductPojo.class));
 
         // When
         ProductData result = productDto.update(1, form);
@@ -175,7 +166,7 @@ class ProductDtoTest {
         assertNotNull(result);
         assertEquals("Updated Product", result.getName());
         assertEquals("UPD123", result.getBarcode());
-        verify(productFlow).update(eq(1), any(ProductPojo.class));
+        verify(productApi).update(eq(1), any(ProductPojo.class));
         verify(productApi).get(1);
     }
 
@@ -183,20 +174,20 @@ class ProductDtoTest {
     void testUpdate_NullId() {
         // When & Then
         assertThrows(ApiException.class, () -> productDto.update(null, new ProductForm()));
-        verify(productFlow, never()).update(any(), any());
+        verify(productApi, never()).update(any(), any());
     }
 
     @Test
     void testUpdate_NullForm() {
         // When & Then
         assertThrows(ApiException.class, () -> productDto.update(1, null));
-        verify(productFlow, never()).update(any(), any());
+        verify(productApi, never()).update(any(), any());
     }
 
     @Test
     void testGetByBarcode_Success() {
         // Given
-        when(productFlow.getByBarcode("TEST123")).thenReturn(testProduct);
+        when(productApi.getByBarcode("TEST123")).thenReturn(testProduct);
         when(clientApi.get(1)).thenReturn(testClient);
 
         // When
@@ -206,7 +197,7 @@ class ProductDtoTest {
         assertNotNull(result);
         assertEquals("TEST123", result.getBarcode());
         assertEquals(testClient.getId(), result.getClientId());
-        verify(productFlow).getByBarcode("TEST123");
+        verify(productApi).getByBarcode("TEST123");
         verify(clientApi).get(1);
     }
 
@@ -214,22 +205,21 @@ class ProductDtoTest {
     void testGetByBarcode_NullBarcode() {
         // When & Then
         assertThrows(ApiException.class, () -> productDto.getByBarcode(null));
-        verify(productFlow, never()).getByBarcode(any());
+        verify(productApi, never()).getByBarcode(any());
     }
 
     @Test
     void testGetByBarcode_EmptyBarcode() {
         // When & Then
         assertThrows(ApiException.class, () -> productDto.getByBarcode(""));
-        verify(productFlow, never()).getByBarcode(any());
+        verify(productApi, never()).getByBarcode(any());
     }
 
     @Test
     void testGetByClientName_Success() {
         // Given
         List<ProductPojo> products = Arrays.asList(testProduct);
-        when(productFlow.getAll()).thenReturn(products);
-        when(clientApi.getByName("testclient")).thenReturn(testClient);
+        when(productApi.getByClientName("testclient")).thenReturn(products);
         when(clientApi.get(1)).thenReturn(testClient);
 
         // When
@@ -238,8 +228,7 @@ class ProductDtoTest {
         // Then
         assertEquals(1, result.size());
         assertEquals(testClient.getId(), result.get(0).getClientId());
-        verify(productFlow).getAll();
-        verify(clientApi).getByName("testclient");
+        verify(productApi).getByClientName("testclient");
         verify(clientApi).get(1);
     }
 
@@ -247,13 +236,13 @@ class ProductDtoTest {
     void testGetByClientName_NullName() {
         // When & Then
         assertThrows(ApiException.class, () -> productDto.getByClientName(null));
-        verify(productFlow, never()).getAll();
+        verify(productApi, never()).getAll();
     }
 
     @Test
     void testGetByClientName_EmptyName() {
         // When & Then
         assertThrows(ApiException.class, () -> productDto.getByClientName(""));
-        verify(productFlow, never()).getAll();
+        verify(productApi, never()).getAll();
     }
 } 

@@ -6,7 +6,6 @@ import org.example.pojo.ProductPojo;
 import org.example.model.data.InventoryData;
 import org.example.model.form.InventoryForm;
 import org.example.exception.ApiException;
-import org.example.flow.InventoryFlow;
 import org.example.api.InventoryApi;
 import org.example.api.ProductApi;
 import org.example.api.ClientApi;
@@ -30,9 +29,6 @@ import static org.mockito.Mockito.*;
 class InventoryDtoTest {
 
     @Mock
-    private InventoryFlow inventoryFlow;
-
-    @Mock
     private InventoryApi inventoryApi;
 
     @Mock
@@ -44,7 +40,7 @@ class InventoryDtoTest {
     @InjectMocks
     private InventoryDto inventoryDto;
 
-    private InventoryPojo testPojo;
+    private InventoryPojo testInventory;
     private InventoryData testData;
     private InventoryForm testForm;
     private ProductPojo testProduct;
@@ -52,70 +48,48 @@ class InventoryDtoTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        testPojo = new InventoryPojo();
-        testPojo.setId(1);
-        testPojo.setProductId(1);
-        testPojo.setQuantity(10);
-
-        testData = new InventoryData();
-        testData.setId(1);
-        testData.setProductId(1);
-        testData.setBarcode("TEST123");
-        testData.setProductName("Test Product");
-        testData.setMrp(100.0);
-        testData.setQuantity(10);
-
-        testForm = new InventoryForm();
-        testForm.setBarcode("TEST123");
-        testForm.setProductName("Test Product");
-        testForm.setClientName("TestClient");
-        testForm.setMrp(100.0);
-        testForm.setQuantity(10);
+        testInventory = new InventoryPojo();
+        testInventory.setId(1);
+        testInventory.setProductId(1);
+        testInventory.setQuantity(10);
 
         testProduct = new ProductPojo();
         testProduct.setId(1);
-        testProduct.setBarcode("TEST123");
         testProduct.setName("Test Product");
-        testProduct.setClientId(1);
+        testProduct.setBarcode("TEST123");
         testProduct.setMrp(100.0);
-        testProduct.setImageUrl("http://example.com/image.jpg");
 
-        testClient = new ClientPojo();
-        testClient.setId(1);
-        testClient.setClientName("TestClient");
+        testForm = new InventoryForm();
+        testForm.setProductId(1);
+        testForm.setQuantity(10);
 
-        // Manually inject the api field using reflection
-        Field apiField = inventoryDto.getClass().getSuperclass().getDeclaredField("api");
-        apiField.setAccessible(true);
-        apiField.set(inventoryDto, inventoryApi);
-
-        // Manually inject the productApi field using reflection
+        // Manually inject dependencies using reflection
         Field productApiField = inventoryDto.getClass().getDeclaredField("productApi");
         productApiField.setAccessible(true);
         productApiField.set(inventoryDto, productApi);
 
-        // Manually inject the clientApi field using reflection
-        Field clientApiField = inventoryDto.getClass().getDeclaredField("clientApi");
-        clientApiField.setAccessible(true);
-        clientApiField.set(inventoryDto, clientApi);
+        // Inject the api field from AbstractDto
+        Field abstractApiField = inventoryDto.getClass().getSuperclass().getDeclaredField("api");
+        abstractApiField.setAccessible(true);
+        abstractApiField.set(inventoryDto, inventoryApi);
     }
 
     @Test
     void testAdd_Success() {
-        when(productApi.getByBarcode("TEST123")).thenReturn(testProduct);
+        // Arrange
+        doNothing().when(inventoryApi).add(any(InventoryPojo.class));
         when(productApi.get(1)).thenReturn(testProduct);
-        doAnswer(invocation -> {
-            InventoryPojo inventory = invocation.getArgument(0);
-            inventory.setId(1); // Set the ID as if it was inserted
-            return null;
-        }).when(inventoryApi).add(any(InventoryPojo.class));
-        
+
+        // Act
         InventoryData result = inventoryDto.add(testForm);
+
+        // Assert
         assertNotNull(result);
         assertEquals(1, result.getProductId());
         assertEquals("TEST123", result.getBarcode());
         assertEquals("Test Product", result.getProductName());
-        verify(inventoryApi, times(1)).add(any(InventoryPojo.class));
+        assertEquals(10, result.getQuantity());
+        verify(inventoryApi).add(any(InventoryPojo.class));
     }
 
     @Test
@@ -128,7 +102,7 @@ class InventoryDtoTest {
     @Test
     void testGet_Success() {
         // Arrange
-        when(inventoryApi.get(1)).thenReturn(testPojo);
+        when(inventoryApi.get(1)).thenReturn(testInventory);
         when(productApi.get(1)).thenReturn(testProduct);
 
         // Act
@@ -136,7 +110,7 @@ class InventoryDtoTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals(testPojo.getId(), result.getId());
+        assertEquals(testInventory.getId(), result.getId());
         assertEquals(1, result.getProductId());
         assertEquals("TEST123", result.getBarcode());
         assertEquals("Test Product", result.getProductName());
@@ -184,38 +158,22 @@ class InventoryDtoTest {
 
     @Test
     void testUpdate_Success() {
-        // Given
-        InventoryForm form = new InventoryForm();
-        form.setBarcode("UPD123");
-        form.setProductName("Updated Product");
-        form.setClientName("test client"); // Use lowercase to match StringUtil.format behavior
-        form.setQuantity(50);
-        form.setMrp(100.0);
+        // Arrange
+        doNothing().when(inventoryApi).update(eq(1), any(InventoryPojo.class));
+        when(inventoryApi.get(1)).thenReturn(testInventory);
+        when(productApi.get(1)).thenReturn(testProduct);
 
-        InventoryPojo inventory = new InventoryPojo();
-        inventory.setId(1);
-        inventory.setProductId(1);
+        // Act
+        InventoryData result = inventoryDto.update(1, testForm);
 
-        ProductPojo product = new ProductPojo();
-        product.setId(1);
-        product.setBarcode("UPD123");
-        product.setName("Updated Product");
-        product.setClientId(1);
-
-        when(inventoryApi.get(1)).thenReturn(inventory);
-        when(productApi.getByBarcode("UPD123")).thenReturn(product);
-        when(productApi.get(1)).thenReturn(product);
-        lenient().doNothing().when(inventoryApi).update(anyInt(), any(InventoryPojo.class));
-
-        // When
-        InventoryData result = inventoryDto.update(1, form);
-
-        // Then
+        // Assert
         assertNotNull(result);
         assertEquals(1, result.getProductId());
-        assertEquals("UPD123", result.getBarcode());
-        assertEquals("Updated Product", result.getProductName());
+        assertEquals("TEST123", result.getBarcode());
+        assertEquals("Test Product", result.getProductName());
+        assertEquals(10, result.getQuantity());
         verify(inventoryApi).update(eq(1), any(InventoryPojo.class));
+        verify(inventoryApi).get(1);
     }
 
     @Test
@@ -234,16 +192,16 @@ class InventoryDtoTest {
 
     @Test
     void testGetByProductId_Success() {
-        when(inventoryFlow.getByProductId(1)).thenReturn(testPojo);
+        when(inventoryApi.getByProductId(1)).thenReturn(testInventory);
         when(productApi.get(1)).thenReturn(testProduct);
         
         InventoryData result = inventoryDto.getByProductId(1);
         assertNotNull(result);
-        assertEquals(testPojo.getId(), result.getId());
+        assertEquals(testInventory.getId(), result.getId());
         assertEquals(1, result.getProductId());
         assertEquals("TEST123", result.getBarcode());
         assertEquals("Test Product", result.getProductName());
-        verify(inventoryFlow, times(1)).getByProductId(1);
+        verify(inventoryApi, times(1)).getByProductId(1);
         verify(productApi, times(1)).get(1);
     }
 
@@ -251,48 +209,48 @@ class InventoryDtoTest {
     void testGetByProductId_NullProductId() {
         // Act & Assert
         assertThrows(ApiException.class, () -> inventoryDto.getByProductId(null));
-        verify(inventoryFlow, never()).getByProductId(any());
+        verify(inventoryApi, never()).getByProductId(any());
     }
 
     @Test
     void testAddStock_Success() {
-        when(inventoryFlow.getByProductId(1)).thenReturn(testPojo);
+        when(inventoryApi.getByProductId(1)).thenReturn(testInventory);
         when(productApi.get(1)).thenReturn(testProduct);
-        doNothing().when(inventoryFlow).addStock(1, 5);
+        doNothing().when(inventoryApi).addStock(1, 5);
         
         InventoryData result = inventoryDto.addStock(1, 5);
         assertNotNull(result);
         assertEquals(1, result.getProductId());
         assertEquals("TEST123", result.getBarcode());
         assertEquals("Test Product", result.getProductName());
-        verify(inventoryFlow, times(1)).addStock(1, 5);
+        verify(inventoryApi, times(1)).addStock(1, 5);
     }
 
     @Test
     void testRemoveStock_Success() {
-        when(inventoryFlow.getByProductId(1)).thenReturn(testPojo);
+        when(inventoryApi.getByProductId(1)).thenReturn(testInventory);
         when(productApi.get(1)).thenReturn(testProduct);
-        doNothing().when(inventoryFlow).removeStock(1, 3);
+        doNothing().when(inventoryApi).removeStock(1, 3);
         
         InventoryData result = inventoryDto.removeStock(1, 3);
         assertNotNull(result);
         assertEquals(1, result.getProductId());
         assertEquals("TEST123", result.getBarcode());
         assertEquals("Test Product", result.getProductName());
-        verify(inventoryFlow, times(1)).removeStock(1, 3);
+        verify(inventoryApi, times(1)).removeStock(1, 3);
     }
 
     @Test
     void testSetStock_Success() {
-        when(inventoryFlow.getByProductId(1)).thenReturn(testPojo);
+        when(inventoryApi.getByProductId(1)).thenReturn(testInventory);
         when(productApi.get(1)).thenReturn(testProduct);
-        doNothing().when(inventoryFlow).setStock(1, 20);
+        doNothing().when(inventoryApi).setStock(1, 20);
         
         InventoryData result = inventoryDto.setStock(1, 20);
         assertNotNull(result);
         assertEquals(1, result.getProductId());
         assertEquals("TEST123", result.getBarcode());
         assertEquals("Test Product", result.getProductName());
-        verify(inventoryFlow, times(1)).setStock(1, 20);
+        verify(inventoryApi, times(1)).setStock(1, 20);
     }
 } 

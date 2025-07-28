@@ -1,12 +1,10 @@
 package org.example.dto;
 
 import org.example.exception.ApiException;
+import org.example.model.data.TsvUploadResult;
 import org.example.model.form.ClientForm;
 import org.example.model.data.ClientData;
-import org.example.model.data.TsvUploadResult;
 import org.example.pojo.ClientPojo;
-import org.example.flow.ClientFlow;
-import org.example.api.ClientApi;
 import org.example.util.StringUtil;
 import org.example.util.FileValidationUtil;
 import org.example.util.ClientTsvParser;
@@ -16,17 +14,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
 
 import jakarta.validation.Valid;
 
 @Component
 public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
-
-    @Autowired
-    private ClientFlow flow;
 
     @Override
     protected String getEntityName() {
@@ -50,14 +42,6 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         return clientData;
     }
 
-    protected ClientPojo convertDataToEntity(ClientData clientData) {
-        ClientPojo clientPojo = new ClientPojo();
-        clientPojo.setId(clientData.getId());
-        clientPojo.setClientName(clientData.getClientName());
-        clientPojo.setStatus(clientData.getStatus());
-        return clientPojo;
-    }
-
     @Override
     protected void preprocess(ClientForm clientForm) {
         // Validate clientName is provided
@@ -69,37 +53,20 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         }
     }
 
-    @Override
-    @org.springframework.transaction.annotation.Transactional
-    public ClientData update(Integer id, @Valid ClientForm form) {
-        validateId(id);
-        preprocess(form);
-        ClientPojo entity = convertFormToEntity(form);
-        // Use the flow instead of the API to ensure products are updated
-        flow.update(id, entity);
-        return convertEntityToData(api.get(id));
-    }
-
-    public List<ClientData> getAll() {
-        return flow.getAll().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-    }
-
     // Custom methods that don't fit the generic pattern
 
     public void toggleStatus(Integer id) {
         if (Objects.isNull(id)) {
             throw new ApiException("Client ID cannot be null");
         }
-        flow.toggleStatus(id);
+        ((org.example.api.ClientApi) api).toggleStatus(id);
     }
 
     public void toggleStatusByName(String name) {
         if (Objects.isNull(name) || name.trim().isEmpty()) {
             throw new ApiException("Client name cannot be null or empty");
         }
-        flow.toggleStatusByName(StringUtil.format(name));
+        ((org.example.api.ClientApi) api).toggleStatusByName(StringUtil.format(name));
     }
 
     public ClientData getByNameOrId(Integer id, String name) {
@@ -107,7 +74,7 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         if (Objects.nonNull(id) && Objects.nonNull(name)) {
             try {
                 ClientPojo idPojo = api.get(id);
-                ClientPojo namePojo = ((ClientApi) api).getByName(name);
+                ClientPojo namePojo = ((org.example.api.ClientApi) api).getByName(name);
                 if (idPojo.equals(namePojo)) {
                     return convertEntityToData(idPojo);
                 } else {
@@ -119,7 +86,7 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         } else if (Objects.nonNull(id)) {
             return convertEntityToData(api.get(id));
         } else {
-            return convertEntityToData(((ClientApi) api).getByName(name));
+            return convertEntityToData(((org.example.api.ClientApi) api).getByName(name));
         }
     }
 
@@ -127,10 +94,40 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         if (name == null || name.trim().isEmpty()) {
             throw new ApiException("Client name cannot be null or empty");
         }
-        List<ClientPojo> clients = flow.getByNameLike(name);
+        List<ClientPojo> clients = ((org.example.api.ClientApi) api).getByNameLike(name);
         return clients.stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
+    }
+
+    public org.example.model.data.PaginationResponse<ClientData> getAllPaginated(org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<ClientPojo> paginatedEntities = ((org.example.api.ClientApi) api).getAllPaginated(request);
+        
+        List<ClientData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    public org.example.model.data.PaginationResponse<ClientData> getByNameLikePaginated(String name, org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<ClientPojo> paginatedEntities = ((org.example.api.ClientApi) api).getByNameLikePaginated(name, request);
+        
+        List<ClientData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
     }
 
     public TsvUploadResult uploadClientsFromTsv(MultipartFile file) {
@@ -142,7 +139,7 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         TsvUploadResult result;
         try {
             System.out.println("ClientDto.uploadClientsFromTsv - Starting parse with complete validation");
-            result = ClientTsvParser.parseWithCompleteValidation(file.getInputStream(), (ClientApi) api);
+            result = ClientTsvParser.parseWithCompleteValidation(file.getInputStream(), (org.example.api.ClientApi) api);
             System.out.println("ClientDto.uploadClientsFromTsv - Parse completed. Total: " + result.getTotalRows() + ", Successful: " + result.getSuccessfulRows() + ", Failed: " + result.getFailedRows());
         } catch (Exception e) {
             System.out.println("ClientDto.uploadClientsFromTsv - Parse failed: " + e.getMessage());
@@ -187,7 +184,7 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
                 System.out.println("ClientDto.uploadClientsFromTsv - Adding client: " + form.getClientName());
                 // Use the flow directly since validation is already done
                 ClientPojo entity = convertFormToEntity(form);
-                flow.add(entity);
+                api.add(entity);
                 result.incrementSuccessful();
                 System.out.println("ClientDto.uploadClientsFromTsv - Successfully added client: " + form.getClientName());
             } catch (Exception e) {
@@ -201,8 +198,6 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         return result;
     }
 
-
-
     public void toggleStatus(Integer id, String name) {
         if (Objects.isNull(id) && Objects.isNull(name)) {
             throw new ApiException("Either ID or name must be provided for status toggle");
@@ -210,50 +205,12 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         
         if (Objects.nonNull(id)) {
             // Use ID-based toggle
-            flow.toggleStatus(id);
+            ((org.example.api.ClientApi) api).toggleStatus(id);
         } else if (Objects.nonNull(name) && !name.trim().isEmpty()) {
             // Use name-based toggle
-            flow.toggleStatusByName(StringUtil.format(name));
+            ((org.example.api.ClientApi) api).toggleStatusByName(StringUtil.format(name));
         } else {
             throw new ApiException("Valid ID or name must be provided for status toggle");
         }
-    }
-
-    // ========== PAGINATION METHODS ==========
-
-    /**
-     * Get all clients with pagination support.
-     */
-    public org.example.model.data.PaginationResponse<ClientData> getAllPaginated(org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<ClientPojo> paginatedEntities = flow.getAllPaginated(request);
-        
-        List<ClientData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new org.example.model.data.PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
-    }
-
-    /**
-     * Get clients by name with partial matching and pagination support.
-     */
-    public org.example.model.data.PaginationResponse<ClientData> getByNameLikePaginated(String name, org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<ClientPojo> paginatedEntities = flow.getByNameLikePaginated(name, request);
-        
-        List<ClientData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new org.example.model.data.PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
     }
 }

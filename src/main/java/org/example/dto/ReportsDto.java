@@ -11,8 +11,8 @@ import org.example.pojo.DaySalesPojo;
 import org.example.dao.DaySalesDao;
 import org.example.dao.OrderItemDao;
 
-import org.example.flow.ProductFlow;
 import org.example.api.ClientApi;
+import org.example.api.ProductApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.example.exception.ApiException;
@@ -31,8 +31,6 @@ public class ReportsDto {
     
 
     @Autowired
-    private ProductFlow productFlow;
-    @Autowired
     private org.example.flow.OrderFlow orderFlow;
     
     @Autowired
@@ -43,6 +41,9 @@ public class ReportsDto {
 
     @Autowired
     private ClientApi clientApi;
+
+    @Autowired
+    private ProductApi productApi;
 
     public List<SalesReportData> getSalesReport(SalesReportForm form) {
         // Validate input - dates are assumed to be in UTC from frontend
@@ -78,7 +79,7 @@ public class ReportsDto {
             if (Objects.nonNull(form.getBrand()) && !form.getBrand().isEmpty()) {
                 filtered = filtered.stream().filter(item -> {
                     try {
-                        org.example.pojo.ProductPojo product = productFlow.get(item.getProductId());
+                        org.example.pojo.ProductPojo product = productApi.get(item.getProductId());
                         if (product != null && product.getClientId() != null && product.getClientId() > 0) {
                             org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
                             return client != null && form.getBrand().equalsIgnoreCase(client.getClientName());
@@ -94,7 +95,7 @@ public class ReportsDto {
             if (Objects.nonNull(form.getCategory()) && !form.getCategory().isEmpty()) {
                 filtered = filtered.stream().filter(item -> {
                     try {
-                        org.example.pojo.ProductPojo product = productFlow.get(item.getProductId());
+                        org.example.pojo.ProductPojo product = productApi.get(item.getProductId());
                         return product != null && form.getCategory().equalsIgnoreCase(product.getName());
                     } catch (Exception e) {
                         // Product not found, exclude from results
@@ -111,7 +112,7 @@ public class ReportsDto {
                 String sku = "Unknown";
                 
                 try {
-                    org.example.pojo.ProductPojo product = productFlow.get(item.getProductId());
+                    org.example.pojo.ProductPojo product = productApi.get(item.getProductId());
                     if (product != null) {
                         productName = product.getName() != null ? product.getName() : "Unknown";
                         sku = product.getBarcode() != null ? product.getBarcode() : "Unknown";
@@ -178,7 +179,7 @@ public class ReportsDto {
                     String brand = null;
                     String category = null;
                     try {
-                        org.example.pojo.ProductPojo product = productFlow.get(item.getProductId());
+                        org.example.pojo.ProductPojo product = productApi.get(item.getProductId());
                         if (product != null) {
                             category = product.getName();
                             // Fetch client information

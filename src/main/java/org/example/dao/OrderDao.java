@@ -2,6 +2,9 @@ package org.example.dao;
 
 import jakarta.persistence.*;
 import jakarta.persistence.criteria.*;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
+import org.example.util.PaginationUtil;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import org.example.pojo.OrderPojo;
@@ -104,58 +107,58 @@ public class OrderDao extends AbstractDao<OrderPojo> {
     /**
      * Get all orders with pagination support, ordered by date descending (most recent first).
      */
-    public org.example.model.data.PaginationResponse<OrderPojo> getAllPaginated(org.example.model.form.PaginationRequest request) {
-        request = org.example.util.PaginationUtil.validateAndSetDefaults(request);
+    public PaginationResponse<OrderPojo> getAllPaginated(PaginationRequest request) {
+        request = PaginationUtil.validateAndSetDefaults(request);
         
         // Get total count
         long totalElements = countAll();
         
         if (totalElements == 0) {
-            return org.example.util.PaginationUtil.createEmptyResponse(request);
+            return PaginationUtil.createEmptyResponse(request);
         }
         
         // Get paginated results with default sorting by date descending (most recent first)
         List<OrderPojo> content = getAllWithPagination(request);
         
-        return org.example.util.PaginationUtil.createResponse(content, totalElements, request);
+        return PaginationUtil.createResponse(content, totalElements, request);
     }
 
     /**
      * Get orders by user ID with pagination support, ordered by date descending (most recent first).
      */
-    public org.example.model.data.PaginationResponse<OrderPojo> getByUserIdPaginated(String userId, org.example.model.form.PaginationRequest request) {
-        request = org.example.util.PaginationUtil.validateAndSetDefaults(request);
+    public PaginationResponse<OrderPojo> getByUserIdPaginated(String userId, PaginationRequest request) {
+        request = PaginationUtil.validateAndSetDefaults(request);
         
         // Get total count
         long totalElements = countByUserId(userId);
         
         if (totalElements == 0) {
-            return org.example.util.PaginationUtil.createEmptyResponse(request);
+            return PaginationUtil.createEmptyResponse(request);
         }
         
         // Get paginated results
         List<OrderPojo> content = getByUserIdWithPagination(userId, request);
         
-        return org.example.util.PaginationUtil.createResponse(content, totalElements, request);
+        return PaginationUtil.createResponse(content, totalElements, request);
     }
 
     /**
      * Get orders by date range with pagination support, ordered by date descending (most recent first).
      */
-    public org.example.model.data.PaginationResponse<OrderPojo> getByDateRangePaginated(java.time.LocalDate startDate, java.time.LocalDate endDate, org.example.model.form.PaginationRequest request) {
-        request = org.example.util.PaginationUtil.validateAndSetDefaults(request);
+    public PaginationResponse<OrderPojo> getByDateRangePaginated(LocalDate startDate, LocalDate endDate, PaginationRequest request) {
+        request = PaginationUtil.validateAndSetDefaults(request);
         
         // Get total count
         long totalElements = countByDateRange(startDate, endDate);
         
         if (totalElements == 0) {
-            return org.example.util.PaginationUtil.createEmptyResponse(request);
+            return PaginationUtil.createEmptyResponse(request);
         }
         
         // Get paginated results
         List<OrderPojo> content = getByDateRangeWithPagination(startDate, endDate, request);
         
-        return org.example.util.PaginationUtil.createResponse(content, totalElements, request);
+        return PaginationUtil.createResponse(content, totalElements, request);
     }
 
     // ========== COUNT METHODS ==========
@@ -175,13 +178,13 @@ public class OrderDao extends AbstractDao<OrderPojo> {
     /**
      * Count orders by date range.
      */
-    public long countByDateRange(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+    public long countByDateRange(LocalDate startDate, LocalDate endDate) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Long> query = cb.createQuery(Long.class);
         Root<OrderPojo> root = query.from(OrderPojo.class);
         
         // Convert LocalDate (IST) to UTC Instants for comparison
-        java.time.ZoneId istZone = java.time.ZoneId.of("Asia/Kolkata");
+        ZoneId istZone = ZoneId.of("Asia/Kolkata");
         Instant start = startDate.atStartOfDay(istZone).toInstant();
         Instant end = endDate.plusDays(1).atStartOfDay(istZone).toInstant();
         
@@ -234,12 +237,12 @@ public class OrderDao extends AbstractDao<OrderPojo> {
      * @param request Pagination request
      * @return Paginated response with orders containing the substring, ordered by date descending
      */
-    public org.example.model.data.PaginationResponse<OrderPojo> findOrdersBySubstringIdPaginated(
+    public PaginationResponse<OrderPojo> findOrdersBySubstringIdPaginated(
             String searchId, 
-            org.example.model.form.PaginationRequest request) {
+            PaginationRequest request) {
         
         if (searchId == null || searchId.trim().isEmpty()) {
-            return org.example.util.PaginationUtil.createEmptyResponse(request);
+            return PaginationUtil.createEmptyResponse(request);
         }
         
         String searchTerm = searchId.trim();
@@ -248,7 +251,7 @@ public class OrderDao extends AbstractDao<OrderPojo> {
         List<OrderPojo> allMatchingOrders = getAllSubstringMatches(searchTerm);
         
         if (allMatchingOrders.isEmpty()) {
-            return org.example.util.PaginationUtil.createEmptyResponse(request);
+            return PaginationUtil.createEmptyResponse(request);
         }
         
         // Apply pagination
@@ -292,7 +295,7 @@ public class OrderDao extends AbstractDao<OrderPojo> {
     /**
      * Get all orders with pagination applied, ordered by date descending (most recent first).
      */
-    private List<OrderPojo> getAllWithPagination(org.example.model.form.PaginationRequest request) {
+    private List<OrderPojo> getAllWithPagination(PaginationRequest request) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderPojo> query = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = query.from(OrderPojo.class);
@@ -319,7 +322,7 @@ public class OrderDao extends AbstractDao<OrderPojo> {
     /**
      * Get orders by user ID with pagination applied, ordered by date descending (most recent first).
      */
-    private List<OrderPojo> getByUserIdWithPagination(String userId, org.example.model.form.PaginationRequest request) {
+    private List<OrderPojo> getByUserIdWithPagination(String userId, PaginationRequest request) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderPojo> query = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = query.from(OrderPojo.class);
@@ -346,7 +349,7 @@ public class OrderDao extends AbstractDao<OrderPojo> {
     /**
      * Get orders by date range with pagination applied, ordered by date descending (most recent first).
      */
-    private List<OrderPojo> getByDateRangeWithPagination(java.time.LocalDate startDate, java.time.LocalDate endDate, org.example.model.form.PaginationRequest request) {
+    private List<OrderPojo> getByDateRangeWithPagination(LocalDate startDate, LocalDate endDate, PaginationRequest request) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderPojo> query = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = query.from(OrderPojo.class);

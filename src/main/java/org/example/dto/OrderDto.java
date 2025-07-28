@@ -1,7 +1,6 @@
 package org.example.dto;
 
 import org.example.flow.OrderFlow;
-import org.example.flow.ProductFlow;
 import org.example.api.InvoiceApi;
 import org.example.model.data.OrderData;
 import org.example.model.enums.OrderStatus;
@@ -33,9 +32,6 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
 
     @Autowired
     private OrderFlow orderFlow;
-
-    @Autowired
-    private ProductFlow productFlow;
 
     @Autowired
     private ProductApi productApi;

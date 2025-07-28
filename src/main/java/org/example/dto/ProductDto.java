@@ -1,30 +1,23 @@
 package org.example.dto;
 
 import org.example.exception.ApiException;
-import org.example.model.form.ProductForm;
 import org.example.model.data.ProductData;
+import org.example.model.form.ProductForm;
 import org.example.model.data.TsvUploadResult;
 import org.example.pojo.ProductPojo;
-import org.example.flow.ProductFlow;
-import org.example.api.ProductApi;
 import org.example.api.ClientApi;
-import org.example.util.StringUtil;
 import org.example.util.FileValidationUtil;
 import org.example.util.ProductTsvParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
-import org.example.pojo.ClientPojo;
+
 import jakarta.validation.Valid;
 
 @Component
 public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductData> {
-
-    @Autowired
-    private ProductFlow productFlow;
 
     @Autowired
     private ClientApi clientApi;
@@ -35,25 +28,14 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
     }
 
     @Override
-    protected ProductPojo convertFormToEntity(ProductForm productForm) {
-        ProductPojo productPojo = new ProductPojo();
-        
-        // Get client ID from client name
-        String clientName = StringUtil.format(productForm.getClientName());
-        Integer clientId = getClientIdByName(clientName);
-        if (clientId == null) {
-            throw new ApiException("Client with name '" + clientName + "' not found");
-        }
-        productPojo.setClientId(clientId);
-        
-        productPojo.setName(productForm.getName());
-        productPojo.setMrp(productForm.getMrp());
-        productPojo.setBarcode(productForm.getBarcode());
-        
-        // Store image URL in imageUrl field
-        productPojo.setImageUrl(productForm.getImage());
-        
-        return productPojo;
+    protected ProductPojo convertFormToEntity(ProductForm form) {
+        ProductPojo pojo = new ProductPojo();
+        pojo.setName(form.getName());
+        pojo.setBarcode(form.getBarcode());
+        pojo.setMrp(form.getMrp());
+        pojo.setImageUrl(form.getImage());
+        pojo.setClientId(form.getClientId());
+        return pojo;
     }
 
     @Override
@@ -61,34 +43,19 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         ProductData productData = new ProductData();
         productData.setId(productPojo.getId());
         productData.setName(productPojo.getName());
-        
-        // Get client information from clientId
-        Integer clientId = productPojo.getClientId();
-        String clientName = null;
-        
-        if (clientId != null && clientId > 0) {
-            // Always use clientApi to get client name to avoid lazy loading issues
-            try {
-                ClientPojo client = clientApi.get(clientId);
-                if (client != null) {
-                    clientName = client.getClientName();
-                }
-            } catch (Exception e) {
-                // Client not found or invalid, continue with null clientName
-                System.out.println("Warning: Client with ID " + clientId + " not found for product " + productPojo.getId());
-            }
-        }
-        
-        System.out.println("Product " + productPojo.getId() + " - Client name: '" + clientName + "', Client ID: " + clientId);
-        
-        productData.setClientId(clientId);
-        productData.setClientName(clientName);
         productData.setBarcode(productPojo.getBarcode());
         productData.setMrp(productPojo.getMrp());
+        productData.setImageUrl(productPojo.getImageUrl());
+        productData.setClientId(productPojo.getClientId());
         
-        // Set imageUrl directly from stored URL
-        if (productPojo.getImageUrl() != null && !productPojo.getImageUrl().trim().isEmpty()) {
-            productData.setImageUrl(productPojo.getImageUrl());
+        // Get client name if clientId is present
+        if (productPojo.getClientId() != null && productPojo.getClientId() > 0) {
+            try {
+                var client = clientApi.get(productPojo.getClientId());
+                productData.setClientName(client.getClientName());
+            } catch (Exception e) {
+                productData.setClientName("Unknown");
+            }
         }
         
         return productData;
@@ -99,45 +66,133 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         if (productForm == null) {
             throw new ApiException("Product form cannot be null");
         }
-        if (productForm.getClientName() == null || productForm.getClientName().trim().isEmpty()) {
-            throw new ApiException("Client name is required");
+        if (productForm.getName() == null || productForm.getName().trim().isEmpty()) {
+            throw new ApiException("Product name is required");
         }
-        // Validate image URL if provided
-        if (productForm.getImage() != null && !productForm.getImage().trim().isEmpty()) {
-            String imageUrl = productForm.getImage().trim();
-            if (!isValidUrl(imageUrl)) {
-                throw new ApiException("Image must be a valid URL");
-            }
+        if (productForm.getBarcode() == null || productForm.getBarcode().trim().isEmpty()) {
+            throw new ApiException("Product barcode is required");
+        }
+        if (productForm.getMrp() == null || productForm.getMrp() <= 0) {
+            throw new ApiException("Product MRP must be positive");
         }
     }
 
-    @Override
-    @org.springframework.transaction.annotation.Transactional
-    public ProductData add(@Valid ProductForm form) {
-        if (Objects.isNull(form)) {
-            throw new ApiException("Product form cannot be null");
+    // Custom methods that don't fit the generic pattern
+
+    public ProductData getByBarcode(String barcode) {
+        if (barcode == null || barcode.trim().isEmpty()) {
+            throw new ApiException("Barcode cannot be null or empty");
         }
-        return super.add(form);
+        ProductPojo product = ((org.example.api.ProductApi) api).getByBarcode(barcode);
+        return convertEntityToData(product);
     }
 
-    @Override
-    @org.springframework.transaction.annotation.Transactional
-    public ProductData update(Integer id, @Valid ProductForm form) {
-        validateId(id);
-        preprocess(form);
-        ProductPojo entity = convertFormToEntity(form);
-        
-        // Use the flow instead of the API to ensure inventory is updated
-        productFlow.update(id, entity);
-        
-        return convertEntityToData(api.get(id));
-    }
-
-    @Override
-    public List<ProductData> getAll() {
-        return productFlow.getAll().stream()
+    public List<ProductData> getByClientName(String clientName) {
+        if (clientName == null || clientName.trim().isEmpty()) {
+            throw new ApiException("Client name cannot be null or empty");
+        }
+        List<ProductPojo> products = ((org.example.api.ProductApi) api).getByClientName(clientName);
+        return products.stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
+    }
+
+    public List<ProductData> getByBarcodeLike(String barcode) {
+        if (barcode == null || barcode.trim().isEmpty()) {
+            throw new ApiException("Barcode cannot be null or empty");
+        }
+        List<ProductPojo> products = ((org.example.api.ProductApi) api).getByBarcodeLike(barcode);
+        return products.stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+    }
+
+    public List<ProductData> getByNameLike(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new ApiException("Name cannot be null or empty");
+        }
+        List<ProductPojo> products = ((org.example.api.ProductApi) api).getByNameLike(name);
+        return products.stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+    }
+
+    public List<ProductData> getByClientId(Integer clientId) {
+        if (clientId == null) {
+            throw new ApiException("Client ID cannot be null");
+        }
+        List<ProductPojo> products = ((org.example.api.ProductApi) api).getByClientId(clientId);
+        return products.stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+    }
+
+    public org.example.model.data.PaginationResponse<ProductData> getAllPaginated(org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getAllPaginated(request);
+        
+        List<ProductData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    public org.example.model.data.PaginationResponse<ProductData> getByNameLikePaginated(String name, org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByNameLikePaginated(name, request);
+        
+        List<ProductData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    public org.example.model.data.PaginationResponse<ProductData> getByClientIdPaginated(Integer clientId, org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByClientIdPaginated(clientId, request);
+        
+        List<ProductData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    public org.example.model.data.PaginationResponse<ProductData> getByClientNamePaginated(String clientName, org.example.model.form.PaginationRequest request) {
+        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByClientNamePaginated(clientName, request);
+        
+        List<ProductData> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new org.example.model.data.PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    public String getProductImageUrl(Integer productId) {
+        if (productId == null) {
+            throw new ApiException("Product ID cannot be null");
+        }
+        ProductPojo product = api.get(productId);
+        return product.getImageUrl();
     }
 
     public TsvUploadResult uploadProductsFromTsv(MultipartFile file) {
@@ -149,7 +204,7 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         TsvUploadResult result;
         try {
             System.out.println("ProductDto.uploadProductsFromTsv - Starting parse with complete validation");
-            result = ProductTsvParser.parseWithCompleteValidation(file.getInputStream(), (ProductApi) api, clientApi);
+            result = ProductTsvParser.parseWithCompleteValidation(file.getInputStream(), (org.example.api.ProductApi) api, clientApi);
             System.out.println("ProductDto.uploadProductsFromTsv - Parse completed. Total: " + result.getTotalRows() + ", Successful: " + result.getSuccessfulRows() + ", Failed: " + result.getFailedRows());
         } catch (Exception e) {
             System.out.println("ProductDto.uploadProductsFromTsv - Parse failed: " + e.getMessage());
@@ -191,207 +246,20 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         // Process only the valid forms (already validated by parser)
         for (ProductForm form : forms) {
             try {
-                System.out.println("ProductDto.uploadProductsFromTsv - Adding product: " + form.getBarcode());
+                System.out.println("ProductDto.uploadProductsFromTsv - Adding product: " + form.getName());
                 // Use the flow directly since validation is already done
                 ProductPojo entity = convertFormToEntity(form);
-                productFlow.add(entity);
+                api.add(entity);
                 result.incrementSuccessful();
-                System.out.println("ProductDto.uploadProductsFromTsv - Successfully added product: " + form.getBarcode());
+                System.out.println("ProductDto.uploadProductsFromTsv - Successfully added product: " + form.getName());
             } catch (Exception e) {
-                System.out.println("ProductDto.uploadProductsFromTsv - Unexpected error adding product '" + form.getBarcode() + "': " + e.getMessage());
-                result.addError("Unexpected error adding product '" + form.getBarcode() + "': " + e.getMessage());
+                System.out.println("ProductDto.uploadProductsFromTsv - Unexpected error adding product '" + form.getName() + "': " + e.getMessage());
+                result.addError("Unexpected error adding product '" + form.getName() + "': " + e.getMessage());
                 result.incrementFailed();
             }
         }
         
         System.out.println("ProductDto.uploadProductsFromTsv - Final result: " + result.getSummary());
         return result;
-    }
-
-
-
-    public String getProductImageUrl(Integer id) {
-        ProductData product = get(id);
-        if (product.getImageUrl() == null || product.getImageUrl().trim().isEmpty()) {
-            throw new ApiException("Product image not found");
-        }
-        return product.getImageUrl();
-    }
-
-    public ProductData getByBarcode(String barcode) {
-        if (barcode == null || barcode.trim().isEmpty()) {
-            throw new ApiException("Barcode cannot be null or empty");
-        }
-        ProductPojo product = productFlow.getByBarcode(barcode);
-        if (product == null) {
-            throw new ApiException("Product with barcode '" + barcode + "' not found");
-        }
-        return convertEntityToData(product);
-    }
-
-    public List<ProductData> getByBarcodeLike(String barcode) {
-        if (barcode == null || barcode.trim().isEmpty()) {
-            throw new ApiException("Barcode cannot be null or empty");
-        }
-        List<ProductPojo> products = productFlow.getByBarcodeLike(barcode);
-        return products.stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-    }
-
-    public ProductData getByName(String name) {
-        if (name == null || name.trim().isEmpty()) {
-            throw new ApiException("Product name cannot be null or empty");
-        }
-        ProductPojo product = productFlow.getByName(name);
-        if (product == null) {
-            throw new ApiException("Product with name '" + name + "' not found");
-        }
-        return convertEntityToData(product);
-    }
-
-    public List<ProductData> getByNameLike(String name) {
-        if (name == null || name.trim().isEmpty()) {
-            throw new ApiException("Product name cannot be null or empty");
-        }
-        List<ProductPojo> products = productFlow.getByNameLike(name);
-        return products.stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * Get products by client ID
-     */
-    public List<ProductData> getByClientId(Integer clientId) {
-        if (clientId == null) {
-            throw new ApiException("Client ID cannot be null");
-        }
-        
-        return productFlow.getAll().stream()
-                .filter(product -> clientId.equals(product.getClientId()))
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * Get products by client name
-     */
-    public List<ProductData> getByClientName(String clientName) {
-        if (clientName == null || clientName.trim().isEmpty()) {
-            throw new ApiException("Client name cannot be null or empty");
-        }
-        
-        // Get client ID from client name
-        Integer clientId = getClientIdByName(clientName);
-        if (clientId == null) {
-            throw new ApiException("Client with name '" + clientName + "' not found");
-        }
-        
-        return getByClientId(clientId);
-    }
-    
-    /**
-     * Helper method to get client ID by client name
-     */
-    private Integer getClientIdByName(String clientName) {
-        if (clientName == null || clientName.trim().isEmpty()) {
-            return null;
-        }
-        
-        try {
-            // Format the client name consistently
-            String formattedClientName = StringUtil.format(clientName);
-            ClientPojo client = clientApi.getByName(formattedClientName);
-            if (client != null) {
-                return client.getId();
-            }
-            
-            // If not found with formatted name, try with original name
-            client = clientApi.getByName(clientName);
-            return client != null ? client.getId() : null;
-        } catch (Exception e) {
-            // Log the error for debugging
-            System.err.println("Error getting client ID for name '" + clientName + "': " + e.getMessage());
-            return null;
-        }
-    }
-    
-    private boolean isValidUrl(String url) {
-        try {
-            new java.net.URL(url);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    // ========== PAGINATION METHODS ==========
-
-    /**
-     * Get all products with pagination support.
-     */
-    public org.example.model.data.PaginationResponse<ProductData> getAllPaginated(org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = productFlow.getAllPaginated(request);
-        
-        List<ProductData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new org.example.model.data.PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
-    }
-
-    /**
-     * Get products by name with partial matching and pagination support.
-     */
-    public org.example.model.data.PaginationResponse<ProductData> getByNameLikePaginated(String name, org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = productFlow.getByNameLikePaginated(name, request);
-        
-        List<ProductData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new org.example.model.data.PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
-    }
-
-    /**
-     * Get products by client ID with pagination support.
-     */
-    public org.example.model.data.PaginationResponse<ProductData> getByClientIdPaginated(Integer clientId, org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = productFlow.getByClientIdPaginated(clientId, request);
-        
-        List<ProductData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new org.example.model.data.PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
-    }
-
-    /**
-     * Get products by client name with pagination support.
-     */
-    public org.example.model.data.PaginationResponse<ProductData> getByClientNamePaginated(String clientName, org.example.model.form.PaginationRequest request) {
-        // Get client ID from client name first
-        Integer clientId = getClientIdByName(clientName);
-        if (clientId == null) {
-            throw new ApiException("Client with name '" + clientName + "' not found");
-        }
-        
-        return getByClientIdPaginated(clientId, request);
     }
 }

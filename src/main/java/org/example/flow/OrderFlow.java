@@ -18,8 +18,6 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
     @Autowired
     private OrderApi api;
 
-
-
     public OrderFlow() {
         super(OrderPojo.class);
     }
