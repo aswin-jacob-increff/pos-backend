@@ -74,7 +74,7 @@ public class OrderDao extends AbstractDao<OrderPojo> {
         CriteriaQuery<OrderPojo> cq = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = cq.from(OrderPojo.class);
         // Convert LocalDate (IST) to UTC Instants for comparison
-        java.time.ZoneId istZone = java.time.ZoneId.of("Asia/Kolkata");
+        ZoneId istZone = ZoneId.of("Asia/Kolkata");
         Instant start = startDate.atStartOfDay(istZone).toInstant();
         Instant end = endDate.plusDays(1).atStartOfDay(istZone).toInstant();
         Predicate dateBetween = cb.between(root.get("date"), start, end);
@@ -268,11 +268,11 @@ public class OrderDao extends AbstractDao<OrderPojo> {
             paginatedContent = allMatchingOrders.subList(startIndex, endIndex);
         }
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             paginatedContent,
             totalElements,
-            pageNumber,
-            pageSize
+            request.getPageNumber(),
+            request.getPageSize()
         );
     }
 
@@ -355,7 +355,7 @@ public class OrderDao extends AbstractDao<OrderPojo> {
         Root<OrderPojo> root = query.from(OrderPojo.class);
         
         // Convert LocalDate (IST) to UTC Instants for comparison
-        java.time.ZoneId istZone = java.time.ZoneId.of("Asia/Kolkata");
+        ZoneId istZone = ZoneId.of("Asia/Kolkata");
         Instant start = startDate.atStartOfDay(istZone).toInstant();
         Instant end = endDate.plusDays(1).atStartOfDay(istZone).toInstant();
         

@@ -7,21 +7,11 @@ import org.springframework.stereotype.Service;
 import org.example.exception.ApiException;
 
 @Service
-public class UserFlow extends AbstractFlow<UserPojo> {
+public class UserFlow {
 
     @Autowired
     private UserApi api;
 
-    public UserFlow() {
-        super(UserPojo.class);
-    }
-
-    @Override
-    protected Integer getEntityId(UserPojo entity) {
-        return entity.getId();
-    }
-
-    @Override
     protected String getEntityName() {
         return "User";
     }
@@ -43,6 +33,24 @@ public class UserFlow extends AbstractFlow<UserPojo> {
             throw new ApiException("User ID cannot be null");
         }
         return api.get(id);
+    }
+
+    public void add(UserPojo userPojo) {
+        api.add(userPojo);
+    }
+
+    public void update(Integer id, UserPojo userPojo) {
+        if (id == null) {
+            throw new ApiException("User ID cannot be null");
+        }
+        if (userPojo == null) {
+            throw new ApiException("User cannot be null");
+        }
+        api.update(id, userPojo);
+    }
+
+    public java.util.List<UserPojo> getAll() {
+        return api.getAll();
     }
 }
 

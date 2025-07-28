@@ -1,14 +1,18 @@
 package org.example.api;
 
 import org.example.dao.OrderItemDao;
+import org.example.dao.OrderDao;
 import org.example.exception.ApiException;
 import org.example.model.enums.OrderStatus;
 import org.example.pojo.OrderItemPojo;
 import org.example.pojo.OrderPojo;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
+import java.time.LocalDate;
 import java.util.Objects;
 
 @Service
@@ -23,9 +27,8 @@ public class OrderApi extends AbstractApi<OrderPojo> {
     @Autowired
     private InvoiceApi invoiceApi;
 
-    @Override
-    protected String getEntityName() {
-        return "Order";
+    public OrderApi() {
+        super(OrderPojo.class);
     }
 
     // Unique add logic for orders (with order items)
@@ -34,39 +37,9 @@ public class OrderApi extends AbstractApi<OrderPojo> {
         if (Objects.isNull(orderPojo)) {
             throw new ApiException("Order cannot be null");
         }
-        // Set default date to current UTC time if not provided
         orderPojo.setDate(Objects.nonNull(orderPojo.getDate()) ? orderPojo.getDate() : Instant.now());
-        // Set status to CREATED when order is created
         orderPojo.setStatus(OrderStatus.CREATED);
-        // Insert order first to get the ID
         dao.insert(orderPojo);
-        
-        // Note: Order items are now managed separately by the calling code
-        // The order is created first, then items are added with orderId reference
-    }
-
-    public void cancelOrder(Integer orderId) {
-        if (Objects.isNull(orderId)) {
-            throw new ApiException("Order ID cannot be null");
-        }
-        OrderPojo order = dao.select(orderId);
-        if (order == null) {
-            throw new ApiException("Order not found");
-        }
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            throw new ApiException("Order is already cancelled");
-        }
-        // Restore inventory quantities for all order items
-        List<OrderItemPojo> orderItems = orderItemDao.selectByOrderId(orderId);
-        for (OrderItemPojo orderItem : orderItems) {
-            Integer productId = orderItem.getProductId();
-            Integer quantityToRestore = orderItem.getQuantity();
-            // Add the quantity back to inventory
-            inventoryApi.addStock(productId, quantityToRestore);
-        }
-        // Update order status to CANCELLED instead of deleting
-        order.setStatus(OrderStatus.CANCELLED);
-        dao.update(orderId, order);
     }
 
     public String generateInvoice(Integer orderId) throws Exception {
@@ -77,9 +50,7 @@ public class OrderApi extends AbstractApi<OrderPojo> {
     // Note: Order items are now managed separately with denormalized structure
 
     public void updateStatus(Integer id, OrderStatus status) {
-        if (Objects.isNull(id)) {
-            throw new ApiException("Order ID cannot be null");
-        }
+        validateId(id);
         if (Objects.isNull(status)) {
             throw new ApiException("Order status cannot be null");
         }
@@ -95,18 +66,13 @@ public class OrderApi extends AbstractApi<OrderPojo> {
      * @param endDate End date (inclusive)
      * @return List of orders within the date range
      */
-    public List<OrderPojo> getOrdersByDateRange(java.time.LocalDate startDate, java.time.LocalDate endDate) {
-        if (startDate == null || endDate == null) {
-            throw new ApiException("Start date and end date cannot be null");
-        }
-        if (endDate.isBefore(startDate)) {
-            throw new ApiException("End date cannot be before start date");
-        }
-        return ((org.example.dao.OrderDao) dao).findOrdersByDateRange(startDate, endDate);
+    public List<OrderPojo> getOrdersByDateRange(LocalDate startDate, LocalDate endDate) {
+        validateDateRange(startDate, endDate);
+        return ((OrderDao) dao).findOrdersByDateRange(startDate, endDate);
     }
 
     public List<OrderPojo> findByUserId(String userId) {
-        return ((org.example.dao.OrderDao) dao).findByUserId(userId);
+        return ((OrderDao) dao).findByUserId(userId);
     }
 
     // ========== SUBSTRING SEARCH METHODS ==========
@@ -120,13 +86,9 @@ public class OrderApi extends AbstractApi<OrderPojo> {
      * @return List of orders where the search term appears as a substring in the ID
      */
     public List<OrderPojo> findOrdersBySubstringId(String searchId, int maxResults) {
-        if (searchId == null || searchId.trim().isEmpty()) {
-            throw new ApiException("Search ID cannot be null or empty");
-        }
-        if (maxResults <= 0) {
-            throw new ApiException("Max results must be positive");
-        }
-        return ((org.example.dao.OrderDao) dao).findOrdersBySubstringId(searchId, maxResults);
+        validateString(searchId, "Search ID");
+        validatePositive(maxResults, "Max results");
+        return ((OrderDao) dao).findOrdersBySubstringId(searchId, maxResults);
     }
 
     /**
@@ -136,16 +98,14 @@ public class OrderApi extends AbstractApi<OrderPojo> {
      * @param request Pagination request
      * @return Paginated response with orders containing the substring
      */
-    public org.example.model.data.PaginationResponse<OrderPojo> findOrdersBySubstringIdPaginated(
+    public PaginationResponse<OrderPojo> findOrdersBySubstringIdPaginated(
             String searchId, 
-            org.example.model.form.PaginationRequest request) {
-        if (searchId == null || searchId.trim().isEmpty()) {
-            throw new ApiException("Search ID cannot be null or empty");
-        }
+            PaginationRequest request) {
+        validateString(searchId, "Search ID");
         if (request == null) {
-            request = new org.example.model.form.PaginationRequest();
+            request = new PaginationRequest();
         }
-        return ((org.example.dao.OrderDao) dao).findOrdersBySubstringIdPaginated(searchId, request);
+        return ((OrderDao) dao).findOrdersBySubstringIdPaginated(searchId, request);
     }
 
     /**
@@ -155,10 +115,8 @@ public class OrderApi extends AbstractApi<OrderPojo> {
      * @return Number of orders containing the substring
      */
     public long countOrdersBySubstringId(String searchId) {
-        if (searchId == null || searchId.trim().isEmpty()) {
-            throw new ApiException("Search ID cannot be null or empty");
-        }
-        return ((org.example.dao.OrderDao) dao).countOrdersBySubstringId(searchId);
+        validateString(searchId, "Search ID");
+        return ((OrderDao) dao).countOrdersBySubstringId(searchId);
     }
 
     // ========== PAGINATION METHODS ==========
@@ -166,30 +124,23 @@ public class OrderApi extends AbstractApi<OrderPojo> {
     /**
      * Get all orders with pagination support, ordered by date descending (most recent first).
      */
-    public org.example.model.data.PaginationResponse<OrderPojo> getAllPaginated(org.example.model.form.PaginationRequest request) {
-        return ((org.example.dao.OrderDao) dao).getAllPaginated(request);
+    public PaginationResponse<OrderPojo> getAllPaginated(PaginationRequest request) {
+        return ((OrderDao) dao).getAllPaginated(request);
     }
 
     /**
      * Get orders by user ID with pagination support, ordered by date descending (most recent first).
      */
-    public org.example.model.data.PaginationResponse<OrderPojo> getByUserIdPaginated(String userId, org.example.model.form.PaginationRequest request) {
-        if (userId == null || userId.trim().isEmpty()) {
-            throw new ApiException("User ID cannot be null or empty");
-        }
-        return ((org.example.dao.OrderDao) dao).getByUserIdPaginated(userId, request);
+    public PaginationResponse<OrderPojo> getByUserIdPaginated(String userId, PaginationRequest request) {
+        validateString(userId, "User ID");
+        return ((OrderDao) dao).getByUserIdPaginated(userId, request);
     }
 
     /**
      * Get orders by date range with pagination support, ordered by date descending (most recent first).
      */
-    public org.example.model.data.PaginationResponse<OrderPojo> getByDateRangePaginated(java.time.LocalDate startDate, java.time.LocalDate endDate, org.example.model.form.PaginationRequest request) {
-        if (startDate == null || endDate == null) {
-            throw new ApiException("Start date and end date cannot be null");
-        }
-        if (endDate.isBefore(startDate)) {
-            throw new ApiException("End date cannot be before start date");
-        }
-        return ((org.example.dao.OrderDao) dao).getByDateRangePaginated(startDate, endDate, request);
+    public PaginationResponse<OrderPojo> getByDateRangePaginated(LocalDate startDate, LocalDate endDate, PaginationRequest request) {
+        validateDateRange(startDate, endDate);
+        return ((OrderDao) dao).getByDateRangePaginated(startDate, endDate, request);
     }
 } 

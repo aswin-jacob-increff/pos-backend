@@ -17,12 +17,16 @@ import org.example.model.data.InventoryData;
 import org.example.api.ProductApi;
 import org.example.api.UserApi;
 import org.example.pojo.UserPojo;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 @RestController
 @RequestMapping(ApiEndpoints.User.BASE_PATH)
@@ -65,7 +69,7 @@ public class UserController {
     }
 
     @GetMapping("/orders/paginated")
-    public ResponseEntity<org.example.model.data.PaginationResponse<OrderData>> getMyOrdersPaginated(
+    public ResponseEntity<PaginationResponse<OrderData>> getMyOrdersPaginated(
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
@@ -79,8 +83,8 @@ public class UserController {
         try {
             if (authentication != null && authentication.isAuthenticated()) {
                 String userEmail = authentication.getName();
-                org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
-                org.example.model.data.PaginationResponse<OrderData> response = orderDto.getOrdersByUserIdPaginated(userEmail, request);
+                PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+                PaginationResponse<OrderData> response = orderDto.getOrdersByUserIdPaginated(userEmail, request);
                 return ResponseEntity.ok(response);
             } else {
                 throw new ApiException("User not authenticated");
@@ -100,14 +104,16 @@ public class UserController {
         try {
             if (authentication != null && authentication.isAuthenticated()) {
                 String userEmail = authentication.getName();
-                java.time.LocalDate start = java.time.LocalDate.parse(startDate);
-                java.time.LocalDate end = java.time.LocalDate.parse(endDate);
-                return orderDto.getOrdersByUserIdAndDateRange(userEmail, start, end);
+                LocalDate start = LocalDate.parse(startDate);
+                LocalDate end = LocalDate.parse(endDate);
+                return orderDto.getOrdersByDateRange(start, end);
             } else {
                 throw new ApiException("User not authenticated");
             }
-        } catch (java.time.format.DateTimeParseException e) {
-            throw new ApiException("Invalid date format. Please use yyyy-MM-dd format (e.g., 2024-01-15)");
+        } catch (DateTimeParseException e) {
+            throw new ApiException("Invalid date format. Use YYYY-MM-DD format.");
+        } catch (ApiException e) {
+            throw e;
         } catch (Exception e) {
             throw new ApiException("Failed to get orders by date range: " + e.getMessage());
         }

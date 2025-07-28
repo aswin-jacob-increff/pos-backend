@@ -1,11 +1,16 @@
 package org.example.api;
 
+import org.example.exception.ApiException;
+import org.example.pojo.InventoryPojo;
+import org.example.pojo.ProductPojo;
+import org.example.pojo.ClientPojo;
+import org.example.dao.InventoryDao;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.example.exception.ApiException;
+import java.util.List;
 import java.util.Objects;
-import org.example.pojo.InventoryPojo;
-import org.example.api.ProductApi;
 
 @Service
 public class InventoryApi extends AbstractApi<InventoryPojo> {
@@ -16,115 +21,25 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
     @Autowired
     private ProductApi productApi;
 
-    @Override
-    protected String getEntityName() {
-        return "Inventory";
-    }
-
-    @Override
-    protected void validateAdd(InventoryPojo inventory) {
-        if (inventory == null) {
-            throw new ApiException("Inventory cannot be null");
-        }
-        
-        // Check if productId is present
-        if (inventory.getProductId() == null) {
-            throw new ApiException("Product ID is required for inventory");
-        }
-        
-        // Check if the product exists and is active
-        try {
-            var product = productApi.get(inventory.getProductId());
-            if (product == null) {
-                throw new ApiException("Product with ID '" + inventory.getProductId() + "' not found");
-            }
-            
-            // Check if the client is active
-            if (product.getClientId() != null) {
-                try {
-                    var client = clientApi.get(product.getClientId());
-                    if (client == null) {
-                        throw new ApiException("Client with ID '" + product.getClientId() + "' not found");
-                    }
-                    if (!client.getStatus()) {
-                        throw new ApiException("Client is not active");
-                    }
-                } catch (ApiException e) {
-                    throw e;
-                } catch (Exception e) {
-                    throw new ApiException("Error validating client: " + e.getMessage());
-                }
-            }
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Error validating product: " + e.getMessage());
-        }
-        
-        // Check for duplicate inventory for the same product
-        InventoryPojo existingInventory = ((org.example.dao.InventoryDao) dao).getByProductId(inventory.getProductId());
-        if (existingInventory != null) {
-            throw new ApiException("Inventory for product ID '" + inventory.getProductId() + "' already exists");
-        }
-    }
-
-    @Override
-    protected void validateUpdate(InventoryPojo existing, InventoryPojo updated) {
-        // Check if productId is present
-        if (updated.getProductId() == null) {
-            throw new ApiException("Product ID is required for inventory");
-        }
-        // Check if the product exists and its client is active
-        try {
-            org.example.pojo.ProductPojo product = productApi.get(updated.getProductId());
-            if (product == null) {
-                throw new ApiException("Product with ID '" + updated.getProductId() + "' not found");
-            }
-            // Check if the client is active
-            if (product.getClientId() != null && product.getClientId() > 0) {
-                try {
-                    org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
-                    if (client == null) {
-                        throw new ApiException("Client for product not found");
-                    }
-                    if (!client.getStatus()) {
-                        throw new ApiException("Client is not active");
-                    }
-                } catch (Exception e) {
-                    throw new ApiException("Error validating client: " + e.getMessage());
-                }
-            }
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Error validating product: " + e.getMessage());
-        }
+    public InventoryApi() {
+        super(InventoryPojo.class);
     }
 
     public InventoryPojo getByProductId(Integer productId) {
-        return ((org.example.dao.InventoryDao) dao).getByProductId(productId);
+        return ((InventoryDao) dao).getByProductId(productId);
     }
 
     /**
-     * Add stock to existing inventory by product ID
+     * Validate product and its client before inventory operations
      */
-    public void addStock(Integer productId, Integer quantityToAdd) {
-        if (quantityToAdd <= 0) {
-            throw new ApiException("Quantity to add must be positive");
-        }
-        InventoryPojo inventory = getByProductId(productId);
-        if (Objects.isNull(inventory)) {
-            throw new ApiException("No inventory found for product ID: " + productId);
-        }
-        
-        // Check if the product exists and its client is active
+    private void validateProductAndClient(Integer productId) {
         try {
-            org.example.pojo.ProductPojo product = productApi.get(productId);
+            ProductPojo product = productApi.get(productId);
             if (product == null) {
                 throw new ApiException("Product with ID '" + productId + "' not found");
             }
             if (product.getClientId() != null && product.getClientId() > 0) {
-                org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                ClientPojo client = clientApi.get(product.getClientId());
                 if (client == null) {
                     throw new ApiException("Client for product not found");
                 }
@@ -137,6 +52,19 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
         } catch (Exception e) {
             throw new ApiException("Error validating product: " + e.getMessage());
         }
+    }
+
+    /**
+     * Add stock to existing inventory by product ID
+     */
+    public void addStock(Integer productId, Integer quantityToAdd) {
+        validatePositive(quantityToAdd, "Quantity to add");
+        InventoryPojo inventory = getByProductId(productId);
+        if (Objects.isNull(inventory)) {
+            throw new ApiException("No inventory found for product ID: " + productId);
+        }
+        
+        validateProductAndClient(productId);
         
         InventoryPojo updatedInventory = new InventoryPojo();
         updatedInventory.setProductId(inventory.getProductId());
@@ -148,9 +76,7 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
      * Remove stock from existing inventory by product ID
      */
     public void removeStock(Integer productId, Integer quantityToRemove) {
-        if (quantityToRemove <= 0) {
-            throw new ApiException("Quantity to remove must be positive");
-        }
+        validatePositive(quantityToRemove, "Quantity to remove");
         InventoryPojo inventory = getByProductId(productId);
         if (Objects.isNull(inventory)) {
             throw new ApiException("No inventory found for product ID: " + productId);
@@ -159,26 +85,7 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
             throw new ApiException("Insufficient stock. Available: " + inventory.getQuantity() + ", Requested: " + quantityToRemove);
         }
         
-        // Check if the product exists and its client is active
-        try {
-            org.example.pojo.ProductPojo product = productApi.get(productId);
-            if (product == null) {
-                throw new ApiException("Product with ID '" + productId + "' not found");
-            }
-            if (product.getClientId() != null && product.getClientId() > 0) {
-                org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
-                if (client == null) {
-                    throw new ApiException("Client for product not found");
-                }
-                if (!client.getStatus()) {
-                    throw new ApiException("Client is not active");
-                }
-            }
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Error validating product: " + e.getMessage());
-        }
+        validateProductAndClient(productId);
         
         InventoryPojo updatedInventory = new InventoryPojo();
         updatedInventory.setProductId(inventory.getProductId());
@@ -190,34 +97,13 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
      * Set stock to a specific quantity by product ID
      */
     public void setStock(Integer productId, Integer newQuantity) {
-        if (newQuantity < 0) {
-            throw new ApiException("Stock quantity cannot be negative");
-        }
+        validateNonNegative(newQuantity, "Stock quantity");
         InventoryPojo inventory = getByProductId(productId);
         if (Objects.isNull(inventory)) {
             throw new ApiException("No inventory found for product ID: " + productId);
         }
         
-        // Check if the product exists and its client is active
-        try {
-            org.example.pojo.ProductPojo product = productApi.get(productId);
-            if (product == null) {
-                throw new ApiException("Product with ID '" + productId + "' not found");
-            }
-            if (product.getClientId() != null && product.getClientId() > 0) {
-                org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
-                if (client == null) {
-                    throw new ApiException("Client for product not found");
-                }
-                if (!client.getStatus()) {
-                    throw new ApiException("Client is not active");
-                }
-            }
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Error validating product: " + e.getMessage());
-        }
+        validateProductAndClient(productId);
         
         InventoryPojo updatedInventory = new InventoryPojo();
         updatedInventory.setProductId(inventory.getProductId());
@@ -225,9 +111,12 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
         dao.update(inventory.getId(), updatedInventory);
     }
 
-    public org.example.model.data.PaginationResponse<InventoryPojo> getByProductIdPaginated(Integer productId, org.example.model.form.PaginationRequest request) {
-        if (Objects.isNull(productId)) {
+    public PaginationResponse<InventoryPojo> getByProductIdPaginated(Integer productId, PaginationRequest request) {
+        if (productId == null) {
             throw new ApiException("Product ID cannot be null");
+        }
+        if (request == null) {
+            request = new PaginationRequest();
         }
         return dao.selectByFieldPaginated("productId", productId, request);
     }

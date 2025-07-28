@@ -2,11 +2,15 @@ package org.example.dto;
 
 import org.example.exception.ApiException;
 import org.example.api.AbstractApi;
+import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
+import org.example.model.data.PaginationResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import jakarta.validation.Valid;
 
 @Component
@@ -44,6 +48,61 @@ public abstract class AbstractDto<T, F, D> {
         T entity = convertFormToEntity(form);
         api.update(id, entity);
         return convertEntityToData(api.get(id));
+    }
+
+    // ========== GENERALIZED PAGINATION METHOD ==========
+
+    /**
+     * Generalized pagination method that handles all types of queries.
+     * This method converts entities to data objects and maintains pagination metadata.
+     */
+    public PaginationResponse<D> getPaginated(PaginationQuery query) {
+        if (query == null) {
+            throw new ApiException("Pagination query cannot be null");
+        }
+        
+        PaginationResponse<T> paginatedEntities = api.getPaginated(query);
+        
+        List<D> dataList = paginatedEntities.getContent().stream()
+                .map(this::convertEntityToData)
+                .collect(Collectors.toList());
+        
+        return new PaginationResponse<>(
+            dataList,
+            paginatedEntities.getTotalElements(),
+            paginatedEntities.getCurrentPage(),
+            paginatedEntities.getPageSize()
+        );
+    }
+
+    // ========== CONVENIENCE PAGINATION METHODS ==========
+
+    /**
+     * Get all entities with pagination support.
+     */
+    public PaginationResponse<D> getAllPaginated(PaginationRequest request) {
+        return getPaginated(PaginationQuery.all(request));
+    }
+
+    /**
+     * Get entities by field value with pagination support.
+     */
+    public PaginationResponse<D> getByFieldPaginated(String fieldName, Object value, PaginationRequest request) {
+        return getPaginated(PaginationQuery.byField(fieldName, value, request));
+    }
+
+    /**
+     * Get entities by field value with partial string matching and pagination support.
+     */
+    public PaginationResponse<D> getByFieldLikePaginated(String fieldName, String searchPattern, PaginationRequest request) {
+        return getPaginated(PaginationQuery.byFieldLike(fieldName, searchPattern, request));
+    }
+
+    /**
+     * Get entities by multiple field values with pagination support.
+     */
+    public PaginationResponse<D> getByFieldsPaginated(String[] fieldNames, Object[] fieldValues, PaginationRequest request) {
+        return getPaginated(PaginationQuery.byFields(fieldNames, fieldValues, request));
     }
 
     /**

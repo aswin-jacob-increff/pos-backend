@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
 
 @Component
 public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, InventoryData> {
@@ -107,14 +109,14 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
         return getByProductId(productId);
     }
 
-    public org.example.model.data.PaginationResponse<InventoryData> getAllPaginated(org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<InventoryPojo> paginatedEntities = ((org.example.api.InventoryApi) api).getAllPaginated(request);
+    public PaginationResponse<InventoryData> getAllPaginated(PaginationRequest request) {
+        PaginationResponse<InventoryPojo> paginatedEntities = ((org.example.api.InventoryApi) api).getAllPaginated(request);
         
         List<InventoryData> dataList = paginatedEntities.getContent().stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             dataList,
             paginatedEntities.getTotalElements(),
             paginatedEntities.getCurrentPage(),
@@ -122,14 +124,14 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
         );
     }
 
-    public org.example.model.data.PaginationResponse<InventoryData> getByProductIdPaginated(Integer productId, org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<InventoryPojo> paginatedEntities = ((org.example.api.InventoryApi) api).getByProductIdPaginated(productId, request);
+    public PaginationResponse<InventoryData> getByProductIdPaginated(Integer productId, PaginationRequest request) {
+        PaginationResponse<InventoryPojo> paginatedEntities = ((org.example.api.InventoryApi) api).getByProductIdPaginated(productId, request);
         
         List<InventoryData> dataList = paginatedEntities.getContent().stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             dataList,
             paginatedEntities.getTotalElements(),
             paginatedEntities.getCurrentPage(),

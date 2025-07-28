@@ -3,6 +3,7 @@ package org.example.flow;
 import org.example.api.AbstractApi;
 import org.example.exception.ApiException;
 import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
 import org.example.model.data.PaginationResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -126,21 +127,38 @@ public abstract class AbstractFlow<T> {
         return entityClass.getSimpleName();
     }
 
-    // ========== PAGINATION METHODS ==========
+    // ========== GENERALIZED PAGINATION METHOD ==========
+
+    /**
+     * Generalized pagination method that handles all types of queries.
+     * This method replaces the need for multiple specific pagination methods.
+     */
+    public PaginationResponse<T> getPaginated(PaginationQuery query) {
+        if (query == null) {
+            throw new ApiException("Pagination query cannot be null");
+        }
+        return api.getPaginated(query);
+    }
+
+    // ========== LEGACY PAGINATION METHODS (for backward compatibility) ==========
 
     /**
      * Get all entities with pagination support.
+     * @deprecated Use getPaginated(PaginationQuery.all(request)) instead
      */
+    @Deprecated
     public PaginationResponse<T> getAllPaginated(PaginationRequest request) {
         if (request == null) {
             request = new PaginationRequest();
         }
-        return api.getAllPaginated(request);
+        return getPaginated(PaginationQuery.all(request));
     }
 
     /**
      * Get entities by field value with pagination support.
+     * @deprecated Use getPaginated(PaginationQuery.byField(fieldName, value, request)) instead
      */
+    @Deprecated
     public PaginationResponse<T> getByFieldPaginated(String fieldName, Object value, PaginationRequest request) {
         if (fieldName == null || value == null) {
             throw new ApiException("Field name and value cannot be null");
@@ -148,12 +166,14 @@ public abstract class AbstractFlow<T> {
         if (request == null) {
             request = new PaginationRequest();
         }
-        return api.getByFieldPaginated(fieldName, value, request);
+        return getPaginated(PaginationQuery.byField(fieldName, value, request));
     }
 
     /**
      * Get entities by field value with partial string matching and pagination support.
+     * @deprecated Use getPaginated(PaginationQuery.byFieldLike(fieldName, searchPattern, request)) instead
      */
+    @Deprecated
     public PaginationResponse<T> getByFieldLikePaginated(String fieldName, String searchPattern, PaginationRequest request) {
         if (fieldName == null || searchPattern == null) {
             throw new ApiException("Field name and search pattern cannot be null");
@@ -161,6 +181,6 @@ public abstract class AbstractFlow<T> {
         if (request == null) {
             request = new PaginationRequest();
         }
-        return api.getByFieldLikePaginated(fieldName, searchPattern, request);
+        return getPaginated(PaginationQuery.byFieldLike(fieldName, searchPattern, request));
     }
 } 

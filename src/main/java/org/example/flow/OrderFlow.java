@@ -3,6 +3,8 @@ package org.example.flow;
 import org.example.model.enums.OrderStatus;
 import org.example.pojo.OrderPojo;
 import org.example.api.OrderApi;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
 
 import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Objects;
+import java.time.LocalDate;
 
 @Service
 @Transactional
@@ -67,12 +70,7 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         return api.getAll();
     }
 
-    public void cancelOrder(Integer id) {
-        if (Objects.isNull(id)) {
-            throw new ApiException("Order ID cannot be null");
-        }
-        api.cancelOrder(id);
-    }
+
 
     public String generateInvoice(Integer orderId) throws Exception {
         if (Objects.isNull(orderId)) {
@@ -106,7 +104,7 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
      * @param endDate End date (inclusive)
      * @return List of orders within the date range
      */
-    public List<OrderPojo> getOrdersByDateRange(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+    public List<OrderPojo> getOrdersByDateRange(LocalDate startDate, LocalDate endDate) {
         return api.getOrdersByDateRange(startDate, endDate);
     }
 
@@ -141,14 +139,14 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
      * @param request Pagination request
      * @return Paginated response with orders containing the substring
      */
-    public org.example.model.data.PaginationResponse<OrderPojo> findOrdersBySubstringIdPaginated(
+    public PaginationResponse<OrderPojo> findOrdersBySubstringIdPaginated(
             String searchId, 
-            org.example.model.form.PaginationRequest request) {
+            PaginationRequest request) {
         if (searchId == null || searchId.trim().isEmpty()) {
             throw new ApiException("Search ID cannot be null or empty");
         }
         if (request == null) {
-            request = new org.example.model.form.PaginationRequest();
+            request = new PaginationRequest();
         }
         return api.findOrdersBySubstringIdPaginated(searchId, request);
     }
@@ -171,14 +169,14 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
     /**
      * Get all orders with pagination support, ordered by date descending (most recent first).
      */
-    public org.example.model.data.PaginationResponse<OrderPojo> getAllPaginated(org.example.model.form.PaginationRequest request) {
+    public PaginationResponse<OrderPojo> getAllPaginated(PaginationRequest request) {
         return api.getAllPaginated(request);
     }
 
     /**
      * Get orders by user ID with pagination support, ordered by date descending (most recent first).
      */
-    public org.example.model.data.PaginationResponse<OrderPojo> getByUserIdPaginated(String userId, org.example.model.form.PaginationRequest request) {
+    public PaginationResponse<OrderPojo> getByUserIdPaginated(String userId, PaginationRequest request) {
         if (userId == null || userId.trim().isEmpty()) {
             throw new ApiException("User ID cannot be null or empty");
         }
@@ -188,7 +186,7 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
     /**
      * Get orders by date range with pagination support, ordered by date descending (most recent first).
      */
-    public org.example.model.data.PaginationResponse<OrderPojo> getByDateRangePaginated(java.time.LocalDate startDate, java.time.LocalDate endDate, org.example.model.form.PaginationRequest request) {
+    public PaginationResponse<OrderPojo> getByDateRangePaginated(LocalDate startDate, LocalDate endDate, PaginationRequest request) {
         if (startDate == null || endDate == null) {
             throw new ApiException("Start date and end date cannot be null");
         }

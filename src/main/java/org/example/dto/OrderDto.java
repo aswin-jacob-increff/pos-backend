@@ -2,6 +2,9 @@ package org.example.dto;
 
 import org.example.flow.OrderFlow;
 import org.example.api.InvoiceApi;
+import org.example.api.ClientApi;
+import org.example.api.ProductApi;
+import org.example.dao.OrderItemDao;
 import org.example.model.data.OrderData;
 import org.example.model.enums.OrderStatus;
 import org.example.model.form.OrderForm;
@@ -11,21 +14,29 @@ import org.example.model.data.InvoiceData;
 import org.example.model.data.InvoiceItemData;
 import org.example.pojo.OrderItemPojo;
 import org.example.pojo.OrderPojo;
+import org.example.pojo.ProductPojo;
+import org.example.pojo.ClientPojo;
+import org.example.pojo.InvoicePojo;
 import org.example.exception.ApiException;
+import org.example.util.TimeUtil;
+import org.example.util.Base64ToPdfUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.Resource;
 import jakarta.validation.Valid;
-import org.example.util.TimeUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.time.format.DateTimeFormatter;
-import org.example.api.ProductApi;
 import java.util.stream.Collectors;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Component
 public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
@@ -43,12 +54,10 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     private InvoiceApi invoiceApi;
     
     @Autowired
-    private org.example.dao.OrderItemDao orderItemDao;
+    private OrderItemDao orderItemDao;
     
-    
-
     @Autowired
-    private org.example.api.ClientApi clientApi;
+    private ClientApi clientApi;
 
     @Override
     protected String getEntityName() {
@@ -69,6 +78,10 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
 
     @Override
     protected OrderData convertEntityToData(OrderPojo orderPojo) {
+        if (orderPojo == null) {
+            throw new ApiException("Order cannot be null");
+        }
+        
         OrderData orderData = new OrderData();
         orderData.setId(orderPojo.getId());
         // Convert UTC Instant from DB to IST LocalDateTime for frontend
@@ -94,14 +107,8 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     }
 
     // Custom methods
-    public void cancelOrder(Integer id) {
-        if (id == null) {
-            throw new ApiException("Order ID cannot be null");
-        }
-        orderFlow.cancelOrder(id);
-    }
 
-    public org.springframework.core.io.Resource downloadInvoice(Integer orderId) {
+    public Resource downloadInvoice(Integer orderId) {
         if (orderId == null) {
             throw new ApiException("Order ID cannot be null");
         }
@@ -115,7 +122,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
             invoiceApi.cleanupDuplicateInvoices(orderId);
             
             // Check if invoice already exists in database
-            org.example.pojo.InvoicePojo existingInvoice = invoiceApi.getByOrderId(orderId);
+            InvoicePojo existingInvoice = invoiceApi.getByOrderId(orderId);
             if (existingInvoice != null) {
                 System.out.println("Invoice exists in database, checking file...");
                 // Invoice exists, try to get the file
@@ -157,7 +164,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
                 Integer clientId = null;
                 
                 try {
-                    org.example.pojo.ProductPojo product = productApi.get(itemPojo.getProductId());
+                    ProductPojo product = productApi.get(itemPojo.getProductId());
                     if (product != null) {
                         productName = product.getName() != null ? product.getName() : "Unknown";
                         productBarcode = product.getBarcode() != null ? product.getBarcode() : "Unknown";
@@ -166,7 +173,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
                         // Fetch client information
                         if (product.getClientId() != null && product.getClientId() > 0) {
                             try {
-                                org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                                ClientPojo client = clientApi.get(product.getClientId());
                                 if (client != null) {
                                     clientName = client.getClientName() != null ? client.getClientName() : "Unknown";
                                 }
@@ -231,7 +238,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
                 String savePath = "src/main/resources/invoice/" + fileName;
                 
                 try {
-                    org.example.util.Base64ToPdfUtil.saveBase64AsPdf(response.getBody(), savePath);
+                    Base64ToPdfUtil.saveBase64AsPdf(response.getBody(), savePath);
                     System.out.println("PDF saved successfully to: " + savePath);
                 } catch (Exception e) {
                     System.out.println("Error saving PDF: " + e.getMessage());
@@ -240,7 +247,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
 
                 System.out.println("Saving invoice to database...");
                 // Create and save invoice entity to database using InvoiceApi
-                org.example.pojo.InvoicePojo invoicePojo = new org.example.pojo.InvoicePojo();
+                InvoicePojo invoicePojo = new InvoicePojo();
                 invoicePojo.setOrderId(orderId);
                 invoicePojo.setFilePath("/invoice/" + fileName);
                 invoicePojo.setInvoiceId(orderId.toString());
@@ -336,7 +343,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
      * @param endDate End date (inclusive)
      * @return List of order data within the date range
      */
-    public List<OrderData> getOrdersByDateRange(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+    public List<OrderData> getOrdersByDateRange(LocalDate startDate, LocalDate endDate) {
         if (startDate == null || endDate == null) {
             throw new ApiException("Start date and end date cannot be null");
         }
@@ -366,7 +373,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         return orderDataList;
     }
 
-    public List<OrderData> getOrdersByUserIdAndDateRange(String userId, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+    public List<OrderData> getOrdersByUserIdAndDateRange(String userId, LocalDate startDate, LocalDate endDate) {
         if (userId == null || startDate == null || endDate == null) {
             throw new ApiException("User ID, start date, and end date cannot be null");
         }
@@ -377,7 +384,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         List<OrderData> filtered = new ArrayList<>();
         for (OrderPojo order : allUserOrders) {
             if (order.getDate() != null) {
-                java.time.LocalDate orderDateIST = org.example.util.TimeUtil.toIST(order.getDate()).toLocalDate();
+                LocalDate orderDateIST = TimeUtil.toIST(order.getDate()).toLocalDate();
                 if ((orderDateIST.isEqual(startDate) || orderDateIST.isAfter(startDate)) && orderDateIST.isBefore(endDate.plusDays(1))) {
                     filtered.add(convertEntityToData(order));
                 }
@@ -389,7 +396,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     /**
      * Format date for invoice in "Date: dd/mm/yyyy. Time: hh:mm" format
      */
-    private String formatDateForInvoice(java.time.LocalDateTime dateTime) {
+    private String formatDateForInvoice(LocalDateTime dateTime) {
         if (dateTime == null) {
             return null;
         }
@@ -401,14 +408,14 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     /**
      * Get all orders with pagination support.
      */
-    public org.example.model.data.PaginationResponse<OrderData> getAllPaginated(org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<OrderPojo> paginatedEntities = orderFlow.getAllPaginated(request);
+    public PaginationResponse<OrderData> getAllPaginated(PaginationRequest request) {
+        PaginationResponse<OrderPojo> paginatedEntities = orderFlow.getAllPaginated(request);
         
         List<OrderData> dataList = paginatedEntities.getContent().stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             dataList,
             paginatedEntities.getTotalElements(),
             paginatedEntities.getCurrentPage(),
@@ -419,14 +426,14 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     /**
      * Get orders by user ID with pagination support.
      */
-    public org.example.model.data.PaginationResponse<OrderData> getOrdersByUserIdPaginated(String userId, org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<OrderPojo> paginatedEntities = orderFlow.getByUserIdPaginated(userId, request);
+    public PaginationResponse<OrderData> getOrdersByUserIdPaginated(String userId, PaginationRequest request) {
+        PaginationResponse<OrderPojo> paginatedEntities = orderFlow.getByUserIdPaginated(userId, request);
         
         List<OrderData> dataList = paginatedEntities.getContent().stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             dataList,
             paginatedEntities.getTotalElements(),
             paginatedEntities.getCurrentPage(),
@@ -437,14 +444,14 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     /**
      * Get orders by date range with pagination support.
      */
-    public org.example.model.data.PaginationResponse<OrderData> getOrdersByDateRangePaginated(java.time.LocalDate startDate, java.time.LocalDate endDate, org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<OrderPojo> paginatedEntities = orderFlow.getByDateRangePaginated(startDate, endDate, request);
+    public PaginationResponse<OrderData> getOrdersByDateRangePaginated(LocalDate startDate, LocalDate endDate, PaginationRequest request) {
+        PaginationResponse<OrderPojo> paginatedEntities = orderFlow.getByDateRangePaginated(startDate, endDate, request);
         
         List<OrderData> dataList = paginatedEntities.getContent().stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             dataList,
             paginatedEntities.getTotalElements(),
             paginatedEntities.getCurrentPage(),
@@ -483,23 +490,23 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
      * @param request Pagination request
      * @return Paginated response with orders containing the substring
      */
-    public org.example.model.data.PaginationResponse<OrderData> findOrdersBySubstringIdPaginated(
+    public PaginationResponse<OrderData> findOrdersBySubstringIdPaginated(
             String searchId, 
-            org.example.model.form.PaginationRequest request) {
+            PaginationRequest request) {
         if (searchId == null || searchId.trim().isEmpty()) {
             throw new ApiException("Search ID cannot be null or empty");
         }
         if (request == null) {
-            request = new org.example.model.form.PaginationRequest();
+            request = new PaginationRequest();
         }
         
-        org.example.model.data.PaginationResponse<OrderPojo> paginatedEntities = orderFlow.findOrdersBySubstringIdPaginated(searchId, request);
+        PaginationResponse<OrderPojo> paginatedEntities = orderFlow.findOrdersBySubstringIdPaginated(searchId, request);
         
         List<OrderData> dataList = paginatedEntities.getContent().stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             dataList,
             paginatedEntities.getTotalElements(),
             paginatedEntities.getCurrentPage(),
@@ -565,7 +572,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         
         // Validate that the product exists
         try {
-            var product = productApi.get(orderItemForm.getProductId());
+            ProductPojo product = productApi.get(orderItemForm.getProductId());
             if (product == null) {
                 throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
             }
@@ -616,7 +623,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         orderItemPojo.setQuantity(orderItemForm.getQuantity());
         
         // Get product details for pricing
-        var product = productApi.get(orderItemForm.getProductId());
+        ProductPojo product = productApi.get(orderItemForm.getProductId());
         if (product == null) {
             throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
         }
@@ -640,7 +647,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         orderItemData.setAmount(orderItemPojo.getAmount());
         
         // Fetch product information using productId
-        org.example.pojo.ProductPojo product = null;
+        ProductPojo product = null;
         try {
             product = productApi.get(orderItemPojo.getProductId());
         } catch (Exception e) {
@@ -656,7 +663,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
             // Fetch client information
             if (product.getClientId() != null && product.getClientId() > 0) {
                 try {
-                    org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                    ClientPojo client = clientApi.get(product.getClientId());
                     if (client != null) {
                         orderItemData.setClientName(client.getClientName());
                     }
@@ -668,7 +675,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         
         // Get order date from the order
         try {
-            var order = api.get(orderItemPojo.getOrderId());
+            OrderPojo order = api.get(orderItemPojo.getOrderId());
             orderItemData.setDateTime(TimeUtil.toIST(order.getDate()));
         } catch (Exception e) {
             // If order not found, set to null

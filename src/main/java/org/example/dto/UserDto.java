@@ -1,10 +1,14 @@
 package org.example.dto;
 
-import org.example.flow.UserFlow;
-import org.example.model.data.UserData;
-import org.example.model.enums.Role;
-import org.example.model.form.UserForm;
+import org.example.exception.ApiException;
 import org.example.pojo.UserPojo;
+import org.example.model.data.UserData;
+import org.example.model.form.UserForm;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
+import org.example.flow.UserFlow;
+import org.example.api.UserApi;
+import org.example.model.enums.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -12,22 +16,24 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
 
 import java.util.List;
+import java.util.Objects;
 
 @Component
-public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
+public class UserDto {
 
     @Autowired
     private UserFlow userFlow;
 
+    @Autowired
+    private UserApi userApi;
+
     @Value("${supervisor.email:admin@example.com}")
     private String supervisorEmail;
 
-    @Override
     protected String getEntityName() {
         return "User";
     }
 
-    @Override
     protected void preprocess(UserForm form) {
         // Cross-field/entity logic: email normalization
         if (form.getEmail() != null) {
@@ -38,7 +44,6 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
         }
     }
 
-    @Override
     protected UserPojo convertFormToEntity(UserForm form) {
         UserPojo pojo = new UserPojo();
         pojo.setEmail(form.getEmail().toLowerCase().trim());
@@ -62,7 +67,6 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
         return pojo;
     }
 
-    @Override
     protected UserData convertEntityToData(UserPojo pojo) {
         UserData data = new UserData();
         data.setId(pojo.getId());
@@ -71,10 +75,35 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
         return data;
     }
 
-    @Override
-    @org.springframework.transaction.annotation.Transactional
+    public UserData add(@Valid UserForm form) {
+        preprocess(form);
+        UserPojo entity = convertFormToEntity(form);
+        userApi.add(entity);
+        return convertEntityToData(entity);
+    }
+
+    public UserData get(Integer id) {
+        validateId(id);
+        UserPojo entity = userApi.get(id);
+        return convertEntityToData(entity);
+    }
+
+    public List<UserData> getAll() {
+        List<UserPojo> entities = userApi.getAll();
+        List<UserData> dataList = new java.util.ArrayList<>();
+        for (UserPojo entity : entities) {
+            dataList.add(convertEntityToData(entity));
+        }
+        return dataList;
+    }
+
+    @Transactional
     public UserData update(Integer id, @Valid UserForm form) {
-        return super.update(id, form);
+        validateId(id);
+        preprocess(form);
+        UserPojo entity = convertFormToEntity(form);
+        userApi.update(id, entity);
+        return convertEntityToData(userApi.get(id));
     }
 
     @Transactional
@@ -98,7 +127,7 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
     /**
      * Get all users with pagination support.
      */
-    public org.example.model.data.PaginationResponse<UserData> getAllPaginated(org.example.model.form.PaginationRequest request) {
+    public PaginationResponse<UserData> getAllPaginated(PaginationRequest request) {
         // Since UserFlow doesn't have pagination methods yet, we'll implement manual pagination
         List<UserData> allUsers = getAll();
         
@@ -116,11 +145,23 @@ public class UserDto extends AbstractDto<UserPojo, UserForm, UserData> {
             paginatedContent = allUsers.subList(startIndex, endIndex);
         }
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             paginatedContent,
             totalElements,
             pageNumber,
             pageSize
         );
+    }
+
+    /**
+     * Validate ID parameter
+     */
+    protected void validateId(Integer id) {
+        if (Objects.isNull(id)) {
+            throw new ApiException(getEntityName() + " ID cannot be null");
+        }
+        if (id <= 0) {
+            throw new ApiException(getEntityName() + " ID must be positive");
+        }
     }
 }

@@ -14,6 +14,10 @@ import org.example.model.data.OrderData;
 import org.example.model.data.OrderItemData;
 import org.example.model.form.OrderForm;
 import org.example.model.form.OrderItemForm;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 @RestController
 @RequestMapping(ApiEndpoints.Supervisor.ORDERS)
@@ -77,7 +81,7 @@ public class OrderController {
     }
 
     @GetMapping("/paginated")
-    public ResponseEntity<org.example.model.data.PaginationResponse<OrderData>> getAllOrdersPaginated(
+    public ResponseEntity<PaginationResponse<OrderData>> getAllOrdersPaginated(
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
@@ -89,8 +93,8 @@ public class OrderController {
         System.out.println("Page: " + page + ", Size: " + size + ", SortBy: " + sortBy + ", SortDirection: " + sortDirection);
         
         try {
-            org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
-            org.example.model.data.PaginationResponse<OrderData> response = orderDto.getAllPaginated(request);
+            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+            PaginationResponse<OrderData> response = orderDto.getAllPaginated(request);
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;
@@ -100,7 +104,7 @@ public class OrderController {
     }
 
     @GetMapping("/user/{userId}/paginated")
-    public ResponseEntity<org.example.model.data.PaginationResponse<OrderData>> getOrdersByUserIdPaginated(
+    public ResponseEntity<PaginationResponse<OrderData>> getOrdersByUserIdPaginated(
             @PathVariable String userId,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
@@ -110,11 +114,11 @@ public class OrderController {
         System.out.println("=== SUPERVISOR ORDER GET BY USER ID PAGINATED ENDPOINT ===");
         System.out.println("Authentication: " + authentication);
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("UserId: " + userId + ", Page: " + page + ", Size: " + size);
+        System.out.println("User ID: " + userId + ", Page: " + page + ", Size: " + size);
         
         try {
-            org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
-            org.example.model.data.PaginationResponse<OrderData> response = orderDto.getOrdersByUserIdPaginated(userId, request);
+            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+            PaginationResponse<OrderData> response = orderDto.getOrdersByUserIdPaginated(userId, request);
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;
@@ -124,7 +128,7 @@ public class OrderController {
     }
 
     @GetMapping("/date-range/paginated")
-    public ResponseEntity<org.example.model.data.PaginationResponse<OrderData>> getOrdersByDateRangePaginated(
+    public ResponseEntity<PaginationResponse<OrderData>> getOrdersByDateRangePaginated(
             @RequestParam String startDate,
             @RequestParam String endDate,
             @RequestParam(defaultValue = "0") Integer page,
@@ -135,17 +139,17 @@ public class OrderController {
         System.out.println("=== SUPERVISOR ORDER GET BY DATE RANGE PAGINATED ENDPOINT ===");
         System.out.println("Authentication: " + authentication);
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("StartDate: " + startDate + ", EndDate: " + endDate + ", Page: " + page + ", Size: " + size);
+        System.out.println("Start Date: " + startDate + ", End Date: " + endDate + ", Page: " + page + ", Size: " + size);
         
         try {
-            java.time.LocalDate start = java.time.LocalDate.parse(startDate);
-            java.time.LocalDate end = java.time.LocalDate.parse(endDate);
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
             
-            org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
-            org.example.model.data.PaginationResponse<OrderData> response = orderDto.getOrdersByDateRangePaginated(start, end, request);
+            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+            PaginationResponse<OrderData> response = orderDto.getOrdersByDateRangePaginated(start, end, request);
             return ResponseEntity.ok(response);
-        } catch (java.time.format.DateTimeParseException e) {
-            throw new ApiException("Invalid date format. Use YYYY-MM-DD format");
+        } catch (DateTimeParseException e) {
+            throw new ApiException("Invalid date format. Use YYYY-MM-DD format.");
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -169,21 +173,7 @@ public class OrderController {
         }
     }
     
-    @DeleteMapping("/{id}/cancel")
-    @org.springframework.transaction.annotation.Transactional
-    public void cancelOrder(@PathVariable Integer id, Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER CANCEL ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        
-        try {
-            orderDto.cancelOrder(id);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to cancel order: " + e.getMessage());
-        }
-    }
+
 
     @GetMapping("/{id}/download-invoice")
     public ResponseEntity<org.springframework.core.io.Resource> downloadInvoice(@PathVariable Integer id, Authentication authentication) {
@@ -221,10 +211,10 @@ public class OrderController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            java.time.LocalDate start = java.time.LocalDate.parse(startDate);
-            java.time.LocalDate end = java.time.LocalDate.parse(endDate);
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
             return orderDto.getOrdersByDateRange(start, end);
-        } catch (java.time.format.DateTimeParseException e) {
+        } catch (DateTimeParseException e) {
             throw new ApiException("Invalid date format. Please use yyyy-MM-dd format (e.g., 2024-01-15)");
         } catch (Exception e) {
             e.printStackTrace();
@@ -269,7 +259,7 @@ public class OrderController {
     }
 
     @GetMapping("/substring-id/{searchId}/paginated")
-    public ResponseEntity<org.example.model.data.PaginationResponse<OrderData>> findOrdersBySubstringIdPaginated(
+    public ResponseEntity<PaginationResponse<OrderData>> findOrdersBySubstringIdPaginated(
             @PathVariable String searchId,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
@@ -282,8 +272,8 @@ public class OrderController {
         System.out.println("SearchId: " + searchId + ", Page: " + page + ", Size: " + size);
         
         try {
-            org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
-            org.example.model.data.PaginationResponse<OrderData> response = orderDto.findOrdersBySubstringIdPaginated(searchId, request);
+            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+            PaginationResponse<OrderData> response = orderDto.findOrdersBySubstringIdPaginated(searchId, request);
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;

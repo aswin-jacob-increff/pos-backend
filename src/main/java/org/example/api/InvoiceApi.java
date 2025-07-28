@@ -18,9 +18,8 @@ public class InvoiceApi extends AbstractApi<InvoicePojo> {
     @Autowired
     private InvoiceDao invoiceDao;
 
-    @Override
-    protected String getEntityName() {
-        return "Invoice";
+    public InvoiceApi() {
+        super(InvoicePojo.class);
     }
 
     @Override

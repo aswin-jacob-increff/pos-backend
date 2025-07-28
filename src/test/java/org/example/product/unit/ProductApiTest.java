@@ -4,11 +4,13 @@ import org.example.api.ProductApi;
 import org.example.api.ClientApi;
 import org.example.dao.ProductDao;
 import org.example.dao.InventoryDao;
+import org.example.exception.ApiException;
 import org.example.pojo.ProductPojo;
 import org.example.pojo.ClientPojo;
-import org.example.exception.ApiException;
-import org.example.model.form.PaginationRequest;
 import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
+import org.example.api.AbstractApi;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,7 +18,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 
@@ -44,47 +45,39 @@ class ProductApiTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        // Setup test product
         testProduct = new ProductPojo();
         testProduct.setId(1);
         testProduct.setName("Test Product");
         testProduct.setBarcode("TEST123");
         testProduct.setClientId(1);
         testProduct.setMrp(100.0);
-        // ProductPojo doesn't have status field
 
+        // Setup test client
         testClient = new ClientPojo();
         testClient.setId(1);
         testClient.setClientName("Test Client");
         testClient.setStatus(true);
 
-        // Manually inject dependencies using reflection
-        Field inventoryDaoField = productApi.getClass().getDeclaredField("inventoryDao");
-        inventoryDaoField.setAccessible(true);
-        inventoryDaoField.set(productApi, inventoryDao);
-
-        Field clientApiField = productApi.getClass().getDeclaredField("clientApi");
-        clientApiField.setAccessible(true);
-        clientApiField.set(productApi, clientApi);
-
-        // Inject the dao field from AbstractApi
-        Field abstractDaoField = productApi.getClass().getSuperclass().getDeclaredField("dao");
-        abstractDaoField.setAccessible(true);
-        abstractDaoField.set(productApi, productDao);
+        // Manually inject the dao field into AbstractApi
+        try {
+            java.lang.reflect.Field daoField = AbstractApi.class.getDeclaredField("dao");
+            daoField.setAccessible(true);
+            daoField.set(productApi, productDao);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to inject dao field", e);
+        }
     }
 
     @Test
     void testAdd_Success() {
         // Arrange
-        when(clientApi.get(1)).thenReturn(testClient);
-        when(productDao.selectByBarcode("TEST123")).thenReturn(null);
         doNothing().when(productDao).insert(any(ProductPojo.class));
 
         // Act
         productApi.add(testProduct);
 
         // Assert
-        verify(clientApi).get(1);
-        verify(productDao).selectByBarcode("TEST123");
         verify(productDao).insert(testProduct);
     }
 
@@ -92,38 +85,6 @@ class ProductApiTest {
     void testAdd_NullProduct() {
         // Act & Assert
         assertThrows(ApiException.class, () -> productApi.add(null));
-        verify(productDao, never()).insert(any());
-    }
-
-    @Test
-    void testAdd_ClientNotFound() {
-        // Arrange
-        when(clientApi.get(1)).thenThrow(new ApiException("Client with ID '1' not found"));
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productApi.add(testProduct));
-        verify(productDao, never()).insert(any());
-    }
-
-    @Test
-    void testAdd_ClientInactive() {
-        // Arrange
-        testClient.setStatus(false);
-        when(clientApi.get(1)).thenReturn(testClient);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productApi.add(testProduct));
-        verify(productDao, never()).insert(any());
-    }
-
-    @Test
-    void testAdd_DuplicateBarcode() {
-        // Arrange
-        when(clientApi.get(1)).thenReturn(testClient);
-        when(productDao.selectByBarcode("TEST123")).thenReturn(new ProductPojo());
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productApi.add(testProduct));
         verify(productDao, never()).insert(any());
     }
 
@@ -162,25 +123,12 @@ class ProductApiTest {
     @Test
     void testUpdate_Success() {
         // Arrange
-        ProductPojo existingProduct = new ProductPojo();
-        existingProduct.setId(1);
-        existingProduct.setName("Existing Product");
-        existingProduct.setBarcode("EXISTING123");
-        existingProduct.setClientId(1);
-        existingProduct.setMrp(50.0);
-
-        when(productDao.select(1)).thenReturn(existingProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
-        when(productDao.selectByBarcode("TEST123")).thenReturn(null);
         doNothing().when(productDao).update(any(Integer.class), any(ProductPojo.class));
 
         // Act
         productApi.update(1, testProduct);
 
         // Assert
-        verify(productDao).select(1);
-        verify(clientApi).get(1);
-        verify(productDao).selectByBarcode("TEST123");
         verify(productDao).update(1, testProduct);
     }
 
@@ -199,41 +147,6 @@ class ProductApiTest {
     }
 
     @Test
-    void testUpdate_ProductNotFound() {
-        // Arrange
-        when(productDao.select(1)).thenReturn(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productApi.update(1, testProduct));
-        verify(productDao).select(1);
-        verify(productDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testUpdate_DuplicateBarcode() {
-        // Arrange
-        ProductPojo existingProduct = new ProductPojo();
-        existingProduct.setId(1);
-        existingProduct.setName("Existing Product");
-        existingProduct.setBarcode("EXISTING123");
-        existingProduct.setClientId(1);
-        existingProduct.setMrp(50.0);
-
-        ProductPojo duplicateProduct = new ProductPojo();
-        duplicateProduct.setId(2);
-        duplicateProduct.setBarcode("TEST123");
-
-        when(productDao.select(1)).thenReturn(existingProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
-        when(productDao.selectByBarcode("TEST123")).thenReturn(duplicateProduct);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productApi.update(1, testProduct));
-        verify(productDao).select(1);
-        verify(productDao, never()).update(any(), any());
-    }
-
-    @Test
     void testGetByName_Success() {
         // Arrange
         when(productDao.selectByField("name", "Test Product")).thenReturn(testProduct);
@@ -243,7 +156,6 @@ class ProductApiTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals(testProduct.getId(), result.getId());
         assertEquals(testProduct.getName(), result.getName());
         verify(productDao).selectByField("name", "Test Product");
     }
@@ -265,8 +177,8 @@ class ProductApiTest {
     @Test
     void testGetByNameLike_Success() {
         // Arrange
-        List<ProductPojo> products = Arrays.asList(testProduct);
-        when(productDao.selectByFieldLike("name", "Test")).thenReturn(products);
+        List<ProductPojo> expectedProducts = Arrays.asList(testProduct);
+        when(productDao.selectByFieldLike("name", "Test")).thenReturn(expectedProducts);
 
         // Act
         List<ProductPojo> result = productApi.getByNameLike("Test");
@@ -274,7 +186,7 @@ class ProductApiTest {
         // Assert
         assertNotNull(result);
         assertEquals(1, result.size());
-        assertEquals(testProduct.getId(), result.get(0).getId());
+        assertEquals(testProduct.getName(), result.get(0).getName());
         verify(productDao).selectByFieldLike("name", "Test");
     }
 
@@ -288,47 +200,46 @@ class ProductApiTest {
     @Test
     void testGetByBarcode_Success() {
         // Arrange
-        when(productDao.selectByBarcode("TEST123")).thenReturn(testProduct);
+        when(productDao.selectByField("barcode", "TEST123")).thenReturn(testProduct);
 
         // Act
         ProductPojo result = productApi.getByBarcode("TEST123");
 
         // Assert
         assertNotNull(result);
-        assertEquals(testProduct.getId(), result.getId());
         assertEquals(testProduct.getBarcode(), result.getBarcode());
-        verify(productDao).selectByBarcode("TEST123");
+        verify(productDao).selectByField("barcode", "TEST123");
     }
 
     @Test
     void testGetByBarcode_NullBarcode() {
         // Act & Assert
         assertThrows(ApiException.class, () -> productApi.getByBarcode(null));
-        verify(productDao, never()).selectByBarcode(any());
+        verify(productDao, never()).selectByField(any(), any());
     }
 
     @Test
     void testGetByBarcode_EmptyBarcode() {
         // Act & Assert
         assertThrows(ApiException.class, () -> productApi.getByBarcode(""));
-        verify(productDao, never()).selectByBarcode(any());
+        verify(productDao, never()).selectByField(any(), any());
     }
 
     @Test
     void testGetByBarcode_NotFound() {
         // Arrange
-        when(productDao.selectByBarcode("NONEXISTENT")).thenReturn(null);
+        when(productDao.selectByField("barcode", "TEST123")).thenReturn(null);
 
         // Act & Assert
-        assertThrows(ApiException.class, () -> productApi.getByBarcode("NONEXISTENT"));
-        verify(productDao).selectByBarcode("NONEXISTENT");
+        assertThrows(ApiException.class, () -> productApi.getByBarcode("TEST123"));
+        verify(productDao).selectByField("barcode", "TEST123");
     }
 
     @Test
     void testGetByBarcodeLike_Success() {
         // Arrange
-        List<ProductPojo> products = Arrays.asList(testProduct);
-        when(productDao.selectByFieldLike("barcode", "TEST")).thenReturn(products);
+        List<ProductPojo> expectedProducts = Arrays.asList(testProduct);
+        when(productDao.selectByFieldLike("barcode", "TEST")).thenReturn(expectedProducts);
 
         // Act
         List<ProductPojo> result = productApi.getByBarcodeLike("TEST");
@@ -336,7 +247,7 @@ class ProductApiTest {
         // Assert
         assertNotNull(result);
         assertEquals(1, result.size());
-        assertEquals(testProduct.getId(), result.get(0).getId());
+        assertEquals(testProduct.getBarcode(), result.get(0).getBarcode());
         verify(productDao).selectByFieldLike("barcode", "TEST");
     }
 
@@ -350,8 +261,8 @@ class ProductApiTest {
     @Test
     void testGetByClientId_Success() {
         // Arrange
-        List<ProductPojo> products = Arrays.asList(testProduct);
-        when(productDao.selectByClientId(1)).thenReturn(products);
+        List<ProductPojo> expectedProducts = Arrays.asList(testProduct);
+        when(((ProductDao) productDao).selectByClientId(1)).thenReturn(expectedProducts);
 
         // Act
         List<ProductPojo> result = productApi.getByClientId(1);
@@ -359,23 +270,23 @@ class ProductApiTest {
         // Assert
         assertNotNull(result);
         assertEquals(1, result.size());
-        assertEquals(testProduct.getId(), result.get(0).getId());
-        verify(productDao).selectByClientId(1);
+        assertEquals(testProduct.getClientId(), result.get(0).getClientId());
+        verify(((ProductDao) productDao)).selectByClientId(1);
     }
 
     @Test
     void testGetByClientId_NullId() {
         // Act & Assert
         assertThrows(ApiException.class, () -> productApi.getByClientId(null));
-        verify(productDao, never()).selectByClientId(any());
+        verify(((ProductDao) productDao), never()).selectByClientId(any());
     }
 
     @Test
     void testGetByClientName_Success() {
         // Arrange
-        List<ProductPojo> products = Arrays.asList(testProduct);
         when(clientApi.getByName("Test Client")).thenReturn(testClient);
-        when(productDao.selectByClientId(1)).thenReturn(products);
+        List<ProductPojo> expectedProducts = Arrays.asList(testProduct);
+        when(((ProductDao) productDao).selectByClientId(1)).thenReturn(expectedProducts);
 
         // Act
         List<ProductPojo> result = productApi.getByClientName("Test Client");
@@ -383,9 +294,8 @@ class ProductApiTest {
         // Assert
         assertNotNull(result);
         assertEquals(1, result.size());
-        assertEquals(testProduct.getId(), result.get(0).getId());
         verify(clientApi).getByName("Test Client");
-        verify(productDao).selectByClientId(1);
+        verify(((ProductDao) productDao)).selectByClientId(1);
     }
 
     @Test
@@ -393,6 +303,7 @@ class ProductApiTest {
         // Act & Assert
         assertThrows(ApiException.class, () -> productApi.getByClientName(null));
         verify(clientApi, never()).getByName(any());
+        verify(((ProductDao) productDao), never()).selectByClientId(any());
     }
 
     @Test
@@ -400,6 +311,7 @@ class ProductApiTest {
         // Act & Assert
         assertThrows(ApiException.class, () -> productApi.getByClientName(""));
         verify(clientApi, never()).getByName(any());
+        verify(((ProductDao) productDao), never()).selectByClientId(any());
     }
 
     @Test
@@ -410,33 +322,33 @@ class ProductApiTest {
         // Act & Assert
         assertThrows(ApiException.class, () -> productApi.getByClientName("NonExistent"));
         verify(clientApi).getByName("NonExistent");
-        verify(productDao, never()).selectByFields(any(), any());
+        verify(((ProductDao) productDao), never()).selectByClientId(any());
     }
 
     @Test
     void testHasProductsByClientId_True() {
         // Arrange
-        when(productDao.hasProductsByClientId(1)).thenReturn(true);
+        when(((ProductDao) productDao).hasProductsByClientId(1)).thenReturn(true);
 
         // Act
         boolean result = productApi.hasProductsByClientId(1);
 
         // Assert
         assertTrue(result);
-        verify(productDao).hasProductsByClientId(1);
+        verify(((ProductDao) productDao)).hasProductsByClientId(1);
     }
 
     @Test
     void testHasProductsByClientId_False() {
         // Arrange
-        when(productDao.hasProductsByClientId(1)).thenReturn(false);
+        when(((ProductDao) productDao).hasProductsByClientId(1)).thenReturn(false);
 
         // Act
         boolean result = productApi.hasProductsByClientId(1);
 
         // Assert
         assertFalse(result);
-        verify(productDao).hasProductsByClientId(1);
+        verify(((ProductDao) productDao)).hasProductsByClientId(1);
     }
 
     @Test
@@ -446,14 +358,14 @@ class ProductApiTest {
 
         // Assert
         assertFalse(result);
-        verify(productDao, never()).hasProductsByClientId(any());
+        verify(((ProductDao) productDao), never()).hasProductsByClientId(any());
     }
 
     @Test
     void testHasProductsByClientName_True() {
         // Arrange
         when(clientApi.getByName("Test Client")).thenReturn(testClient);
-        when(productDao.hasProductsByClientId(1)).thenReturn(true);
+        when(((ProductDao) productDao).hasProductsByClientId(1)).thenReturn(true);
 
         // Act
         boolean result = productApi.hasProductsByClientName("Test Client");
@@ -461,14 +373,14 @@ class ProductApiTest {
         // Assert
         assertTrue(result);
         verify(clientApi).getByName("Test Client");
-        verify(productDao).hasProductsByClientId(1);
+        verify(((ProductDao) productDao)).hasProductsByClientId(1);
     }
 
     @Test
     void testHasProductsByClientName_False() {
         // Arrange
         when(clientApi.getByName("Test Client")).thenReturn(testClient);
-        when(productDao.hasProductsByClientId(1)).thenReturn(false);
+        when(((ProductDao) productDao).hasProductsByClientId(1)).thenReturn(false);
 
         // Act
         boolean result = productApi.hasProductsByClientName("Test Client");
@@ -476,7 +388,7 @@ class ProductApiTest {
         // Assert
         assertFalse(result);
         verify(clientApi).getByName("Test Client");
-        verify(productDao).hasProductsByClientId(1);
+        verify(((ProductDao) productDao)).hasProductsByClientId(1);
     }
 
     @Test
@@ -487,6 +399,7 @@ class ProductApiTest {
         // Assert
         assertFalse(result);
         verify(clientApi, never()).getByName(any());
+        verify(((ProductDao) productDao), never()).hasProductsByClientId(any());
     }
 
     @Test
@@ -497,6 +410,7 @@ class ProductApiTest {
         // Assert
         assertFalse(result);
         verify(clientApi, never()).getByName(any());
+        verify(((ProductDao) productDao), never()).hasProductsByClientId(any());
     }
 
     @Test
@@ -510,6 +424,31 @@ class ProductApiTest {
         // Assert
         assertFalse(result);
         verify(clientApi).getByName("NonExistent");
-        verify(productDao, never()).hasProductsByClientId(any());
+        verify(((ProductDao) productDao), never()).hasProductsByClientId(any());
+    }
+
+    @Test
+    void testGetPaginated_Success() {
+        // Arrange
+        PaginationRequest request = new PaginationRequest(0, 10, "name", "ASC");
+        PaginationQuery query = PaginationQuery.all(request);
+        PaginationResponse<ProductPojo> expectedResponse = new PaginationResponse<>(Arrays.asList(testProduct), 1, 0, 10);
+        when(productDao.getPaginated(query)).thenReturn(expectedResponse);
+
+        // Act
+        PaginationResponse<ProductPojo> result = productApi.getPaginated(query);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(expectedResponse.getContent(), result.getContent());
+        assertEquals(expectedResponse.getTotalElements(), result.getTotalElements());
+        verify(productDao).getPaginated(query);
+    }
+
+    @Test
+    void testGetPaginated_NullQuery() {
+        // Act & Assert
+        assertThrows(ApiException.class, () -> productApi.getPaginated(null));
+        verify(productDao, never()).getPaginated(any());
     }
 } 

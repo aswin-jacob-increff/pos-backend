@@ -3,6 +3,7 @@ package org.example.pojo;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.example.util.TimeUtil;
 
 import java.time.Instant;
 import org.example.model.enums.OrderStatus;
@@ -40,10 +41,10 @@ public class OrderPojo extends AbstractPojo {
     // No direct reference needed - order items reference this order by order_id
 
     public void setTotal(double total) {
-        this.total = org.example.util.TimeUtil.round2(total);
+        this.total = TimeUtil.round2(total);
     }
     public double getTotal() {
-        return org.example.util.TimeUtil.round2(this.total);
+        return TimeUtil.round2(this.total);
     }
 
 }

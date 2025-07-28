@@ -2,6 +2,7 @@ package org.example.model.data;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.example.util.TimeUtil;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,9 +22,9 @@ public class OrderData {
     private String userId;
 
     public void setTotal(Double total) {
-        this.total = total == null ? null : org.example.util.TimeUtil.round2(total);
+        this.total = total == null ? null : TimeUtil.round2(total);
     }
     public Double getTotal() {
-        return total == null ? null : org.example.util.TimeUtil.round2(total);
+        return total == null ? null : TimeUtil.round2(total);
     }
 }

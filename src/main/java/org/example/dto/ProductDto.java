@@ -3,6 +3,8 @@ package org.example.dto;
 import org.example.exception.ApiException;
 import org.example.model.data.ProductData;
 import org.example.model.form.ProductForm;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
 import org.example.model.data.TsvUploadResult;
 import org.example.pojo.ProductPojo;
 import org.example.api.ClientApi;
@@ -127,14 +129,14 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
                 .collect(Collectors.toList());
     }
 
-    public org.example.model.data.PaginationResponse<ProductData> getAllPaginated(org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getAllPaginated(request);
+    public PaginationResponse<ProductData> getAllPaginated(PaginationRequest request) {
+        PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getAllPaginated(request);
         
         List<ProductData> dataList = paginatedEntities.getContent().stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             dataList,
             paginatedEntities.getTotalElements(),
             paginatedEntities.getCurrentPage(),
@@ -142,14 +144,14 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         );
     }
 
-    public org.example.model.data.PaginationResponse<ProductData> getByNameLikePaginated(String name, org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByNameLikePaginated(name, request);
+    public PaginationResponse<ProductData> getByNameLikePaginated(String name, PaginationRequest request) {
+        PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByNameLikePaginated(name, request);
         
         List<ProductData> dataList = paginatedEntities.getContent().stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             dataList,
             paginatedEntities.getTotalElements(),
             paginatedEntities.getCurrentPage(),
@@ -157,14 +159,14 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         );
     }
 
-    public org.example.model.data.PaginationResponse<ProductData> getByClientIdPaginated(Integer clientId, org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByClientIdPaginated(clientId, request);
+    public PaginationResponse<ProductData> getByClientIdPaginated(Integer clientId, PaginationRequest request) {
+        PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByClientIdPaginated(clientId, request);
         
         List<ProductData> dataList = paginatedEntities.getContent().stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             dataList,
             paginatedEntities.getTotalElements(),
             paginatedEntities.getCurrentPage(),
@@ -172,14 +174,14 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         );
     }
 
-    public org.example.model.data.PaginationResponse<ProductData> getByClientNamePaginated(String clientName, org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByClientNamePaginated(clientName, request);
+    public PaginationResponse<ProductData> getByClientNamePaginated(String clientName, PaginationRequest request) {
+        PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByClientNamePaginated(clientName, request);
         
         List<ProductData> dataList = paginatedEntities.getContent().stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             dataList,
             paginatedEntities.getTotalElements(),
             paginatedEntities.getCurrentPage(),

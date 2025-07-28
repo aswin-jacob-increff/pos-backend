@@ -170,14 +170,12 @@ class OrderApiTest {
         updatedOrder.setTotal(150.0);
         updatedOrder.setStatus(OrderStatus.INVOICED);
 
-        when(orderDao.select(1)).thenReturn(testOrder);
         doNothing().when(orderDao).update(eq(1), any(OrderPojo.class));
 
         // Act
         orderApi.update(1, updatedOrder);
 
         // Assert
-        verify(orderDao).select(1);
         verify(orderDao).update(1, updatedOrder);
     }
 
@@ -195,80 +193,7 @@ class OrderApiTest {
         verify(orderDao, never()).update(any(), any());
     }
 
-    @Test
-    void testCancelOrder_Success() {
-        // Arrange
-        when(orderDao.select(1)).thenReturn(testOrder);
-        when(orderItemDao.selectByOrderId(1)).thenReturn(Arrays.asList(testOrderItem));
-        doNothing().when(inventoryApi).addStock(1, 2);
-        doNothing().when(orderDao).update(eq(1), any(OrderPojo.class));
 
-        // Act
-        orderApi.cancelOrder(1);
-
-        // Assert
-        verify(orderDao).select(1);
-        verify(orderItemDao).selectByOrderId(1);
-        verify(inventoryApi).addStock(1, 2);
-        verify(orderDao).update(eq(1), argThat(order -> order.getStatus() == OrderStatus.CANCELLED));
-    }
-
-    @Test
-    void testCancelOrder_NullId() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderApi.cancelOrder(null));
-        verify(orderDao, never()).select(any());
-    }
-
-    @Test
-    void testCancelOrder_OrderNotFound() {
-        // Arrange
-        when(orderDao.select(999)).thenReturn(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderApi.cancelOrder(999));
-        verify(orderDao).select(999);
-        verify(orderItemDao, never()).selectByOrderId(any());
-    }
-
-    @Test
-    void testCancelOrder_AlreadyCancelled() {
-        // Arrange
-        testOrder.setStatus(OrderStatus.CANCELLED);
-        when(orderDao.select(1)).thenReturn(testOrder);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderApi.cancelOrder(1));
-        verify(orderDao).select(1);
-        verify(orderItemDao, never()).selectByOrderId(any());
-    }
-
-    @Test
-    void testCancelOrder_WithMultipleItems() {
-        // Arrange
-        OrderItemPojo item1 = new OrderItemPojo();
-        item1.setProductId(1);
-        item1.setQuantity(2);
-
-        OrderItemPojo item2 = new OrderItemPojo();
-        item2.setProductId(2);
-        item2.setQuantity(3);
-
-        when(orderDao.select(1)).thenReturn(testOrder);
-        when(orderItemDao.selectByOrderId(1)).thenReturn(Arrays.asList(item1, item2));
-        doNothing().when(inventoryApi).addStock(anyInt(), anyInt());
-        doNothing().when(orderDao).update(any(Integer.class), any(OrderPojo.class));
-
-        // Act
-        orderApi.cancelOrder(1);
-
-        // Assert
-        verify(orderDao).select(1);
-        verify(orderItemDao).selectByOrderId(1);
-        verify(inventoryApi).addStock(1, 2);
-        verify(inventoryApi).addStock(2, 3);
-        verify(orderDao).update(eq(1), argThat(order -> order.getStatus() == OrderStatus.CANCELLED));
-    }
 
     @Test
     void testGenerateInvoice_ThrowsException() {

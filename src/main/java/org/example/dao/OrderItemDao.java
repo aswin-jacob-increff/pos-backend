@@ -5,6 +5,8 @@ import jakarta.persistence.criteria.*;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import org.example.pojo.OrderItemPojo;
+import org.example.model.data.SalesReportData;
+import java.time.LocalDate;
 
 @Repository
 public class OrderItemDao extends AbstractDao<OrderItemPojo> {
@@ -84,7 +86,7 @@ public class OrderItemDao extends AbstractDao<OrderItemPojo> {
         public Double getRevenue() { return revenue; }
     }
 
-    public List<SalesReportRow> getSalesReport(java.time.LocalDate start, java.time.LocalDate end, String brand, String category) {
+    public List<SalesReportRow> getSalesReport(LocalDate start, LocalDate end, String brand, String category) {
         // This method needs to be refactored to work with the normalized structure
         // For now, return empty list as the sales report functionality should be handled differently
         // The sales report should join with Product and Client tables to get the required information

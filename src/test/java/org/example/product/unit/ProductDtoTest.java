@@ -6,6 +6,7 @@ import org.example.model.form.ProductForm;
 import org.example.pojo.ProductPojo;
 import org.example.pojo.ClientPojo;
 import org.example.api.ClientApi;
+import org.example.api.ProductApi;
 import org.example.exception.ApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ import static org.mockito.Mockito.*;
 class ProductDtoTest {
 
     @Mock
-    private org.example.api.ProductApi productApi;
+    private ProductApi productApi;
 
     @Mock
     private ClientApi clientApi;

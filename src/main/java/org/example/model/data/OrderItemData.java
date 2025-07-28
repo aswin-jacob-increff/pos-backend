@@ -2,6 +2,7 @@ package org.example.model.data;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.example.util.TimeUtil;
 
 import java.time.LocalDateTime;
 
@@ -23,15 +24,15 @@ public class OrderItemData {
     private String imageUrl; // Reference to image endpoint: /api/products/{productId}/image
 
     public void setSellingPrice(Double sellingPrice) {
-        this.sellingPrice = sellingPrice == null ? null : org.example.util.TimeUtil.round2(sellingPrice);
+        this.sellingPrice = sellingPrice == null ? null : TimeUtil.round2(sellingPrice);
     }
     public Double getSellingPrice() {
-        return sellingPrice == null ? null : org.example.util.TimeUtil.round2(sellingPrice);
+        return sellingPrice == null ? null : TimeUtil.round2(sellingPrice);
     }
     public void setAmount(Double amount) {
-        this.amount = amount == null ? null : org.example.util.TimeUtil.round2(amount);
+        this.amount = amount == null ? null : TimeUtil.round2(amount);
     }
     public Double getAmount() {
-        return amount == null ? null : org.example.util.TimeUtil.round2(amount);
+        return amount == null ? null : TimeUtil.round2(amount);
     }
 }

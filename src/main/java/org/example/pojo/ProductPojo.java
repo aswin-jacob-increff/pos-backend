@@ -3,6 +3,7 @@ package org.example.pojo;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.example.util.TimeUtil;
 
 @Setter
 @Getter
@@ -35,9 +36,9 @@ public class ProductPojo extends AbstractPojo {
     private String imageUrl;
 
     public void setMrp(Double mrp) {
-        this.mrp = mrp == null ? null : org.example.util.TimeUtil.round2(mrp);
+        this.mrp = mrp == null ? null : TimeUtil.round2(mrp);
     }
     public Double getMrp() {
-        return mrp == null ? null : org.example.util.TimeUtil.round2(mrp);
+        return mrp == null ? null : TimeUtil.round2(mrp);
     }
 }

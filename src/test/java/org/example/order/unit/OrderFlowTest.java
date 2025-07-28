@@ -132,24 +132,7 @@ class OrderFlowTest {
         verify(api, never()).update(any(), any());
     }
 
-    @Test
-    void testCancelOrder_Success() {
-        // Arrange
-        doNothing().when(api).cancelOrder(1);
 
-        // Act
-        orderFlow.cancelOrder(1);
-
-        // Assert
-        verify(api).cancelOrder(1);
-    }
-
-    @Test
-    void testCancelOrder_NullId() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderFlow.cancelOrder(null));
-        verify(api, never()).cancelOrder(any());
-    }
 
     @Test
     void testGenerateInvoice_Success() throws Exception {

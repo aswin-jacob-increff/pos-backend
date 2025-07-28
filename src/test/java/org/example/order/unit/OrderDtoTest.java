@@ -8,21 +8,29 @@ import org.example.model.data.OrderItemData;
 import org.example.model.form.OrderItemForm;
 import org.example.pojo.OrderPojo;
 import org.example.exception.ApiException;
+import org.example.api.ProductApi;
+import org.example.api.ClientApi;
+import org.example.api.InvoiceApi;
+import org.example.api.OrderApi;
+import org.example.dao.OrderItemDao;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.client.RestTemplate;
+import org.example.model.enums.OrderStatus;
 
 import java.lang.reflect.Field;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.time.LocalDateTime;
-import org.example.model.enums.OrderStatus;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,22 +40,22 @@ class OrderDtoTest {
     private OrderFlow orderFlow;
 
     @Mock
-    private org.example.api.ProductApi productApi;
+    private ProductApi productApi;
 
     @Mock
-    private org.example.api.ClientApi clientApi;
+    private ClientApi clientApi;
 
     @Mock
-    private org.example.api.InvoiceApi invoiceApi;
+    private InvoiceApi invoiceApi;
 
     @Mock
-    private org.example.dao.OrderItemDao orderItemDao;
+    private OrderItemDao orderItemDao;
 
     @Mock
-    private org.springframework.web.client.RestTemplate restTemplate;
+    private RestTemplate restTemplate;
 
     @Mock
-    private org.example.api.OrderApi orderApi;
+    private OrderApi orderApi;
 
     @InjectMocks
     private OrderDto orderDto;
@@ -206,24 +214,7 @@ class OrderDtoTest {
         verify(orderApi, never()).update(any(), any());
     }
 
-    @Test
-    void testCancelOrder_Success() {
-        // Arrange
-        doNothing().when(orderFlow).cancelOrder(1);
 
-        // Act
-        orderDto.cancelOrder(1);
-
-        // Assert
-        verify(orderFlow).cancelOrder(1);
-    }
-
-    @Test
-    void testCancelOrder_NullId() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderDto.cancelOrder(null));
-        verify(orderFlow, never()).cancelOrder(any());
-    }
 
     @Test
     void testGetOrdersByDateRange_Success() {
@@ -232,7 +223,7 @@ class OrderDtoTest {
         when(orderFlow.getOrdersByDateRange(any(), any())).thenReturn(orders);
 
         // Act
-        List<OrderData> result = orderDto.getOrdersByDateRange(java.time.LocalDate.now(), java.time.LocalDate.now());
+        List<OrderData> result = orderDto.getOrdersByDateRange(LocalDate.now(), LocalDate.now());
 
         // Assert
         assertNotNull(result);
@@ -243,13 +234,13 @@ class OrderDtoTest {
     @Test
     void testGetOrdersByDateRange_NullStartDate() {
         // Act & Assert
-        assertThrows(ApiException.class, () -> orderDto.getOrdersByDateRange(null, java.time.LocalDate.now()));
+        assertThrows(ApiException.class, () -> orderDto.getOrdersByDateRange(null, LocalDate.now()));
     }
 
     @Test
     void testGetOrdersByDateRange_NullEndDate() {
         // Act & Assert
-        assertThrows(ApiException.class, () -> orderDto.getOrdersByDateRange(java.time.LocalDate.now(), null));
+        assertThrows(ApiException.class, () -> orderDto.getOrdersByDateRange(LocalDate.now(), null));
     }
 
     @Test

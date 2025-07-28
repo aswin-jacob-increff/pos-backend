@@ -4,6 +4,8 @@ import org.example.exception.ApiException;
 import org.example.model.data.TsvUploadResult;
 import org.example.model.form.ClientForm;
 import org.example.model.data.ClientData;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
 import org.example.pojo.ClientPojo;
 import org.example.util.StringUtil;
 import org.example.util.FileValidationUtil;
@@ -100,14 +102,14 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
                 .collect(Collectors.toList());
     }
 
-    public org.example.model.data.PaginationResponse<ClientData> getAllPaginated(org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<ClientPojo> paginatedEntities = ((org.example.api.ClientApi) api).getAllPaginated(request);
+    public PaginationResponse<ClientData> getAllPaginated(PaginationRequest request) {
+        PaginationResponse<ClientPojo> paginatedEntities = ((org.example.api.ClientApi) api).getAllPaginated(request);
         
         List<ClientData> dataList = paginatedEntities.getContent().stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             dataList,
             paginatedEntities.getTotalElements(),
             paginatedEntities.getCurrentPage(),
@@ -115,14 +117,14 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         );
     }
 
-    public org.example.model.data.PaginationResponse<ClientData> getByNameLikePaginated(String name, org.example.model.form.PaginationRequest request) {
-        org.example.model.data.PaginationResponse<ClientPojo> paginatedEntities = ((org.example.api.ClientApi) api).getByNameLikePaginated(name, request);
+    public PaginationResponse<ClientData> getByNameLikePaginated(String name, PaginationRequest request) {
+        PaginationResponse<ClientPojo> paginatedEntities = ((org.example.api.ClientApi) api).getByNameLikePaginated(name, request);
         
         List<ClientData> dataList = paginatedEntities.getContent().stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
         
-        return new org.example.model.data.PaginationResponse<>(
+        return new PaginationResponse<>(
             dataList,
             paginatedEntities.getTotalElements(),
             paginatedEntities.getCurrentPage(),

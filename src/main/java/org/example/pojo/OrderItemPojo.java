@@ -3,6 +3,7 @@ package org.example.pojo;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.example.util.TimeUtil;
 
 @Setter
 @Getter
@@ -33,15 +34,15 @@ public class OrderItemPojo extends AbstractPojo {
     private Double amount;
 
     public void setSellingPrice(Double sellingPrice) {
-        this.sellingPrice = sellingPrice == null ? null : org.example.util.TimeUtil.round2(sellingPrice);
+        this.sellingPrice = sellingPrice == null ? null : TimeUtil.round2(sellingPrice);
     }
     public Double getSellingPrice() {
-        return sellingPrice == null ? null : org.example.util.TimeUtil.round2(sellingPrice);
+        return sellingPrice == null ? null : TimeUtil.round2(sellingPrice);
     }
     public void setAmount(Double amount) {
-        this.amount = amount == null ? null : org.example.util.TimeUtil.round2(amount);
+        this.amount = amount == null ? null : TimeUtil.round2(amount);
     }
     public Double getAmount() {
-        return amount == null ? null : org.example.util.TimeUtil.round2(amount);
+        return amount == null ? null : TimeUtil.round2(amount);
     }
 }

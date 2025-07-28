@@ -18,6 +18,11 @@ import org.example.model.form.InventoryForm;
 import org.example.dto.InventoryDto;
 import org.springframework.web.multipart.MultipartFile;
 import org.example.api.ProductApi;
+import org.example.dto.ProductDto;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
+import org.example.model.data.ProductData;
+import org.example.pojo.ProductPojo;
 
 @RestController
 @RequestMapping(ApiEndpoints.Supervisor.INVENTORY)
@@ -28,6 +33,9 @@ public class InventoryController {
 
     @Autowired
     private ProductApi productApi;
+
+    @Autowired
+    private ProductDto productDto;
 
     @PostMapping
     @org.springframework.transaction.annotation.Transactional
@@ -76,7 +84,7 @@ public class InventoryController {
     }
 
     @GetMapping("/paginated")
-    public ResponseEntity<org.example.model.data.PaginationResponse<InventoryData>> getAllInventoryPaginated(
+    public ResponseEntity<PaginationResponse<InventoryData>> getAllInventoryPaginated(
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
@@ -88,8 +96,8 @@ public class InventoryController {
         System.out.println("Page: " + page + ", Size: " + size + ", SortBy: " + sortBy + ", SortDirection: " + sortDirection);
         
         try {
-            org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
-            org.example.model.data.PaginationResponse<InventoryData> response = inventoryDto.getAllPaginated(request);
+            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+            PaginationResponse<InventoryData> response = inventoryDto.getAllPaginated(request);
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;
@@ -99,7 +107,7 @@ public class InventoryController {
     }
 
     @GetMapping("/product/name/{productName}/paginated")
-    public ResponseEntity<org.example.model.data.PaginationResponse<InventoryData>> getByProductNamePaginated(
+    public ResponseEntity<PaginationResponse<InventoryData>> getByProductNamePaginated(
             @PathVariable String productName,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
@@ -112,14 +120,12 @@ public class InventoryController {
         System.out.println("Product Name: " + productName + ", Page: " + page + ", Size: " + size);
         
         try {
-            // Get product by name first, then get inventory by product ID
-            var product = productApi.getByName(productName);
+            ProductPojo product = productApi.getByName(productName);
             if (product == null) {
                 throw new ApiException("Product with name '" + productName + "' not found");
             }
-            
-            org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
-            org.example.model.data.PaginationResponse<InventoryData> response = inventoryDto.getByProductIdPaginated(product.getId(), request);
+            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+            PaginationResponse<InventoryData> response = inventoryDto.getByProductIdPaginated(product.getId(), request);
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;
@@ -129,7 +135,7 @@ public class InventoryController {
     }
 
     @GetMapping("/product/barcode/{barcode}/paginated")
-    public ResponseEntity<org.example.model.data.PaginationResponse<InventoryData>> getByProductBarcodePaginated(
+    public ResponseEntity<PaginationResponse<InventoryData>> getByProductBarcodePaginated(
             @PathVariable String barcode,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
@@ -142,14 +148,12 @@ public class InventoryController {
         System.out.println("Barcode: " + barcode + ", Page: " + page + ", Size: " + size);
         
         try {
-            // Get product by barcode first, then get inventory by product ID
-            var product = productApi.getByBarcode(barcode);
+            ProductPojo product = productApi.getByBarcode(barcode);
             if (product == null) {
                 throw new ApiException("Product with barcode '" + barcode + "' not found");
             }
-            
-            org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
-            org.example.model.data.PaginationResponse<InventoryData> response = inventoryDto.getByProductIdPaginated(product.getId(), request);
+            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+            PaginationResponse<InventoryData> response = inventoryDto.getByProductIdPaginated(product.getId(), request);
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;

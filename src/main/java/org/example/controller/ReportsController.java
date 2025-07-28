@@ -9,10 +9,13 @@ import org.example.model.data.CustomDateRangeSalesData;
 import org.example.model.form.CustomDateRangeSalesForm;
 import org.example.model.form.DaySalesForm;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 @RestController
 @RequestMapping(ApiEndpoints.Supervisor.REPORTS)
@@ -76,11 +79,13 @@ public class ReportsController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            java.time.LocalDate start = java.time.LocalDate.parse(startDate);
-            java.time.LocalDate end = java.time.LocalDate.parse(endDate);
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
             return reportsDto.getAllDaySales(start, end);
-        } catch (java.time.format.DateTimeParseException e) {
-            throw new ApiException("Invalid date format. Please use yyyy-MM-dd format (e.g., 2024-01-15)");
+        } catch (DateTimeParseException e) {
+            throw new ApiException("Invalid date format. Use YYYY-MM-DD format.");
+        } catch (ApiException e) {
+            throw e;
         } catch (Exception e) {
             throw new ApiException("Failed to get day sales by date range: " + e.getMessage());
         }

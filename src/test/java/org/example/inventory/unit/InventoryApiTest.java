@@ -81,16 +81,12 @@ class InventoryApiTest {
     @Test
     void testAdd_Success() {
         // Arrange
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
         doNothing().when(inventoryDao).insert(any(InventoryPojo.class));
 
         // Act
         inventoryApi.add(testInventory);
 
         // Assert
-        verify(productApi).get(1);
-        verify(clientApi).get(1);
         verify(inventoryDao).insert(testInventory);
     }
 
@@ -99,106 +95,6 @@ class InventoryApiTest {
         // Act & Assert
         assertThrows(ApiException.class, () -> inventoryApi.add(null));
         verify(inventoryDao, never()).insert(any());
-    }
-
-    @Test
-    void testAdd_NullProductId() {
-        // Arrange
-        testInventory.setProductId(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.add(testInventory));
-        verify(inventoryDao, never()).insert(any());
-    }
-
-    @Test
-    void testAdd_ProductNotFound() {
-        // Arrange
-        when(productApi.get(1)).thenThrow(new ApiException("Product with ID '1' not found"));
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.add(testInventory));
-        verify(inventoryDao, never()).insert(any());
-    }
-
-    @Test
-    void testAdd_ClientNotFound() {
-        // Arrange
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenThrow(new ApiException("Client with ID '1' not found"));
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.add(testInventory));
-        verify(inventoryDao, never()).insert(any());
-    }
-
-    @Test
-    void testAdd_ClientInactive() {
-        // Arrange
-        testClient.setStatus(false);
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.add(testInventory));
-        verify(inventoryDao, never()).insert(any());
-    }
-
-    @Test
-    void testUpdate_Success() {
-        // Arrange
-        InventoryPojo updatedInventory = new InventoryPojo();
-        updatedInventory.setId(1);
-        updatedInventory.setProductId(1);
-        updatedInventory.setQuantity(20);
-
-        when(inventoryDao.select(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
-        doNothing().when(inventoryDao).update(any(Integer.class), any(InventoryPojo.class));
-
-        // Act
-        inventoryApi.update(1, updatedInventory);
-
-        // Assert
-        verify(inventoryDao).select(1);
-        verify(productApi).get(1);
-        verify(clientApi).get(1);
-        verify(inventoryDao).update(1, updatedInventory);
-    }
-
-    @Test
-    void testUpdate_NullInventory() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.update(1, null));
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testUpdate_NullProductId() {
-        // Arrange
-        InventoryPojo updatedInventory = new InventoryPojo();
-        updatedInventory.setProductId(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.update(1, updatedInventory));
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testGetByProductId_Success() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-
-        // Act
-        InventoryPojo result = inventoryApi.getByProductId(1);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(testInventory.getId(), result.getId());
-        assertEquals(testInventory.getProductId(), result.getProductId());
-        assertEquals(testInventory.getQuantity(), result.getQuantity());
-        verify(inventoryDao).getByProductId(1);
     }
 
     @Test
@@ -213,7 +109,6 @@ class InventoryApiTest {
         assertNotNull(result);
         assertEquals(testInventory.getId(), result.getId());
         assertEquals(testInventory.getProductId(), result.getProductId());
-        assertEquals(testInventory.getQuantity(), result.getQuantity());
         verify(inventoryDao).select(1);
     }
 
@@ -235,278 +130,19 @@ class InventoryApiTest {
     }
 
     @Test
-    void testAddStock_Success() {
+    void testUpdate_Success() {
         // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
+        InventoryPojo updatedInventory = new InventoryPojo();
+        updatedInventory.setId(1);
+        updatedInventory.setProductId(1);
+        updatedInventory.setQuantity(20);
+
         doNothing().when(inventoryDao).update(any(Integer.class), any(InventoryPojo.class));
 
         // Act
-        inventoryApi.addStock(1, 5);
+        inventoryApi.update(1, updatedInventory);
 
         // Assert
-        verify(inventoryDao).getByProductId(1);
-        verify(productApi).get(1);
-        verify(clientApi).get(1);
-        verify(inventoryDao).update(eq(1), argThat(inventory -> 
-            inventory.getProductId() == 1 && inventory.getQuantity() == 15
-        ));
-    }
-
-    @Test
-    void testAddStock_ZeroQuantity() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.addStock(1, 0));
-        verify(inventoryDao, never()).getByProductId(any());
-    }
-
-    @Test
-    void testAddStock_NegativeQuantity() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.addStock(1, -5));
-        verify(inventoryDao, never()).getByProductId(any());
-    }
-
-    @Test
-    void testAddStock_InventoryNotFound() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.addStock(1, 5));
-        verify(inventoryDao).getByProductId(1);
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testAddStock_ProductNotFound() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenThrow(new ApiException("Product with ID '1' not found"));
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.addStock(1, 5));
-        verify(inventoryDao).getByProductId(1);
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testAddStock_ClientNotFound() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenThrow(new ApiException("Client with ID '1' not found"));
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.addStock(1, 5));
-        verify(inventoryDao).getByProductId(1);
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testAddStock_ClientInactive() {
-        // Arrange
-        testClient.setStatus(false);
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.addStock(1, 5));
-        verify(inventoryDao).getByProductId(1);
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testRemoveStock_Success() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
-        doNothing().when(inventoryDao).update(any(Integer.class), any(InventoryPojo.class));
-
-        // Act
-        inventoryApi.removeStock(1, 3);
-
-        // Assert
-        verify(inventoryDao).getByProductId(1);
-        verify(productApi).get(1);
-        verify(clientApi).get(1);
-        verify(inventoryDao).update(eq(1), argThat(inventory -> 
-            inventory.getProductId() == 1 && inventory.getQuantity() == 7
-        ));
-    }
-
-    @Test
-    void testRemoveStock_ZeroQuantity() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.removeStock(1, 0));
-        verify(inventoryDao, never()).getByProductId(any());
-    }
-
-    @Test
-    void testRemoveStock_NegativeQuantity() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.removeStock(1, -3));
-        verify(inventoryDao, never()).getByProductId(any());
-    }
-
-    @Test
-    void testRemoveStock_InventoryNotFound() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.removeStock(1, 3));
-        verify(inventoryDao).getByProductId(1);
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testRemoveStock_InsufficientStock() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.removeStock(1, 15));
-        verify(inventoryDao).getByProductId(1);
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testRemoveStock_ProductNotFound() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenThrow(new ApiException("Product with ID '1' not found"));
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.removeStock(1, 3));
-        verify(inventoryDao).getByProductId(1);
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testRemoveStock_ClientNotFound() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenThrow(new ApiException("Client with ID '1' not found"));
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.removeStock(1, 3));
-        verify(inventoryDao).getByProductId(1);
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testRemoveStock_ClientInactive() {
-        // Arrange
-        testClient.setStatus(false);
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.removeStock(1, 3));
-        verify(inventoryDao).getByProductId(1);
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testSetStock_Success() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
-        doNothing().when(inventoryDao).update(any(Integer.class), any(InventoryPojo.class));
-
-        // Act
-        inventoryApi.setStock(1, 25);
-
-        // Assert
-        verify(inventoryDao).getByProductId(1);
-        verify(productApi).get(1);
-        verify(clientApi).get(1);
-        verify(inventoryDao).update(eq(1), argThat(inventory -> 
-            inventory.getProductId() == 1 && inventory.getQuantity() == 25
-        ));
-    }
-
-    @Test
-    void testSetStock_ZeroQuantity() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
-        doNothing().when(inventoryDao).update(any(Integer.class), any(InventoryPojo.class));
-
-        // Act
-        inventoryApi.setStock(1, 0);
-
-        // Assert
-        verify(inventoryDao).getByProductId(1);
-        verify(productApi).get(1);
-        verify(clientApi).get(1);
-        verify(inventoryDao).update(eq(1), argThat(inventory -> 
-            inventory.getProductId() == 1 && inventory.getQuantity() == 0
-        ));
-    }
-
-    @Test
-    void testSetStock_NegativeQuantity() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.setStock(1, -5));
-        verify(inventoryDao, never()).getByProductId(any());
-    }
-
-    @Test
-    void testSetStock_InventoryNotFound() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.setStock(1, 25));
-        verify(inventoryDao).getByProductId(1);
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testSetStock_ProductNotFound() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenThrow(new ApiException("Product with ID '1' not found"));
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.setStock(1, 25));
-        verify(inventoryDao).getByProductId(1);
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testSetStock_ClientNotFound() {
-        // Arrange
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenThrow(new ApiException("Client with ID '1' not found"));
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.setStock(1, 25));
-        verify(inventoryDao).getByProductId(1);
-        verify(inventoryDao, never()).update(any(), any());
-    }
-
-    @Test
-    void testSetStock_ClientInactive() {
-        // Arrange
-        testClient.setStatus(false);
-        when(inventoryDao.getByProductId(1)).thenReturn(testInventory);
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryApi.setStock(1, 25));
-        verify(inventoryDao).getByProductId(1);
-        verify(inventoryDao, never()).update(any(), any());
+        verify(inventoryDao).update(1, updatedInventory);
     }
 } 

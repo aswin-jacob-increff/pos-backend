@@ -4,6 +4,8 @@ import org.example.dto.ClientDto;
 import org.example.exception.ApiException;
 import org.example.model.data.ClientData;
 import org.example.model.form.ClientForm;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
@@ -70,7 +72,7 @@ public class ClientController {
     }
 
     @GetMapping("/paginated")
-    public ResponseEntity<org.example.model.data.PaginationResponse<ClientData>> getAllClientsPaginated(
+    public ResponseEntity<PaginationResponse<ClientData>> getAllClientsPaginated(
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
@@ -82,8 +84,8 @@ public class ClientController {
         System.out.println("Page: " + page + ", Size: " + size + ", SortBy: " + sortBy + ", SortDirection: " + sortDirection);
         
         try {
-            org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
-            org.example.model.data.PaginationResponse<ClientData> response = clientDto.getAllPaginated(request);
+            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+            PaginationResponse<ClientData> response = clientDto.getAllPaginated(request);
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;
@@ -93,7 +95,7 @@ public class ClientController {
     }
 
     @GetMapping("/name/search/{name}/paginated")
-    public ResponseEntity<org.example.model.data.PaginationResponse<ClientData>> searchByNamePaginated(
+    public ResponseEntity<PaginationResponse<ClientData>> searchByNamePaginated(
             @PathVariable String name,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
@@ -106,8 +108,8 @@ public class ClientController {
         System.out.println("Name: " + name + ", Page: " + page + ", Size: " + size);
         
         try {
-            org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest(page, size, sortBy, sortDirection);
-            org.example.model.data.PaginationResponse<ClientData> response = clientDto.getByNameLikePaginated(name, request);
+            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+            PaginationResponse<ClientData> response = clientDto.getByNameLikePaginated(name, request);
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;

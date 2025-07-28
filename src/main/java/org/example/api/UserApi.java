@@ -11,10 +11,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.example.exception.ApiException;
 import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 
 @Service
-public class UserApi extends AbstractApi<UserPojo> implements UserDetailsService {
+public class UserApi implements UserDetailsService {
 
     @Autowired
     private SecurityConfig securityConfig;
@@ -24,10 +27,44 @@ public class UserApi extends AbstractApi<UserPojo> implements UserDetailsService
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    @Override
-    protected String getEntityName() {
-        return "User";
+    // Basic CRUD operations
+    public void add(UserPojo userPojo) {
+        if (Objects.isNull(userPojo)) {
+            throw new ApiException("User cannot be null");
+        }
+        userDao.insert(userPojo);
     }
+
+    public UserPojo get(Integer id) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("User ID cannot be null");
+        }
+        UserPojo user = userDao.select(id);
+        if (user == null) {
+            throw new ApiException("User with ID " + id + " not found");
+        }
+        return user;
+    }
+
+    public List<UserPojo> getAll() {
+        return userDao.selectAll();
+    }
+
+    public void update(Integer id, UserPojo userPojo) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("User ID cannot be null");
+        }
+        if (Objects.isNull(userPojo)) {
+            throw new ApiException("User cannot be null");
+        }
+        UserPojo existingUser = userDao.select(id);
+        if (existingUser == null) {
+            throw new ApiException("User with ID " + id + " not found");
+        }
+        userDao.update(id, userPojo);
+    }
+
+
 
     // Signup method that accepts a pre-constructed UserPojo (used by UserFlow)
     public void signup(UserPojo userPojo) {
