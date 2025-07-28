@@ -61,13 +61,7 @@ public class InvoiceApi extends AbstractApi<InvoicePojo> {
         return invoiceDao.selectAllByOrderId(orderId);
     }
 
-    /**
-     * Generate invoice for an order. This method is now deprecated - use OrderDto.downloadInvoice() instead.
-     */
-    @Deprecated
-    public String generateInvoice(Object order) {
-        throw new ApiException("Use OrderDto.downloadInvoice() instead");
-    }
+
     
     /**
      * Clean up duplicate invoices for a specific order by keeping only the most recent one

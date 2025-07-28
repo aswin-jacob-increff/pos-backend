@@ -102,20 +102,7 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
                 .collect(Collectors.toList());
     }
 
-    public PaginationResponse<ClientData> getAllPaginated(PaginationRequest request) {
-        PaginationResponse<ClientPojo> paginatedEntities = ((org.example.api.ClientApi) api).getAllPaginated(request);
-        
-        List<ClientData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
-    }
+
 
     public PaginationResponse<ClientData> getByNameLikePaginated(String name, PaginationRequest request) {
         PaginationResponse<ClientPojo> paginatedEntities = ((org.example.api.ClientApi) api).getByNameLikePaginated(name, request);

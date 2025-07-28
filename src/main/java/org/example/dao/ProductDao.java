@@ -4,6 +4,7 @@ import org.springframework.stereotype.Repository;
 import org.example.pojo.ProductPojo;
 import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
 import java.util.List;
 
 @Repository
@@ -31,7 +32,7 @@ public class ProductDao extends AbstractDao<ProductPojo> {
     }
 
     public PaginationResponse<ProductPojo> selectByClientIdPaginated(Integer clientId, PaginationRequest request) {
-        return selectByFieldPaginated("clientId", clientId, request);
+        return getPaginated(PaginationQuery.byField("clientId", clientId, request));
     }
 
     @Override

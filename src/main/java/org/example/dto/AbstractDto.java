@@ -75,35 +75,7 @@ public abstract class AbstractDto<T, F, D> {
         );
     }
 
-    // ========== CONVENIENCE PAGINATION METHODS ==========
 
-    /**
-     * Get all entities with pagination support.
-     */
-    public PaginationResponse<D> getAllPaginated(PaginationRequest request) {
-        return getPaginated(PaginationQuery.all(request));
-    }
-
-    /**
-     * Get entities by field value with pagination support.
-     */
-    public PaginationResponse<D> getByFieldPaginated(String fieldName, Object value, PaginationRequest request) {
-        return getPaginated(PaginationQuery.byField(fieldName, value, request));
-    }
-
-    /**
-     * Get entities by field value with partial string matching and pagination support.
-     */
-    public PaginationResponse<D> getByFieldLikePaginated(String fieldName, String searchPattern, PaginationRequest request) {
-        return getPaginated(PaginationQuery.byFieldLike(fieldName, searchPattern, request));
-    }
-
-    /**
-     * Get entities by multiple field values with pagination support.
-     */
-    public PaginationResponse<D> getByFieldsPaginated(String[] fieldNames, Object[] fieldValues, PaginationRequest request) {
-        return getPaginated(PaginationQuery.byFields(fieldNames, fieldValues, request));
-    }
 
     /**
      * Get entity name for error messages

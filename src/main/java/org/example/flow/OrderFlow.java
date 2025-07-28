@@ -8,6 +8,7 @@ import org.example.api.InventoryApi;
 import org.example.dao.OrderItemDao;
 import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
 
 import org.example.exception.ApiException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -179,7 +180,7 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
      * Get all orders with pagination support, ordered by date descending (most recent first).
      */
     public PaginationResponse<OrderPojo> getAllPaginated(PaginationRequest request) {
-        return api.getAllPaginated(request);
+        return api.getPaginated(PaginationQuery.all(request));
     }
 
     /**
@@ -189,7 +190,7 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         if (userId == null || userId.trim().isEmpty()) {
             throw new ApiException("User ID cannot be null or empty");
         }
-        return api.getByUserIdPaginated(userId, request);
+        return api.getPaginated(PaginationQuery.byField("userId", userId, request));
     }
 
     /**
@@ -202,7 +203,11 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         if (endDate.isBefore(startDate)) {
             throw new ApiException("End date cannot be before start date");
         }
-        return api.getByDateRangePaginated(startDate, endDate, request);
+        return api.getPaginated(PaginationQuery.byFields(
+            new String[]{"date", "date"}, 
+            new Object[]{startDate, endDate}, 
+            request
+        ));
     }
 
     // ========== INVENTORY MANAGEMENT METHODS ==========

@@ -16,6 +16,7 @@ import org.example.model.form.OrderForm;
 import org.example.model.form.OrderItemForm;
 import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 
@@ -94,7 +95,7 @@ public class OrderController {
         
         try {
             PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
-            PaginationResponse<OrderData> response = orderDto.getAllPaginated(request);
+            PaginationResponse<OrderData> response = orderDto.getPaginated(PaginationQuery.all(request));
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;

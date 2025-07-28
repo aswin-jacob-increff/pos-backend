@@ -5,6 +5,7 @@ import org.example.exception.ApiException;
 import org.example.model.data.UserData;
 import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -46,7 +47,7 @@ public class SupervisorController {
         
         try {
             PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
-            PaginationResponse<UserData> response = userDto.getAllPaginated(request);
+            PaginationResponse<UserData> response = userDto.getPaginated(PaginationQuery.all(request));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             throw new ApiException("Failed to get all users: " + e.getMessage());

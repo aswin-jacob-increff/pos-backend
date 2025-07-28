@@ -7,6 +7,7 @@ import org.example.pojo.ClientPojo;
 import org.example.dao.InventoryDao;
 import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -118,6 +119,6 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
         if (request == null) {
             request = new PaginationRequest();
         }
-        return dao.selectByFieldPaginated("productId", productId, request);
+        return getPaginated(PaginationQuery.byField("productId", productId, request));
     }
 } 

@@ -10,6 +10,7 @@ import org.example.pojo.OrderItemPojo;
 import org.example.model.enums.OrderStatus;
 import org.example.exception.ApiException;
 import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
 import org.example.model.data.PaginationResponse;
 import org.example.pojo.InventoryPojo;
 import org.junit.jupiter.api.BeforeEach;
@@ -444,7 +445,7 @@ class OrderApiTest {
         expectedResponse.setContent(Arrays.asList(testOrder));
         expectedResponse.setTotalElements(1L);
         
-        when(orderDao.getAllPaginated(request)).thenReturn(expectedResponse);
+        when(orderDao.getPaginated(any(PaginationQuery.class))).thenReturn(expectedResponse);
 
         // Act
         PaginationResponse<OrderPojo> result = orderApi.getAllPaginated(request);
@@ -453,7 +454,7 @@ class OrderApiTest {
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
         assertEquals(1L, result.getTotalElements());
-        verify(orderDao).getAllPaginated(request);
+        verify(orderDao).getPaginated(any(PaginationQuery.class));
     }
 
     @Test

@@ -8,6 +8,7 @@ import org.example.pojo.OrderItemPojo;
 import org.example.pojo.OrderPojo;
 import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
@@ -125,7 +126,7 @@ public class OrderApi extends AbstractApi<OrderPojo> {
      * Get all orders with pagination support, ordered by date descending (most recent first).
      */
     public PaginationResponse<OrderPojo> getAllPaginated(PaginationRequest request) {
-        return ((OrderDao) dao).getAllPaginated(request);
+        return ((OrderDao) dao).getPaginated(PaginationQuery.all(request));
     }
 
     /**

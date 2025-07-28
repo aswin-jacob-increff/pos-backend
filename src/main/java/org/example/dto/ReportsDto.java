@@ -30,20 +30,8 @@ import org.example.util.TimeUtil;
 public class ReportsDto {
     
 
-    @Autowired
-    private org.example.flow.OrderFlow orderFlow;
-    
-    @Autowired
-    private DaySalesDao daySalesRepo;
-    
-    @Autowired
-    private OrderItemDao orderItemDao;
-
-    @Autowired
-    private ClientApi clientApi;
-
-    @Autowired
-    private ProductApi productApi;
+        @Autowired
+    private org.example.flow.ReportsFlow reportsFlow;
 
     public List<SalesReportData> getSalesReport(SalesReportForm form) {
         // Validate input - dates are assumed to be in UTC from frontend
@@ -59,13 +47,13 @@ public class ReportsDto {
             LocalDate start = form.getStartDate();
             LocalDate end = form.getEndDate();
             
-            // Use direct DAO call with proper eager fetching
-            List<OrderItemPojo> allItems = orderItemDao.selectAll();
+            // Use ReportsFlow to get all order items
+            List<OrderItemPojo> allItems = reportsFlow.getAllOrderItems();
             
             // Filter by date range - need to get orders for each item
             List<OrderItemPojo> filtered = new ArrayList<>();
             for (OrderItemPojo item : allItems) {
-                OrderPojo order = orderFlow.get(item.getOrderId());
+                OrderPojo order = reportsFlow.getOrder(item.getOrderId());
                 if (Objects.nonNull(order) && Objects.nonNull(order.getDate())) {
                     // Convert order date (Instant) to IST LocalDate
                     LocalDate orderDateIST = TimeUtil.toIST(order.getDate()).toLocalDate();
@@ -79,9 +67,9 @@ public class ReportsDto {
             if (Objects.nonNull(form.getBrand()) && !form.getBrand().isEmpty()) {
                 filtered = filtered.stream().filter(item -> {
                     try {
-                        org.example.pojo.ProductPojo product = productApi.get(item.getProductId());
+                        org.example.pojo.ProductPojo product = reportsFlow.getProduct(item.getProductId());
                         if (product != null && product.getClientId() != null && product.getClientId() > 0) {
-                            org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                            org.example.pojo.ClientPojo client = reportsFlow.getClient(product.getClientId());
                             return client != null && form.getBrand().equalsIgnoreCase(client.getClientName());
                         }
                     } catch (Exception e) {
@@ -94,10 +82,10 @@ public class ReportsDto {
             // Filter by category (product name) if provided
             if (Objects.nonNull(form.getCategory()) && !form.getCategory().isEmpty()) {
                 filtered = filtered.stream().filter(item -> {
-                    try {
-                        org.example.pojo.ProductPojo product = productApi.get(item.getProductId());
-                        return product != null && form.getCategory().equalsIgnoreCase(product.getName());
-                    } catch (Exception e) {
+                                    try {
+                    org.example.pojo.ProductPojo product = reportsFlow.getProduct(item.getProductId());
+                    return product != null && form.getCategory().equalsIgnoreCase(product.getName());
+                } catch (Exception e) {
                         // Product not found, exclude from results
                         return false;
                     }
@@ -112,7 +100,7 @@ public class ReportsDto {
                 String sku = "Unknown";
                 
                 try {
-                    org.example.pojo.ProductPojo product = productApi.get(item.getProductId());
+                    org.example.pojo.ProductPojo product = reportsFlow.getProduct(item.getProductId());
                     if (product != null) {
                         productName = product.getName() != null ? product.getName() : "Unknown";
                         sku = product.getBarcode() != null ? product.getBarcode() : "Unknown";
@@ -120,7 +108,7 @@ public class ReportsDto {
                         // Get client name
                         if (product.getClientId() != null && product.getClientId() > 0) {
                             try {
-                                org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                                org.example.pojo.ClientPojo client = reportsFlow.getClient(product.getClientId());
                                 if (client != null) {
                                     brand = client.getClientName() != null ? client.getClientName() : "Unknown";
                                 }
@@ -165,11 +153,11 @@ public class ReportsDto {
         try {
             LocalDate start = form.getStartDate();
             LocalDate end = form.getEndDate();
-            List<OrderItemPojo> allItems = orderItemDao.selectAll();
+            List<OrderItemPojo> allItems = reportsFlow.getAllOrderItems();
             Map<String, CustomDateRangeSalesData> resultMap = new HashMap<>();
             Map<String, Map<Integer, Boolean>> processedOrders = new HashMap<>(); // Track processed orders for each group
             for (OrderItemPojo item : allItems) {
-                OrderPojo order = orderFlow.get(item.getOrderId());
+                OrderPojo order = reportsFlow.getOrder(item.getOrderId());
                 if (Objects.isNull(order) || Objects.isNull(order.getDate())) continue;
                 // Convert order date (Instant) to IST LocalDate
                 LocalDate orderDateIST = TimeUtil.toIST(order.getDate()).toLocalDate();
@@ -179,13 +167,13 @@ public class ReportsDto {
                     String brand = null;
                     String category = null;
                     try {
-                        org.example.pojo.ProductPojo product = productApi.get(item.getProductId());
+                        org.example.pojo.ProductPojo product = reportsFlow.getProduct(item.getProductId());
                         if (product != null) {
                             category = product.getName();
                             // Fetch client information
                             if (product.getClientId() != null && product.getClientId() > 0) {
                                 try {
-                                    org.example.pojo.ClientPojo client = clientApi.get(product.getClientId());
+                                    org.example.pojo.ClientPojo client = reportsFlow.getClient(product.getClientId());
                                     if (client != null) {
                                         brand = client.getClientName();
                                     }
@@ -237,7 +225,7 @@ public class ReportsDto {
         }
         
         try {
-            List<DaySalesPojo> daySalesList = daySalesRepo.findByDateRange(startDate, endDate);
+            List<DaySalesPojo> daySalesList = reportsFlow.getDaySalesByDateRange(startDate, endDate);
             return daySalesList.stream()
                 .map(daySales -> {
                     DaySalesForm form = new DaySalesForm();
@@ -256,7 +244,7 @@ public class ReportsDto {
     
     public List<DaySalesForm> getAllDaySales() {
         try {
-            List<DaySalesPojo> daySalesList = daySalesRepo.selectAll();
+            List<DaySalesPojo> daySalesList = reportsFlow.getAllDaySales();
             return daySalesList.stream()
                 .map(daySales -> {
                     DaySalesForm form = new DaySalesForm();
@@ -283,7 +271,7 @@ public class ReportsDto {
         
         try {
             // Note: findByDateRange uses cb.between() which is inclusive of both start and end dates
-            List<DaySalesPojo> daySalesList = daySalesRepo.findByDateRange(startDate, endDate);
+            List<DaySalesPojo> daySalesList = reportsFlow.getDaySalesByDateRange(startDate, endDate);
             return daySalesList.stream()
                 .map(daySales -> {
                     DaySalesForm form = new DaySalesForm();

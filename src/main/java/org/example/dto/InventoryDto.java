@@ -109,20 +109,7 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
         return getByProductId(productId);
     }
 
-    public PaginationResponse<InventoryData> getAllPaginated(PaginationRequest request) {
-        PaginationResponse<InventoryPojo> paginatedEntities = ((org.example.api.InventoryApi) api).getAllPaginated(request);
-        
-        List<InventoryData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
-    }
+
 
     public PaginationResponse<InventoryData> getByProductIdPaginated(Integer productId, PaginationRequest request) {
         PaginationResponse<InventoryPojo> paginatedEntities = ((org.example.api.InventoryApi) api).getByProductIdPaginated(productId, request);

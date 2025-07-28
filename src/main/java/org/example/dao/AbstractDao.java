@@ -158,34 +158,7 @@ public abstract class AbstractDao<T> {
         return PaginationUtil.createResponse(content, totalElements, request);
     }
 
-    // ========== LEGACY PAGINATION METHODS (for backward compatibility) ==========
 
-    /**
-     * Get all entities with pagination support.
-     * @deprecated Use getPaginated(PaginationQuery.all(request)) instead
-     */
-    @Deprecated
-    public PaginationResponse<T> selectAllPaginated(PaginationRequest request) {
-        return getPaginated(PaginationQuery.all(request));
-    }
-
-    /**
-     * Get entities by field value with pagination support.
-     * @deprecated Use getPaginated(PaginationQuery.byField(fieldName, value, request)) instead
-     */
-    @Deprecated
-    public PaginationResponse<T> selectByFieldPaginated(String fieldName, Object value, PaginationRequest request) {
-        return getPaginated(PaginationQuery.byField(fieldName, value, request));
-    }
-
-    /**
-     * Get entities by field value with partial string matching and pagination support.
-     * @deprecated Use getPaginated(PaginationQuery.byFieldLike(fieldName, searchPattern, request)) instead
-     */
-    @Deprecated
-    public PaginationResponse<T> selectByFieldLikePaginated(String fieldName, String searchPattern, PaginationRequest request) {
-        return getPaginated(PaginationQuery.byFieldLike(fieldName, searchPattern, request));
-    }
 
     // ========== COUNT METHODS ==========
 

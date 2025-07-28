@@ -230,7 +230,7 @@ public abstract class AbstractApi<T> {
         if (request == null) {
             request = new PaginationRequest();
         }
-        return dao.selectByFieldPaginated(fieldName, value, request);
+        return getPaginated(PaginationQuery.byField(fieldName, value, request));
     }
 
     /**
@@ -242,44 +242,7 @@ public abstract class AbstractApi<T> {
         if (request == null) {
             request = new PaginationRequest();
         }
-        return dao.selectByFieldLikePaginated(fieldName, value.trim(), request);
+        return getPaginated(PaginationQuery.byFieldLike(fieldName, value.trim(), request));
     }
 
-    // ========== LEGACY PAGINATION METHODS (for backward compatibility) ==========
-
-    /**
-     * Get all entities with pagination support.
-     * @deprecated Use getPaginated(PaginationQuery.all(request)) instead
-     */
-    @Deprecated
-    public PaginationResponse<T> getAllPaginated(PaginationRequest request) {
-        if (request == null) {
-            request = new PaginationRequest();
-        }
-        return getPaginated(PaginationQuery.all(request));
-    }
-
-    /**
-     * Get entities by field value with pagination support.
-     * @deprecated Use getPaginated(PaginationQuery.byField(fieldName, value, request)) instead
-     */
-    @Deprecated
-    public PaginationResponse<T> getByFieldPaginated(String fieldName, Object value, PaginationRequest request) {
-        if (request == null) {
-            request = new PaginationRequest();
-        }
-        return getPaginated(PaginationQuery.byField(fieldName, value, request));
-    }
-
-    /**
-     * Get entities by field value with partial string matching and pagination support.
-     * @deprecated Use getPaginated(PaginationQuery.byFieldLike(fieldName, searchPattern, request)) instead
-     */
-    @Deprecated
-    public PaginationResponse<T> getByFieldLikePaginated(String fieldName, String searchPattern, PaginationRequest request) {
-        if (request == null) {
-            request = new PaginationRequest();
-        }
-        return getPaginated(PaginationQuery.byFieldLike(fieldName, searchPattern, request));
-    }
 } 

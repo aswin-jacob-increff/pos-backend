@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.persistence.criteria.*;
 import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
 import org.example.util.PaginationUtil;
 import org.springframework.stereotype.Repository;
 import java.util.List;
@@ -108,19 +109,7 @@ public class OrderDao extends AbstractDao<OrderPojo> {
      * Get all orders with pagination support, ordered by date descending (most recent first).
      */
     public PaginationResponse<OrderPojo> getAllPaginated(PaginationRequest request) {
-        request = PaginationUtil.validateAndSetDefaults(request);
-        
-        // Get total count
-        long totalElements = countAll();
-        
-        if (totalElements == 0) {
-            return PaginationUtil.createEmptyResponse(request);
-        }
-        
-        // Get paginated results with default sorting by date descending (most recent first)
-        List<OrderPojo> content = getAllWithPagination(request);
-        
-        return PaginationUtil.createResponse(content, totalElements, request);
+        return getPaginated(PaginationQuery.all(request));
     }
 
     /**

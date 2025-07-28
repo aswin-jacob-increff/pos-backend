@@ -21,6 +21,7 @@ import org.example.api.ProductApi;
 import org.example.dto.ProductDto;
 import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
 import org.example.model.data.ProductData;
 import org.example.pojo.ProductPojo;
 
@@ -97,7 +98,7 @@ public class InventoryController {
         
         try {
             PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
-            PaginationResponse<InventoryData> response = inventoryDto.getAllPaginated(request);
+            PaginationResponse<InventoryData> response = inventoryDto.getPaginated(PaginationQuery.all(request));
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;

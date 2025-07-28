@@ -408,23 +408,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
 
     // ========== PAGINATION METHODS ==========
 
-    /**
-     * Get all orders with pagination support.
-     */
-    public PaginationResponse<OrderData> getAllPaginated(PaginationRequest request) {
-        PaginationResponse<OrderPojo> paginatedEntities = orderFlow.getAllPaginated(request);
-        
-        List<OrderData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
-    }
+
 
     /**
      * Get orders by user ID with pagination support.

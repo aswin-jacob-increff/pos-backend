@@ -129,20 +129,7 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
                 .collect(Collectors.toList());
     }
 
-    public PaginationResponse<ProductData> getAllPaginated(PaginationRequest request) {
-        PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getAllPaginated(request);
-        
-        List<ProductData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
-    }
+
 
     public PaginationResponse<ProductData> getByNameLikePaginated(String name, PaginationRequest request) {
         PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByNameLikePaginated(name, request);

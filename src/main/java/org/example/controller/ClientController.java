@@ -6,6 +6,7 @@ import org.example.model.data.ClientData;
 import org.example.model.form.ClientForm;
 import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
@@ -85,7 +86,7 @@ public class ClientController {
         
         try {
             PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
-            PaginationResponse<ClientData> response = clientDto.getAllPaginated(request);
+            PaginationResponse<ClientData> response = clientDto.getPaginated(PaginationQuery.all(request));
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;

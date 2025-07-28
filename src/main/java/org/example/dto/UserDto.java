@@ -6,6 +6,7 @@ import org.example.model.data.UserData;
 import org.example.model.form.UserForm;
 import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
 import org.example.flow.UserFlow;
 import org.example.api.UserApi;
 import org.example.model.enums.Role;
@@ -151,6 +152,22 @@ public class UserDto {
             pageNumber,
             pageSize
         );
+    }
+
+    /**
+     * Get paginated results using PaginationQuery
+     */
+    public PaginationResponse<UserData> getPaginated(PaginationQuery query) {
+        if (query == null) {
+            throw new ApiException("Pagination query cannot be null");
+        }
+        
+        // For now, we only support ALL query type for users
+        if (query.getQueryType() != PaginationQuery.QueryType.ALL) {
+            throw new ApiException("Only ALL query type is supported for users");
+        }
+        
+        return getAllPaginated(query.getPaginationRequest());
     }
 
     /**

@@ -84,7 +84,7 @@ public class ProductController {
             "SUPERVISOR PRODUCT GET ALL PAGINATED ENDPOINT",
             authentication,
             request,
-            productDto::getAllPaginated
+            (req) -> productDto.getPaginated(PaginationQuery.all(req))
         );
     }
 
@@ -146,7 +146,7 @@ public class ProductController {
         
         try {
             PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
-            PaginationResponse<ProductData> response = productDto.getAllPaginated(request);
+            PaginationResponse<ProductData> response = productDto.getPaginated(PaginationQuery.all(request));
             return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;
