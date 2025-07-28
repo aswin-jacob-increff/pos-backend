@@ -2,7 +2,10 @@ package org.example.flow;
 
 import org.example.model.enums.OrderStatus;
 import org.example.pojo.OrderPojo;
+import org.example.pojo.OrderItemPojo;
 import org.example.api.OrderApi;
+import org.example.api.InventoryApi;
+import org.example.dao.OrderItemDao;
 import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
 
@@ -20,6 +23,12 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
 
     @Autowired
     private OrderApi api;
+
+    @Autowired
+    private InventoryApi inventoryApi;
+
+    @Autowired
+    private OrderItemDao orderItemDao;
 
     public OrderFlow() {
         super(OrderPojo.class);
@@ -194,5 +203,76 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
             throw new ApiException("End date cannot be before start date");
         }
         return api.getByDateRangePaginated(startDate, endDate, request);
+    }
+
+    // ========== INVENTORY MANAGEMENT METHODS ==========
+
+    /**
+     * Reduce inventory when adding an order item
+     */
+    public void reduceInventoryForOrderItem(Integer productId, Integer quantity) {
+        if (productId == null) {
+            throw new ApiException("Product ID cannot be null");
+        }
+        if (quantity == null || quantity <= 0) {
+            throw new ApiException("Quantity must be positive");
+        }
+
+        try {
+            System.out.println("OrderFlow: Reducing inventory for product ID: " + productId + 
+                              ", quantity: " + quantity);
+            inventoryApi.removeStock(productId, quantity);
+            System.out.println("OrderFlow: Successfully reduced inventory for product ID: " + productId);
+        } catch (Exception e) {
+            System.out.println("OrderFlow: Failed to reduce inventory for product ID: " + productId + 
+                              ", error: " + e.getMessage());
+            throw new ApiException("Failed to reduce inventory: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Adjust inventory when updating an order item
+     */
+    public void adjustInventoryForOrderItemUpdate(Integer productId, Integer oldQuantity, Integer newQuantity) {
+        if (productId == null) {
+            throw new ApiException("Product ID cannot be null");
+        }
+        if (oldQuantity == null || newQuantity == null) {
+            throw new ApiException("Old and new quantities cannot be null");
+        }
+
+        int quantityDifference = newQuantity - oldQuantity;
+        
+        if (quantityDifference != 0) {
+            try {
+                if (quantityDifference > 0) {
+                    // Quantity increased, reduce inventory
+                    System.out.println("OrderFlow: Updating order item - reducing inventory for product ID: " + 
+                                      productId + ", additional quantity: " + quantityDifference);
+                    inventoryApi.removeStock(productId, quantityDifference);
+                } else {
+                    // Quantity decreased, add back inventory
+                    int quantityToAdd = Math.abs(quantityDifference);
+                    System.out.println("OrderFlow: Updating order item - adding back inventory for product ID: " + 
+                                      productId + ", quantity to add: " + quantityToAdd);
+                    inventoryApi.addStock(productId, quantityToAdd);
+                }
+                System.out.println("OrderFlow: Successfully adjusted inventory for product ID: " + productId);
+            } catch (Exception e) {
+                System.out.println("OrderFlow: Failed to adjust inventory for product ID: " + productId + 
+                                  ", error: " + e.getMessage());
+                throw new ApiException("Failed to adjust inventory: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Get order item by ID for inventory calculations
+     */
+    public OrderItemPojo getOrderItem(Integer orderItemId) {
+        if (orderItemId == null) {
+            throw new ApiException("Order item ID cannot be null");
+        }
+        return orderItemDao.select(orderItemId);
     }
 }

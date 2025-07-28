@@ -4,6 +4,7 @@ import org.example.flow.OrderFlow;
 import org.example.api.InvoiceApi;
 import org.example.api.ClientApi;
 import org.example.api.ProductApi;
+
 import org.example.dao.OrderItemDao;
 import org.example.model.data.OrderData;
 import org.example.model.enums.OrderStatus;
@@ -58,6 +59,8 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     
     @Autowired
     private ClientApi clientApi;
+
+
 
     @Override
     protected String getEntityName() {
@@ -571,14 +574,18 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         }
         
         // Validate that the product exists
+        ProductPojo product = null;
         try {
-            ProductPojo product = productApi.get(orderItemForm.getProductId());
+            product = productApi.get(orderItemForm.getProductId());
             if (product == null) {
                 throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
             }
         } catch (Exception e) {
             throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
         }
+
+        // Reduce inventory before creating order item
+        orderFlow.reduceInventoryForOrderItem(orderItemForm.getProductId(), orderItemForm.getQuantity());
 
         OrderItemPojo orderItemPojo = convertOrderItemFormToPojo(orderItemForm);
         orderItemDao.insert(orderItemPojo);
@@ -596,6 +603,19 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         if (Objects.isNull(orderItemForm)) {
             throw new ApiException("Order item form cannot be null");
         }
+        
+        // Get the existing order item to calculate inventory adjustment
+        OrderItemPojo existingItem = orderFlow.getOrderItem(id);
+        if (existingItem == null) {
+            throw new ApiException("Order item with ID " + id + " not found");
+        }
+        
+        // Adjust inventory based on quantity difference
+        orderFlow.adjustInventoryForOrderItemUpdate(
+            orderItemForm.getProductId(), 
+            existingItem.getQuantity(), 
+            orderItemForm.getQuantity()
+        );
         
         OrderItemPojo orderItemPojo = convertOrderItemFormToPojo(orderItemForm);
         orderItemDao.update(id, orderItemPojo);
