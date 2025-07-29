@@ -69,7 +69,6 @@ class OrderDtoTest {
     void setUp() throws Exception {
         testForm = new OrderForm();
         testForm.setUserId("testuser@example.com");
-        testForm.setTotal(100.0);
 
         testOrder = new OrderPojo();
         testOrder.setId(1); // Ensure ID is set

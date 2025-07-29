@@ -72,7 +72,7 @@ class ClientDtoTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals("test client", result.getClientName()); // StringUtil.format() converts to lowercase
+        assertEquals("test client", result.getClientName()); // StringUtil.normalise() converts to lowercase
         verify(clientApi).add(any(ClientPojo.class));
     }
 
@@ -87,7 +87,7 @@ class ClientDtoTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals("test client", result.getClientName()); // StringUtil.format() converts to lowercase
+        assertEquals("test client", result.getClientName()); // StringUtil.normalise() converts to lowercase
         assertTrue(result.getStatus()); // Should default to true
         verify(clientApi).add(any(ClientPojo.class));
     }
@@ -103,7 +103,7 @@ class ClientDtoTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals("test client", result.getClientName()); // StringUtil.format() converts to lowercase
+        assertEquals("test client", result.getClientName()); // StringUtil.normalise() converts to lowercase
         assertFalse(result.getStatus());
         verify(clientApi).add(any(ClientPojo.class));
     }
@@ -344,7 +344,7 @@ class ClientDtoTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals("test client", result.getClientName()); // StringUtil.format() converts to lowercase and trims
+        assertEquals("test client", result.getClientName()); // StringUtil.normalise() converts to lowercase and trims
         verify(clientApi).add(any(ClientPojo.class));
     }
 } 

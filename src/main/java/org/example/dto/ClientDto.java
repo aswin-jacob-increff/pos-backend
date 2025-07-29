@@ -31,7 +31,7 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
     @Override
     protected ClientPojo convertFormToEntity(ClientForm form) {
         ClientPojo pojo = new ClientPojo();
-        pojo.setClientName(StringUtil.format(form.getClientName()));
+        pojo.setClientName(StringUtil.normalise(form.getClientName()));
         pojo.setStatus(form.getStatus() != null ? form.getStatus() : true);
         return pojo;
     }
@@ -66,11 +66,11 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         if (Objects.isNull(name) || name.trim().isEmpty()) {
             throw new ApiException("Client name cannot be null or empty");
         }
-        ((org.example.api.ClientApi) api).toggleStatusByName(StringUtil.format(name));
+        ((org.example.api.ClientApi) api).toggleStatusByName(StringUtil.normalise(name));
     }
 
     public ClientData getByNameOrId(Integer id, String name) {
-        name = StringUtil.format(name);
+                    name = StringUtil.normalise(name);
         if (Objects.nonNull(id) && Objects.nonNull(name)) {
             try {
                 ClientPojo idPojo = api.get(id);

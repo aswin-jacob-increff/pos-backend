@@ -16,7 +16,6 @@ public class OrderForm {
     @NotNull(message = "Order must contain at least one item")
     @Size(min = 1, message = "Order must contain at least one item")
     private List<OrderItemForm> orderItemFormList;
-    private Double total;
     private String userId;
 
 }

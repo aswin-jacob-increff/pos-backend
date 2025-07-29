@@ -28,7 +28,7 @@ public class ClientApi extends AbstractApi<ClientPojo> {
             return null;
         }
         // Format the name consistently with how it's stored
-        String formattedName = StringUtil.format(name);
+        String formattedName = StringUtil.normalise(name);
         return findByField("clientName", formattedName);
     }
 
