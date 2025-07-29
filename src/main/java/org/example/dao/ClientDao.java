@@ -3,6 +3,7 @@ package org.example.dao;
 import jakarta.transaction.Transactional;
 import org.example.pojo.ClientPojo;
 import org.springframework.stereotype.Repository;
+import java.util.List;
 
 @Repository
 @Transactional
@@ -13,7 +14,8 @@ public class ClientDao extends AbstractDao<ClientPojo> {
     }
 
     public ClientPojo selectByName(String name) {
-        return selectByField("clientName", name);
+        List<ClientPojo> results = getByParams("clientName", name);
+        return results.isEmpty() ? null : results.get(0);
     }
 
     public void toggleStatus(Integer id) {

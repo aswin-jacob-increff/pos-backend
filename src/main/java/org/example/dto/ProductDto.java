@@ -42,6 +42,10 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
 
     @Override
     protected ProductData convertEntityToData(ProductPojo productPojo) {
+        if (productPojo == null) {
+            return null;
+        }
+        
         ProductData productData = new ProductData();
         productData.setId(productPojo.getId());
         productData.setName(productPojo.getName());
@@ -79,89 +83,40 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         }
     }
 
-    // Custom methods that don't fit the generic pattern
+    // ========== CUSTOM METHODS ==========
 
     public ProductData getByBarcode(String barcode) {
-        if (barcode == null || barcode.trim().isEmpty()) {
-            throw new ApiException("Barcode cannot be null or empty");
-        }
-        ProductPojo product = ((org.example.api.ProductApi) api).getByBarcode(barcode);
-        return convertEntityToData(product);
+        return getByField("barcode", barcode);
     }
 
     public List<ProductData> getByClientName(String clientName) {
-        if (clientName == null || clientName.trim().isEmpty()) {
-            throw new ApiException("Client name cannot be null or empty");
-        }
+        validateFieldValue("clientName", clientName);
         List<ProductPojo> products = ((org.example.api.ProductApi) api).getByClientName(clientName);
-        return products.stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
+        return convertEntitiesToData(products);
     }
 
     public List<ProductData> getByBarcodeLike(String barcode) {
-        if (barcode == null || barcode.trim().isEmpty()) {
-            throw new ApiException("Barcode cannot be null or empty");
-        }
-        List<ProductPojo> products = ((org.example.api.ProductApi) api).getByBarcodeLike(barcode);
-        return products.stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
+        return getByFieldLike("barcode", barcode);
     }
 
     public List<ProductData> getByNameLike(String name) {
-        if (name == null || name.trim().isEmpty()) {
-            throw new ApiException("Name cannot be null or empty");
-        }
-        List<ProductPojo> products = ((org.example.api.ProductApi) api).getByNameLike(name);
-        return products.stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
+        return getByFieldLike("name", name);
     }
 
     public List<ProductData> getByClientId(Integer clientId) {
-        if (clientId == null) {
-            throw new ApiException("Client ID cannot be null");
-        }
-        List<ProductPojo> products = ((org.example.api.ProductApi) api).getByClientId(clientId);
-        return products.stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
+        return getByFields(new String[]{"clientId"}, new Object[]{clientId});
     }
 
-
-
     public PaginationResponse<ProductData> getByNameLikePaginated(String name, PaginationRequest request) {
-        PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByNameLikePaginated(name, request);
-        
-        List<ProductData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
+        return getByFieldLikePaginated("name", name, request);
     }
 
     public PaginationResponse<ProductData> getByClientIdPaginated(Integer clientId, PaginationRequest request) {
-        PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByClientIdPaginated(clientId, request);
-        
-        List<ProductData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
+        return getByFieldPaginated("clientId", clientId, request);
     }
 
     public PaginationResponse<ProductData> getByClientNamePaginated(String clientName, PaginationRequest request) {
+        validateFieldValue("clientName", clientName);
         PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByClientNamePaginated(clientName, request);
         
         List<ProductData> dataList = paginatedEntities.getContent().stream()
@@ -177,78 +132,38 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
     }
 
     public String getProductImageUrl(Integer productId) {
-        if (productId == null) {
-            throw new ApiException("Product ID cannot be null");
-        }
+        validateId(productId);
         ProductPojo product = api.get(productId);
         return product.getImageUrl();
     }
 
     public TsvUploadResult uploadProductsFromTsv(MultipartFile file) {
-        System.out.println("ProductDto.uploadProductsFromTsv - Starting");
-        // Validate file
+        if (file == null || file.isEmpty()) {
+            throw new ApiException("File cannot be null or empty");
+        }
+
         FileValidationUtil.validateTsvFile(file);
-        System.out.println("ProductDto.uploadProductsFromTsv - File validation passed");
-        
-        TsvUploadResult result;
+
         try {
-            System.out.println("ProductDto.uploadProductsFromTsv - Starting parse with complete validation");
-            result = ProductTsvParser.parseWithCompleteValidation(file.getInputStream(), (org.example.api.ProductApi) api, clientApi);
-            System.out.println("ProductDto.uploadProductsFromTsv - Parse completed. Total: " + result.getTotalRows() + ", Successful: " + result.getSuccessfulRows() + ", Failed: " + result.getFailedRows());
-        } catch (Exception e) {
-            System.out.println("ProductDto.uploadProductsFromTsv - Parse failed: " + e.getMessage());
-            e.printStackTrace();
-            result = new TsvUploadResult();
-            result.addError("Failed to parse file: " + e.getMessage());
-            return result;
-        }
-        
-        // Check if we have any forms to process
-        if (result.getSuccessfulRows() == 0) {
-            System.out.println("ProductDto.uploadProductsFromTsv - No successful rows to process");
-            return result;
-        }
-        
-        // Validate file size
-        try {
-            FileValidationUtil.validateFileSize(result.getSuccessfulRows());
-            System.out.println("ProductDto.uploadProductsFromTsv - File size validation passed");
-        } catch (ApiException e) {
-            System.out.println("ProductDto.uploadProductsFromTsv - File size validation failed: " + e.getMessage());
-            result.addError("File size validation failed: " + e.getMessage());
-            return result;
-        }
-        
-        // Get the parsed forms from the result
-        List<ProductForm> forms = result.getParsedForms();
-        if (forms == null || forms.isEmpty()) {
-            System.out.println("ProductDto.uploadProductsFromTsv - No valid forms found to process");
-            result.addError("No valid forms found to process");
-            return result;
-        }
-        
-        System.out.println("ProductDto.uploadProductsFromTsv - Processing " + forms.size() + " forms");
-        
-        // Reset counters for actual processing
-        result.setSuccessfulRows(0);
-        
-        // Process only the valid forms (already validated by parser)
-        for (ProductForm form : forms) {
-            try {
-                System.out.println("ProductDto.uploadProductsFromTsv - Adding product: " + form.getName());
-                // Use the flow directly since validation is already done
-                ProductPojo entity = convertFormToEntity(form);
-                api.add(entity);
-                result.incrementSuccessful();
-                System.out.println("ProductDto.uploadProductsFromTsv - Successfully added product: " + form.getName());
-            } catch (Exception e) {
-                System.out.println("ProductDto.uploadProductsFromTsv - Unexpected error adding product '" + form.getName() + "': " + e.getMessage());
-                result.addError("Unexpected error adding product '" + form.getName() + "': " + e.getMessage());
-                result.incrementFailed();
+            TsvUploadResult result = ProductTsvParser.parseWithDuplicateDetection(file.getInputStream());
+            
+            // Process the parsed forms
+            List<ProductForm> forms = result.getParsedForms();
+            if (forms != null) {
+                for (ProductForm form : forms) {
+                    try {
+                        add(form);
+                        result.incrementSuccessful();
+                    } catch (Exception e) {
+                        result.addError("Failed to add product '" + form.getName() + "': " + e.getMessage());
+                        result.incrementFailed();
+                    }
+                }
             }
+            
+            return result;
+        } catch (Exception e) {
+            throw new ApiException("Failed to process TSV file: " + e.getMessage());
         }
-        
-        System.out.println("ProductDto.uploadProductsFromTsv - Final result: " + result.getSummary());
-        return result;
     }
 }

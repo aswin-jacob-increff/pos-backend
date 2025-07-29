@@ -188,7 +188,7 @@ class ProductDtoTest {
     @Test
     void testGetByBarcode_Success() {
         // Given
-        when(productApi.getByBarcode("TEST123")).thenReturn(testProduct);
+        when(productApi.getByField("barcode", "TEST123")).thenReturn(testProduct);
         when(clientApi.get(1)).thenReturn(testClient);
 
         // When
@@ -198,7 +198,7 @@ class ProductDtoTest {
         assertNotNull(result);
         assertEquals("TEST123", result.getBarcode());
         assertEquals(testClient.getId(), result.getClientId());
-        verify(productApi).getByBarcode("TEST123");
+        verify(productApi).getByField("barcode", "TEST123");
         verify(clientApi).get(1);
     }
 

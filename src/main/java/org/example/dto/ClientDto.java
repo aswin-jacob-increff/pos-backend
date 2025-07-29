@@ -6,6 +6,7 @@ import org.example.model.form.ClientForm;
 import org.example.model.data.ClientData;
 import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
+import org.example.model.form.PaginationQuery;
 import org.example.pojo.ClientPojo;
 import org.example.util.StringUtil;
 import org.example.util.FileValidationUtil;
@@ -31,7 +32,7 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
     protected ClientPojo convertFormToEntity(ClientForm form) {
         ClientPojo pojo = new ClientPojo();
         pojo.setClientName(StringUtil.format(form.getClientName()));
-        pojo.setStatus(form.getStatus() != null ? form.getStatus() : true); // Default to true if null
+        pojo.setStatus(form.getStatus() != null ? form.getStatus() : true);
         return pojo;
     }
 
@@ -46,7 +47,6 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
 
     @Override
     protected void preprocess(ClientForm clientForm) {
-        // Validate clientName is provided
         if (clientForm == null) {
             throw new ApiException("Client form cannot be null");
         }
@@ -55,12 +55,10 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         }
     }
 
-    // Custom methods that don't fit the generic pattern
+    // ========== CUSTOM METHODS ==========
 
     public void toggleStatus(Integer id) {
-        if (Objects.isNull(id)) {
-            throw new ApiException("Client ID cannot be null");
-        }
+        validateId(id);
         ((org.example.api.ClientApi) api).toggleStatus(id);
     }
 
@@ -93,113 +91,50 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
     }
 
     public List<ClientData> getByNameLike(String name) {
-        if (name == null || name.trim().isEmpty()) {
-            throw new ApiException("Client name cannot be null or empty");
-        }
-        List<ClientPojo> clients = ((org.example.api.ClientApi) api).getByNameLike(name);
-        return clients.stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
+        return getByFieldLike("clientName", name);
     }
 
-
-
     public PaginationResponse<ClientData> getByNameLikePaginated(String name, PaginationRequest request) {
-        PaginationResponse<ClientPojo> paginatedEntities = ((org.example.api.ClientApi) api).getByNameLikePaginated(name, request);
-        
-        List<ClientData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
+        return getByFieldLikePaginated("clientName", name, request);
     }
 
     public TsvUploadResult uploadClientsFromTsv(MultipartFile file) {
-        System.out.println("ClientDto.uploadClientsFromTsv - Starting");
-        // Validate file
+        if (file == null || file.isEmpty()) {
+            throw new ApiException("File cannot be null or empty");
+        }
+
         FileValidationUtil.validateTsvFile(file);
-        System.out.println("ClientDto.uploadClientsFromTsv - File validation passed");
-        
-        TsvUploadResult result;
+
         try {
-            System.out.println("ClientDto.uploadClientsFromTsv - Starting parse with complete validation");
-            result = ClientTsvParser.parseWithCompleteValidation(file.getInputStream(), (org.example.api.ClientApi) api);
-            System.out.println("ClientDto.uploadClientsFromTsv - Parse completed. Total: " + result.getTotalRows() + ", Successful: " + result.getSuccessfulRows() + ", Failed: " + result.getFailedRows());
-        } catch (Exception e) {
-            System.out.println("ClientDto.uploadClientsFromTsv - Parse failed: " + e.getMessage());
-            e.printStackTrace();
-            result = new TsvUploadResult();
-            result.addError("Failed to parse file: " + e.getMessage());
-            return result;
-        }
-        
-        // Check if we have any forms to process
-        if (result.getSuccessfulRows() == 0) {
-            System.out.println("ClientDto.uploadClientsFromTsv - No successful rows to process");
-            return result;
-        }
-        
-        // Validate file size
-        try {
-            FileValidationUtil.validateFileSize(result.getSuccessfulRows());
-            System.out.println("ClientDto.uploadClientsFromTsv - File size validation passed");
-        } catch (ApiException e) {
-            System.out.println("ClientDto.uploadClientsFromTsv - File size validation failed: " + e.getMessage());
-            result.addError("File size validation failed: " + e.getMessage());
-            return result;
-        }
-        
-        // Get the parsed forms from the result
-        List<ClientForm> forms = result.getParsedForms();
-        if (forms == null || forms.isEmpty()) {
-            System.out.println("ClientDto.uploadClientsFromTsv - No valid forms found to process");
-            result.addError("No valid forms found to process");
-            return result;
-        }
-        
-        System.out.println("ClientDto.uploadClientsFromTsv - Processing " + forms.size() + " forms");
-        
-        // Reset counters for actual processing
-        result.setSuccessfulRows(0);
-        
-        // Process only the valid forms (already validated by parser)
-        for (ClientForm form : forms) {
-            try {
-                System.out.println("ClientDto.uploadClientsFromTsv - Adding client: " + form.getClientName());
-                // Use the flow directly since validation is already done
-                ClientPojo entity = convertFormToEntity(form);
-                api.add(entity);
-                result.incrementSuccessful();
-                System.out.println("ClientDto.uploadClientsFromTsv - Successfully added client: " + form.getClientName());
-            } catch (Exception e) {
-                System.out.println("ClientDto.uploadClientsFromTsv - Unexpected error adding client '" + form.getClientName() + "': " + e.getMessage());
-                result.addError("Unexpected error adding client '" + form.getClientName() + "': " + e.getMessage());
-                result.incrementFailed();
+            TsvUploadResult result = ClientTsvParser.parseWithDuplicateDetection(file.getInputStream());
+            
+            // Process the parsed forms
+            List<ClientForm> forms = result.getParsedForms();
+            if (forms != null) {
+                for (ClientForm form : forms) {
+                    try {
+                        add(form);
+                        result.incrementSuccessful();
+                    } catch (Exception e) {
+                        result.addError("Failed to add client '" + form.getClientName() + "': " + e.getMessage());
+                        result.incrementFailed();
+                    }
+                }
             }
+            
+            return result;
+        } catch (Exception e) {
+            throw new ApiException("Failed to process TSV file: " + e.getMessage());
         }
-        
-        System.out.println("ClientDto.uploadClientsFromTsv - Final result: " + result.getSummary());
-        return result;
     }
 
     public void toggleStatus(Integer id, String name) {
-        if (Objects.isNull(id) && Objects.isNull(name)) {
-            throw new ApiException("Either ID or name must be provided for status toggle");
-        }
-        
         if (Objects.nonNull(id)) {
-            // Use ID-based toggle
-            ((org.example.api.ClientApi) api).toggleStatus(id);
+            toggleStatus(id);
         } else if (Objects.nonNull(name) && !name.trim().isEmpty()) {
-            // Use name-based toggle
-            ((org.example.api.ClientApi) api).toggleStatusByName(StringUtil.format(name));
+            toggleStatusByName(name);
         } else {
-            throw new ApiException("Valid ID or name must be provided for status toggle");
+            throw new ApiException("Either ID or name must be provided");
         }
     }
 }

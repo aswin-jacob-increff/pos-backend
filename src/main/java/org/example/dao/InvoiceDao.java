@@ -1,10 +1,8 @@
 package org.example.dao;
 
-import jakarta.persistence.*;
-import jakarta.persistence.criteria.*;
+import org.example.pojo.InvoicePojo;
 import org.springframework.stereotype.Repository;
 import java.util.List;
-import org.example.pojo.InvoicePojo;
 
 @Repository
 public class InvoiceDao extends AbstractDao<InvoicePojo> {
@@ -14,18 +12,12 @@ public class InvoiceDao extends AbstractDao<InvoicePojo> {
     }
 
     public InvoicePojo selectByOrderId(Integer orderId) {
-        return selectByField("orderId", orderId);
+        List<InvoicePojo> results = getByParams("orderId", orderId);
+        return results.isEmpty() ? null : results.get(0);
     }
     
     public List<InvoicePojo> selectAllByOrderId(Integer orderId) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<InvoicePojo> query = cb.createQuery(InvoicePojo.class);
-        Root<InvoicePojo> root = query.from(InvoicePojo.class);
-        
-        query.select(root)
-             .where(cb.equal(root.get("orderId"), orderId));
-        
-        return em.createQuery(query).getResultList();
+        return getByParams(new String[]{"orderId"}, new Object[]{orderId});
     }
 
     @Override

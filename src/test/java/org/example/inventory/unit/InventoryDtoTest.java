@@ -192,7 +192,7 @@ class InventoryDtoTest {
 
     @Test
     void testGetByProductId_Success() {
-        when(inventoryApi.getByProductId(1)).thenReturn(testInventory);
+        when(inventoryApi.getByField("productId", 1)).thenReturn(testInventory);
         when(productApi.get(1)).thenReturn(testProduct);
         
         InventoryData result = inventoryDto.getByProductId(1);
@@ -201,7 +201,7 @@ class InventoryDtoTest {
         assertEquals(1, result.getProductId());
         assertEquals("TEST123", result.getBarcode());
         assertEquals("Test Product", result.getProductName());
-        verify(inventoryApi, times(1)).getByProductId(1);
+        verify(inventoryApi, times(1)).getByField("productId", 1);
         verify(productApi, times(1)).get(1);
     }
 
@@ -215,42 +215,45 @@ class InventoryDtoTest {
     @Test
     void testAddStock_Success() {
         when(inventoryApi.getByProductId(1)).thenReturn(testInventory);
+        when(inventoryApi.getByField("productId", 1)).thenReturn(testInventory);
         when(productApi.get(1)).thenReturn(testProduct);
-        doNothing().when(inventoryApi).addStock(1, 5);
+        doNothing().when(inventoryApi).update(eq(1), any(InventoryPojo.class));
         
-        InventoryData result = inventoryDto.addStock(1, 5);
+        InventoryData result = inventoryDto.addStockAndReturn(1, 5);
         assertNotNull(result);
         assertEquals(1, result.getProductId());
         assertEquals("TEST123", result.getBarcode());
         assertEquals("Test Product", result.getProductName());
-        verify(inventoryApi, times(1)).addStock(1, 5);
+        verify(inventoryApi, times(1)).update(eq(1), any(InventoryPojo.class));
     }
 
     @Test
     void testRemoveStock_Success() {
         when(inventoryApi.getByProductId(1)).thenReturn(testInventory);
+        when(inventoryApi.getByField("productId", 1)).thenReturn(testInventory);
         when(productApi.get(1)).thenReturn(testProduct);
-        doNothing().when(inventoryApi).removeStock(1, 3);
+        doNothing().when(inventoryApi).update(eq(1), any(InventoryPojo.class));
         
-        InventoryData result = inventoryDto.removeStock(1, 3);
+        InventoryData result = inventoryDto.removeStockAndReturn(1, 3);
         assertNotNull(result);
         assertEquals(1, result.getProductId());
         assertEquals("TEST123", result.getBarcode());
         assertEquals("Test Product", result.getProductName());
-        verify(inventoryApi, times(1)).removeStock(1, 3);
+        verify(inventoryApi, times(1)).update(eq(1), any(InventoryPojo.class));
     }
 
     @Test
     void testSetStock_Success() {
         when(inventoryApi.getByProductId(1)).thenReturn(testInventory);
+        when(inventoryApi.getByField("productId", 1)).thenReturn(testInventory);
         when(productApi.get(1)).thenReturn(testProduct);
-        doNothing().when(inventoryApi).setStock(1, 20);
+        doNothing().when(inventoryApi).update(eq(1), any(InventoryPojo.class));
         
         InventoryData result = inventoryDto.setStock(1, 20);
         assertNotNull(result);
         assertEquals(1, result.getProductId());
         assertEquals("TEST123", result.getBarcode());
         assertEquals("Test Product", result.getProductName());
-        verify(inventoryApi, times(1)).setStock(1, 20);
+        verify(inventoryApi, times(1)).update(eq(1), any(InventoryPojo.class));
     }
 } 

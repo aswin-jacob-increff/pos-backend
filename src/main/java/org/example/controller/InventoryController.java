@@ -313,7 +313,7 @@ public class InventoryController {
             if (product == null) {
                 throw new ApiException("Product with barcode '" + productId.trim() + "' not found");
             }
-            return inventoryDto.addStock(product.getId(), quantity);
+            return inventoryDto.addStockAndReturn(product.getId(), quantity);
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -349,7 +349,7 @@ public class InventoryController {
             if (product == null) {
                 throw new ApiException("Product with barcode '" + productId.trim() + "' not found");
             }
-            return inventoryDto.removeStock(product.getId(), quantity);
+            return inventoryDto.removeStockAndReturn(product.getId(), quantity);
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {

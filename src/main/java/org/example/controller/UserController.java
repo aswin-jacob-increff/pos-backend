@@ -19,6 +19,7 @@ import org.example.api.UserApi;
 import org.example.pojo.UserPojo;
 import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
+import org.example.util.AuthHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -57,12 +58,8 @@ public class UserController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                String userEmail = authentication.getName();
-                return orderDto.getOrdersByUserId(userEmail);
-            } else {
-                throw new ApiException("User not authenticated");
-            }
+            String userEmail = AuthHelper.getUserId(authentication);
+            return orderDto.getOrdersByUserId(userEmail);
         } catch (Exception e) {
             throw new ApiException("Failed to get user orders: " + e.getMessage());
         }
@@ -81,14 +78,10 @@ public class UserController {
         System.out.println("Page: " + page + ", Size: " + size + ", SortBy: " + sortBy + ", SortDirection: " + sortDirection);
         
         try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                String userEmail = authentication.getName();
-                PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
-                PaginationResponse<OrderData> response = orderDto.getOrdersByUserIdPaginated(userEmail, request);
-                return ResponseEntity.ok(response);
-            } else {
-                throw new ApiException("User not authenticated");
-            }
+            String userEmail = AuthHelper.getUserId(authentication);
+            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+            PaginationResponse<OrderData> response = orderDto.getOrdersByUserIdPaginated(userEmail, request);
+            return ResponseEntity.ok(response);
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -102,14 +95,10 @@ public class UserController {
             @RequestParam String endDate,
             Authentication authentication) {
         try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                String userEmail = authentication.getName();
-                LocalDate start = LocalDate.parse(startDate);
-                LocalDate end = LocalDate.parse(endDate);
-                return orderDto.getOrdersByDateRange(start, end);
-            } else {
-                throw new ApiException("User not authenticated");
-            }
+            String userEmail = AuthHelper.getUserId(authentication);
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+            return orderDto.getOrdersByDateRange(start, end);
         } catch (DateTimeParseException e) {
             throw new ApiException("Invalid date format. Use YYYY-MM-DD format.");
         } catch (ApiException e) {
@@ -127,15 +116,11 @@ public class UserController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                // Set the user ID from the authenticated user
-                String userEmail = authentication.getName();
-                form.setUserId(userEmail);
-                
-                return orderDto.add(form);
-            } else {
-                throw new ApiException("User not authenticated");
-            }
+            // Set the user ID from the authenticated user
+            String userEmail = AuthHelper.getUserId(authentication);
+            form.setUserId(userEmail);
+            
+            return orderDto.add(form);
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -255,11 +240,8 @@ public class UserController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                return productDto.getByBarcode(barcode);
-            } else {
-                throw new ApiException("User not authenticated");
-            }
+            AuthHelper.getUserId(authentication); // Verify authentication
+            return productDto.getByBarcode(barcode);
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -274,16 +256,13 @@ public class UserController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                // Get product by barcode first, then get inventory by product ID
-                var product = productApi.getByBarcode(barcode);
-                if (product == null) {
-                    throw new ApiException("Product with barcode '" + barcode + "' not found");
-                }
-                return inventoryDto.getByProductId(product.getId());
-            } else {
-                throw new ApiException("User not authenticated");
+            AuthHelper.getUserId(authentication); // Verify authentication
+            // Get product by barcode first, then get inventory by product ID
+            var product = productApi.getByBarcode(barcode);
+            if (product == null) {
+                throw new ApiException("Product with barcode '" + barcode + "' not found");
             }
+            return inventoryDto.getByProductId(product.getId());
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -298,10 +277,10 @@ public class UserController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                // Try to get product first
-                ProductData product = null;
-                InventoryData inventory = null;
+            AuthHelper.getUserId(authentication); // Verify authentication
+            // Try to get product first
+            ProductData product = null;
+            InventoryData inventory = null;
                 
                 try {
                     product = productDto.getByBarcode(barcode);
@@ -327,9 +306,6 @@ public class UserController {
                 response.put("found", product != null || inventory != null);
                 
                 return ResponseEntity.ok(response);
-            } else {
-                throw new ApiException("User not authenticated");
-            }
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -349,17 +325,13 @@ public class UserController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                // Verify the order belongs to the authenticated user
-                String userEmail = authentication.getName();
-                OrderData order = orderDto.get(orderId);
-                if (!order.getUserId().equals(userEmail)) {
-                    throw new ApiException("Access denied: Order does not belong to user");
-                }
-                return orderDto.getOrderItemsByOrderId(orderId);
-            } else {
-                throw new ApiException("User not authenticated");
+            // Verify the order belongs to the authenticated user
+            String userEmail = AuthHelper.getUserId(authentication);
+            OrderData order = orderDto.get(orderId);
+            if (!order.getUserId().equals(userEmail)) {
+                throw new ApiException("Access denied: Order does not belong to user");
             }
+            return orderDto.getOrderItemsByOrderId(orderId);
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -381,20 +353,16 @@ public class UserController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                // Verify the order belongs to the authenticated user
-                String userEmail = authentication.getName();
-                OrderData order = orderDto.get(orderId);
-                if (!order.getUserId().equals(userEmail)) {
-                    throw new ApiException("Access denied: Order does not belong to user");
-                }
-                
-                // Set the order ID from the path variable
-                orderItemForm.setOrderId(orderId);
-                return orderDto.addOrderItem(orderItemForm);
-            } else {
-                throw new ApiException("User not authenticated");
+            // Verify the order belongs to the authenticated user
+            String userEmail = AuthHelper.getUserId(authentication);
+            OrderData order = orderDto.get(orderId);
+            if (!order.getUserId().equals(userEmail)) {
+                throw new ApiException("Access denied: Order does not belong to user");
             }
+            
+            // Set the order ID from the path variable
+            orderItemForm.setOrderId(orderId);
+            return orderDto.addOrderItem(orderItemForm);
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -416,19 +384,15 @@ public class UserController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                // Verify the order item belongs to the authenticated user
-                String userEmail = authentication.getName();
-                OrderItemData orderItem = orderDto.getOrderItem(itemId);
-                OrderData order = orderDto.get(orderItem.getOrderId());
-                if (!order.getUserId().equals(userEmail)) {
-                    throw new ApiException("Access denied: Order item does not belong to user");
-                }
-                
-                return orderDto.updateOrderItem(itemId, orderItemForm);
-            } else {
-                throw new ApiException("User not authenticated");
+            // Verify the order item belongs to the authenticated user
+            String userEmail = AuthHelper.getUserId(authentication);
+            OrderItemData orderItem = orderDto.getOrderItem(itemId);
+            OrderData order = orderDto.get(orderItem.getOrderId());
+            if (!order.getUserId().equals(userEmail)) {
+                throw new ApiException("Access denied: Order item does not belong to user");
             }
+            
+            return orderDto.updateOrderItem(itemId, orderItemForm);
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -446,19 +410,15 @@ public class UserController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                // Verify the order item belongs to the authenticated user
-                String userEmail = authentication.getName();
-                OrderItemData orderItem = orderDto.getOrderItem(itemId);
-                OrderData order = orderDto.get(orderItem.getOrderId());
-                if (!order.getUserId().equals(userEmail)) {
-                    throw new ApiException("Access denied: Order item does not belong to user");
-                }
-                
-                return orderDto.getOrderItem(itemId);
-            } else {
-                throw new ApiException("User not authenticated");
+            // Verify the order item belongs to the authenticated user
+            String userEmail = AuthHelper.getUserId(authentication);
+            OrderItemData orderItem = orderDto.getOrderItem(itemId);
+            OrderData order = orderDto.get(orderItem.getOrderId());
+            if (!order.getUserId().equals(userEmail)) {
+                throw new ApiException("Access denied: Order item does not belong to user");
             }
+            
+            return orderDto.getOrderItem(itemId);
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {

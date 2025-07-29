@@ -96,6 +96,8 @@ public class OrderDao extends AbstractDao<OrderPojo> {
     }
 
     public List<OrderPojo> findByUserId(String userId) {
+        // This method has custom ordering (desc by date) so it should remain as is
+        // rather than using the generic getByParams method
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderPojo> cq = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = cq.from(OrderPojo.class);
@@ -105,12 +107,7 @@ public class OrderDao extends AbstractDao<OrderPojo> {
 
     // ========== PAGINATION METHODS ==========
 
-    /**
-     * Get all orders with pagination support, ordered by date descending (most recent first).
-     */
-    public PaginationResponse<OrderPojo> getAllPaginated(PaginationRequest request) {
-        return getPaginated(PaginationQuery.all(request));
-    }
+
 
     /**
      * Get orders by user ID with pagination support, ordered by date descending (most recent first).

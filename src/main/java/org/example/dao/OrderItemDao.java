@@ -1,7 +1,5 @@
 package org.example.dao;
 
-import jakarta.persistence.*;
-import jakarta.persistence.criteria.*;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import org.example.pojo.OrderItemPojo;
@@ -16,32 +14,6 @@ public class OrderItemDao extends AbstractDao<OrderItemPojo> {
     }
 
     @Override
-    public OrderItemPojo select(Integer id) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<OrderItemPojo> query = cb.createQuery(OrderItemPojo.class);
-        Root<OrderItemPojo> root = query.from(OrderItemPojo.class);
-        query.select(root)
-             .where(cb.equal(root.get("id"), id));
-        try {
-            return em.createQuery(query).getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    @Override
-    public List<OrderItemPojo> selectAll() {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<OrderItemPojo> query = cb.createQuery(OrderItemPojo.class);
-        Root<OrderItemPojo> root = query.from(OrderItemPojo.class);
-        query.select(root);
-        return em.createQuery(query).getResultList();
-    }
-
-    @Override
     protected void updateEntity(OrderItemPojo existing, OrderItemPojo updated) {
         existing.setOrderId(updated.getOrderId());
         existing.setProductId(updated.getProductId());
@@ -51,21 +23,11 @@ public class OrderItemDao extends AbstractDao<OrderItemPojo> {
     }
 
     public List<OrderItemPojo> selectByOrderId(Integer orderId) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<OrderItemPojo> query = cb.createQuery(OrderItemPojo.class);
-        Root<OrderItemPojo> root = query.from(OrderItemPojo.class);
-        query.select(root)
-             .where(cb.equal(root.get("orderId"), orderId));
-        return em.createQuery(query).getResultList();
+        return getByParams(new String[]{"orderId"}, new Object[]{orderId});
     }
 
     public List<OrderItemPojo> selectByProductId(Integer productId) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<OrderItemPojo> query = cb.createQuery(OrderItemPojo.class);
-        Root<OrderItemPojo> root = query.from(OrderItemPojo.class);
-        query.select(root)
-             .where(cb.equal(root.get("productId"), productId));
-        return em.createQuery(query).getResultList();
+        return getByParams(new String[]{"productId"}, new Object[]{productId});
     }
 
     public static class SalesReportRow {

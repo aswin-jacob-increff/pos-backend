@@ -3,6 +3,7 @@ package org.example.controller;
 import org.example.dto.OrderDto;
 import org.example.exception.ApiException;
 import org.example.model.constants.ApiEndpoints;
+import org.example.util.AuthHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -35,15 +36,11 @@ public class OrderController {
         System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         
         try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                // Set the user ID from the authenticated user
-                String userEmail = authentication.getName();
-                form.setUserId(userEmail);
-                
-                return orderDto.add(form);
-            } else {
-                throw new ApiException("User not authenticated");
-            }
+            // Set the user ID from the authenticated user
+            String userEmail = AuthHelper.getUserId(authentication);
+            form.setUserId(userEmail);
+            
+            return orderDto.add(form);
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {

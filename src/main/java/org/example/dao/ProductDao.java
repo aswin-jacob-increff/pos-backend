@@ -15,24 +15,25 @@ public class ProductDao extends AbstractDao<ProductPojo> {
     }
 
     public ProductPojo selectByBarcode(String barcode) {
-        return selectByField("barcode", barcode);
+        List<ProductPojo> results = getByParams("barcode", barcode);
+        return results.isEmpty() ? null : results.get(0);
     }
 
     public ProductPojo selectByName(String name) {
-        return selectByField("name", name);
+        List<ProductPojo> results = getByParams("name", name);
+        return results.isEmpty() ? null : results.get(0);
     }
 
     public List<ProductPojo> selectByClientId(Integer clientId) {
-        return selectByFields(new String[]{"clientId"}, new Object[]{clientId});
+        return getByParams(new String[]{"clientId"}, new Object[]{clientId});
     }
 
     public boolean hasProductsByClientId(Integer clientId) {
-        List<ProductPojo> products = selectByClientId(clientId);
-        return products != null && !products.isEmpty();
+        return existsByField("clientId", clientId);
     }
 
     public PaginationResponse<ProductPojo> selectByClientIdPaginated(Integer clientId, PaginationRequest request) {
-        return getPaginated(PaginationQuery.byField("clientId", clientId, request));
+        return getByParamsPaginated("clientId", clientId, request);
     }
 
     @Override

@@ -3,6 +3,8 @@ package org.example.dto;
 import org.example.exception.ApiException;
 import org.example.model.data.InventoryData;
 import org.example.model.form.InventoryForm;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
 import org.example.model.data.TsvUploadResult;
 import org.example.pojo.InventoryPojo;
 import org.example.api.ProductApi;
@@ -15,8 +17,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
-import org.example.model.data.PaginationResponse;
-import org.example.model.form.PaginationRequest;
 
 @Component
 public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, InventoryData> {
@@ -39,20 +39,26 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
 
     @Override
     protected InventoryData convertEntityToData(InventoryPojo inventoryPojo) {
+        if (inventoryPojo == null) {
+            return null;
+        }
+        
         InventoryData inventoryData = new InventoryData();
         inventoryData.setId(inventoryPojo.getId());
         inventoryData.setProductId(inventoryPojo.getProductId());
         inventoryData.setQuantity(inventoryPojo.getQuantity());
         
-        // Get product information if productId is present
+        // Get product details if productId is present
         if (inventoryPojo.getProductId() != null && inventoryPojo.getProductId() > 0) {
             try {
                 var product = productApi.get(inventoryPojo.getProductId());
                 inventoryData.setProductName(product.getName());
                 inventoryData.setBarcode(product.getBarcode());
+                inventoryData.setMrp(product.getMrp());
             } catch (Exception e) {
                 inventoryData.setProductName("Unknown");
                 inventoryData.setBarcode("Unknown");
+                inventoryData.setMrp(0.0);
             }
         }
         
@@ -64,133 +70,127 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
         if (inventoryForm == null) {
             throw new ApiException("Inventory form cannot be null");
         }
-        if (inventoryForm.getProductId() == null) {
-            throw new ApiException("Product ID is required");
+        if (inventoryForm.getProductId() == null || inventoryForm.getProductId() <= 0) {
+            throw new ApiException("Product ID is required and must be positive");
         }
         if (inventoryForm.getQuantity() == null || inventoryForm.getQuantity() < 0) {
             throw new ApiException("Quantity must be non-negative");
         }
     }
 
-    // Custom methods that don't fit the generic pattern
+    // ========== CUSTOM METHODS ==========
 
     public InventoryData getByProductId(Integer productId) {
-        if (productId == null) {
-            throw new ApiException("Product ID cannot be null");
-        }
-        InventoryPojo inventory = ((org.example.api.InventoryApi) api).getByProductId(productId);
-        if (inventory == null) {
-            throw new ApiException("No inventory found for product ID: " + productId);
-        }
-        return convertEntityToData(inventory);
+        return getByField("productId", productId);
     }
 
-    public InventoryData addStock(Integer productId, Integer quantity) {
-        if (quantity == null || quantity <= 0) {
-            throw new ApiException("Quantity must be positive");
+    public List<InventoryData> getByProductId(Integer productId, PaginationRequest request) {
+        return getByFieldPaginated("productId", productId, request).getContent();
+    }
+
+    public PaginationResponse<InventoryData> getByProductIdPaginated(Integer productId, PaginationRequest request) {
+        return getByFieldPaginated("productId", productId, request);
+    }
+
+    public void updateQuantity(Integer productId, Integer newQuantity) {
+        if (productId == null || productId <= 0) {
+            throw new ApiException("Product ID must be positive");
         }
-        ((org.example.api.InventoryApi) api).addStock(productId, quantity);
+        if (newQuantity == null || newQuantity < 0) {
+            throw new ApiException("Quantity must be non-negative");
+        }
+
+        InventoryPojo inventory = ((org.example.api.InventoryApi) api).getByProductId(productId);
+        if (inventory == null) {
+            throw new ApiException("Inventory not found for product ID: " + productId);
+        }
+
+        inventory.setQuantity(newQuantity);
+        api.update(inventory.getId(), inventory);
+    }
+
+    public void addStock(Integer productId, Integer quantityToAdd) {
+        if (productId == null || productId <= 0) {
+            throw new ApiException("Product ID must be positive");
+        }
+        if (quantityToAdd == null || quantityToAdd <= 0) {
+            throw new ApiException("Quantity to add must be positive");
+        }
+
+        InventoryPojo inventory = ((org.example.api.InventoryApi) api).getByProductId(productId);
+        if (inventory == null) {
+            throw new ApiException("Inventory not found for product ID: " + productId);
+        }
+
+        inventory.setQuantity(inventory.getQuantity() + quantityToAdd);
+        api.update(inventory.getId(), inventory);
+    }
+
+    public void removeStock(Integer productId, Integer quantityToRemove) {
+        if (productId == null || productId <= 0) {
+            throw new ApiException("Product ID must be positive");
+        }
+        if (quantityToRemove == null || quantityToRemove <= 0) {
+            throw new ApiException("Quantity to remove must be positive");
+        }
+
+        InventoryPojo inventory = ((org.example.api.InventoryApi) api).getByProductId(productId);
+        if (inventory == null) {
+            throw new ApiException("Inventory not found for product ID: " + productId);
+        }
+
+        if (inventory.getQuantity() < quantityToRemove) {
+            throw new ApiException("Insufficient stock. Available: " + inventory.getQuantity() + ", Requested: " + quantityToRemove);
+        }
+
+        inventory.setQuantity(inventory.getQuantity() - quantityToRemove);
+        api.update(inventory.getId(), inventory);
+    }
+
+    // ========== COMPATIBILITY METHODS FOR TESTS ==========
+
+    public InventoryData addStockAndReturn(Integer productId, Integer quantity) {
+        addStock(productId, quantity);
         return getByProductId(productId);
     }
 
-    public InventoryData removeStock(Integer productId, Integer quantity) {
-        if (quantity == null || quantity <= 0) {
-            throw new ApiException("Quantity must be positive");
-        }
-        ((org.example.api.InventoryApi) api).removeStock(productId, quantity);
+    public InventoryData removeStockAndReturn(Integer productId, Integer quantity) {
+        removeStock(productId, quantity);
         return getByProductId(productId);
     }
 
     public InventoryData setStock(Integer productId, Integer quantity) {
-        if (quantity == null || quantity < 0) {
-            throw new ApiException("Quantity must be non-negative");
-        }
-        ((org.example.api.InventoryApi) api).setStock(productId, quantity);
+        updateQuantity(productId, quantity);
         return getByProductId(productId);
     }
 
-
-
-    public PaginationResponse<InventoryData> getByProductIdPaginated(Integer productId, PaginationRequest request) {
-        PaginationResponse<InventoryPojo> paginatedEntities = ((org.example.api.InventoryApi) api).getByProductIdPaginated(productId, request);
-        
-        List<InventoryData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
-    }
-
     public TsvUploadResult uploadInventoryFromTsv(MultipartFile file) {
-        System.out.println("InventoryDto.uploadInventoryFromTsv - Starting");
-        // Validate file
+        if (file == null || file.isEmpty()) {
+            throw new ApiException("File cannot be null or empty");
+        }
+
         FileValidationUtil.validateTsvFile(file);
-        System.out.println("InventoryDto.uploadInventoryFromTsv - File validation passed");
-        
-        TsvUploadResult result;
+
         try {
-            System.out.println("InventoryDto.uploadInventoryFromTsv - Starting parse with complete validation");
-            result = InventoryTsvParser.parseWithCompleteValidation(file.getInputStream(), productApi);
-            System.out.println("InventoryDto.uploadInventoryFromTsv - Parse completed. Total: " + result.getTotalRows() + ", Successful: " + result.getSuccessfulRows() + ", Failed: " + result.getFailedRows());
-        } catch (Exception e) {
-            System.out.println("InventoryDto.uploadInventoryFromTsv - Parse failed: " + e.getMessage());
-            e.printStackTrace();
-            result = new TsvUploadResult();
-            result.addError("Failed to parse file: " + e.getMessage());
-            return result;
-        }
-        
-        // Check if we have any forms to process
-        if (result.getSuccessfulRows() == 0) {
-            System.out.println("InventoryDto.uploadInventoryFromTsv - No successful rows to process");
-            return result;
-        }
-        
-        // Validate file size
-        try {
-            FileValidationUtil.validateFileSize(result.getSuccessfulRows());
-            System.out.println("InventoryDto.uploadInventoryFromTsv - File size validation passed");
-        } catch (ApiException e) {
-            System.out.println("InventoryDto.uploadInventoryFromTsv - File size validation failed: " + e.getMessage());
-            result.addError("File size validation failed: " + e.getMessage());
-            return result;
-        }
-        
-        // Get the parsed forms from the result
-        List<InventoryForm> forms = result.getParsedForms();
-        if (forms == null || forms.isEmpty()) {
-            System.out.println("InventoryDto.uploadInventoryFromTsv - No valid forms found to process");
-            result.addError("No valid forms found to process");
-            return result;
-        }
-        
-        System.out.println("InventoryDto.uploadInventoryFromTsv - Processing " + forms.size() + " forms");
-        
-        // Reset counters for actual processing
-        result.setSuccessfulRows(0);
-        
-        // Process only the valid forms (already validated by parser)
-        for (InventoryForm form : forms) {
-            try {
-                System.out.println("InventoryDto.uploadInventoryFromTsv - Adding inventory for product: " + form.getProductId());
-                // Use the flow directly since validation is already done
-                InventoryPojo entity = convertFormToEntity(form);
-                api.add(entity);
-                result.incrementSuccessful();
-                System.out.println("InventoryDto.uploadInventoryFromTsv - Successfully added inventory for product: " + form.getProductId());
-            } catch (Exception e) {
-                System.out.println("InventoryDto.uploadInventoryFromTsv - Unexpected error adding inventory for product '" + form.getProductId() + "': " + e.getMessage());
-                result.addError("Unexpected error adding inventory for product '" + form.getProductId() + "': " + e.getMessage());
-                result.incrementFailed();
+            TsvUploadResult result = InventoryTsvParser.parseWithDuplicateDetection(file.getInputStream());
+            
+            // Process the parsed forms
+            List<InventoryForm> forms = result.getParsedForms();
+            if (forms != null) {
+                for (InventoryForm form : forms) {
+                    try {
+                        add(form);
+                        result.incrementSuccessful();
+                    } catch (Exception e) {
+                        result.addError("Failed to add inventory for product ID '" + form.getProductId() + "': " + e.getMessage());
+                        result.incrementFailed();
+                    }
+                }
             }
+            
+            return result;
+        } catch (Exception e) {
+            throw new ApiException("Failed to process TSV file: " + e.getMessage());
         }
-        
-        System.out.println("InventoryDto.uploadInventoryFromTsv - Final result: " + result.getSummary());
-        return result;
     }
 }
