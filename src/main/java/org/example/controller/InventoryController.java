@@ -39,7 +39,6 @@ public class InventoryController {
     private ProductDto productDto;
 
     @PostMapping
-    @org.springframework.transaction.annotation.Transactional
     public InventoryData add(@RequestBody InventoryForm form, Authentication authentication) {
         System.out.println("=== SUPERVISOR INVENTORY ADD ENDPOINT ===");
         System.out.println("Authentication: " + authentication);
@@ -208,7 +207,6 @@ public class InventoryController {
     }
 
     @PutMapping("/{id}")
-    @org.springframework.transaction.annotation.Transactional
     public InventoryData update(@PathVariable Integer id, @RequestBody InventoryForm form, Authentication authentication) {
         System.out.println("=== SUPERVISOR INVENTORY UPDATE ENDPOINT ===");
         System.out.println("Authentication: " + authentication);
@@ -286,7 +284,6 @@ public class InventoryController {
     }
     
     @PutMapping("/{productId}/addStock")
-    @org.springframework.transaction.annotation.Transactional
     public InventoryData addStock(
             @PathVariable String productId,
             @RequestParam Integer quantity,
@@ -322,7 +319,6 @@ public class InventoryController {
     }
 
     @PutMapping("/{productId}/removeStock")
-    @org.springframework.transaction.annotation.Transactional
     public InventoryData removeStock(
             @PathVariable String productId,
             @RequestParam Integer quantity,
@@ -358,7 +354,6 @@ public class InventoryController {
     }
 
     @PutMapping("/{productId}/setStock")
-    @org.springframework.transaction.annotation.Transactional
     public InventoryData setStock(
             @PathVariable String productId,
             @RequestParam Integer quantity,
@@ -420,7 +415,6 @@ public class InventoryController {
     }
 
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<org.example.model.data.TsvUploadResult> uploadInventoryFromTsv(@RequestParam("file") MultipartFile file, Authentication authentication) {
         System.out.println("=== SUPERVISOR INVENTORY UPLOAD TSV ENDPOINT ===");
         System.out.println("Authentication: " + authentication);

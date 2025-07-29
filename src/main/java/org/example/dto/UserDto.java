@@ -13,7 +13,6 @@ import org.example.model.enums.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
 
 import java.util.List;
@@ -98,7 +97,6 @@ public class UserDto {
         return dataList;
     }
 
-    @Transactional
     public UserData update(Integer id, @Valid UserForm form) {
         validateId(id);
         preprocess(form);
@@ -107,7 +105,6 @@ public class UserDto {
         return convertEntityToData(userApi.get(id));
     }
 
-    @Transactional
     public void signup(@Valid UserForm form) {
         preprocess(form);
         

@@ -42,7 +42,6 @@ public abstract class AbstractDto<T, F, D> {
                 .collect(Collectors.toList());
     }
 
-    @org.springframework.transaction.annotation.Transactional
     public D update(Integer id, @Valid F form) {
         validateId(id);
         preprocess(form);

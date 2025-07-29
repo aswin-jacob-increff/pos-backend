@@ -283,7 +283,6 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional
     public OrderData add(@Valid OrderForm form) {
         if (Objects.isNull(form)) {
             throw new ApiException("Order form cannot be null");
@@ -319,7 +318,6 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional
     public OrderData update(Integer id, @Valid OrderForm form) {
         if (Objects.isNull(id)) {
             throw new ApiException("Order ID cannot be null");
@@ -541,7 +539,6 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     /**
      * Add a single order item
      */
-    @org.springframework.transaction.annotation.Transactional
     public OrderItemData addOrderItem(OrderItemForm orderItemForm) {
         if (Objects.isNull(orderItemForm)) {
             throw new ApiException("Order item form cannot be null");
@@ -579,7 +576,6 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     /**
      * Update an order item
      */
-    @org.springframework.transaction.annotation.Transactional
     public OrderItemData updateOrderItem(Integer id, OrderItemForm orderItemForm) {
         if (Objects.isNull(id)) {
             throw new ApiException("Order item ID cannot be null");

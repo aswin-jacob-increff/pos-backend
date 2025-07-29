@@ -27,7 +27,6 @@ public class ClientController {
 
 
     @PostMapping("/add")
-    @org.springframework.transaction.annotation.Transactional
     public ClientData add(@RequestBody ClientForm form, Authentication authentication) {
         System.out.println("=== SUPERVISOR CLIENT ADD ENDPOINT ===");
         System.out.println("Authentication: " + authentication);
@@ -120,7 +119,6 @@ public class ClientController {
     }
 
     @PutMapping("/{id}")
-    @org.springframework.transaction.annotation.Transactional
     public ClientData update(@PathVariable Integer id, @RequestBody ClientForm form, Authentication authentication) {
         System.out.println("=== SUPERVISOR CLIENT UPDATE ENDPOINT ===");
         System.out.println("Authentication: " + authentication);
@@ -136,7 +134,6 @@ public class ClientController {
     }
 
     @PutMapping("/toggle")
-    @org.springframework.transaction.annotation.Transactional
     public void toggleStatus(@RequestParam(required = false) Integer id,
                             @RequestParam(required = false) String name,
                             Authentication authentication) {
@@ -218,7 +215,6 @@ public class ClientController {
     }
 
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<org.example.model.data.TsvUploadResult> uploadClientsFromTsv(@RequestParam("file") MultipartFile file, Authentication authentication) {
         System.out.println("=== SUPERVISOR CLIENT UPLOAD TSV ENDPOINT ===");
         System.out.println("Authentication: " + authentication);

@@ -1,5 +1,6 @@
 package org.example.api;
 
+import jakarta.transaction.Transactional;
 import org.example.exception.ApiException;
 import org.example.pojo.InventoryPojo;
 import org.example.pojo.ProductPojo;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
+@Transactional
 public class InventoryApi extends AbstractApi<InventoryPojo> {
 
     @Autowired

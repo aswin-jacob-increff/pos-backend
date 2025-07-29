@@ -29,7 +29,6 @@ public class OrderController {
     private OrderDto orderDto;
 
     @PostMapping("/add")
-    @org.springframework.transaction.annotation.Transactional
     public OrderData add(@RequestBody OrderForm form, Authentication authentication) {
         System.out.println("=== SUPERVISOR ORDER ADD ENDPOINT ===");
         System.out.println("Authentication: " + authentication);
@@ -156,7 +155,6 @@ public class OrderController {
     }
 
     @PutMapping("/{id}")
-    @org.springframework.transaction.annotation.Transactional
     public OrderData update(@PathVariable Integer id, @RequestBody OrderForm form, Authentication authentication) {
         System.out.println("=== SUPERVISOR ORDER UPDATE ENDPOINT ===");
         System.out.println("Authentication: " + authentication);
@@ -304,7 +302,6 @@ public class OrderController {
      * Add a new order item to an order
      */
     @PostMapping("/{orderId}/items")
-    @org.springframework.transaction.annotation.Transactional
     public OrderItemData addOrderItem(
             @PathVariable Integer orderId,
             @RequestBody OrderItemForm orderItemForm,
@@ -328,7 +325,6 @@ public class OrderController {
      * Update an order item
      */
     @PutMapping("/items/{itemId}")
-    @org.springframework.transaction.annotation.Transactional
     public OrderItemData updateOrderItem(
             @PathVariable Integer itemId,
             @RequestBody OrderItemForm orderItemForm,

@@ -1,5 +1,6 @@
 package org.example.api;
 
+import jakarta.transaction.Transactional;
 import org.example.dao.OrderItemDao;
 import org.example.dao.OrderDao;
 import org.example.exception.ApiException;
@@ -17,6 +18,7 @@ import java.time.LocalDate;
 import java.util.Objects;
 
 @Service
+@Transactional
 public class OrderApi extends AbstractApi<OrderPojo> {
 
     @Autowired

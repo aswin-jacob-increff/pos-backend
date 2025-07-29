@@ -4,9 +4,11 @@ import org.example.pojo.UserPojo;
 import org.example.api.UserApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.example.exception.ApiException;
 
 @Service
+@Transactional
 public class UserFlow {
 
     @Autowired

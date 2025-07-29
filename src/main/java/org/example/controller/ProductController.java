@@ -23,7 +23,6 @@ public class ProductController {
     private ProductDto productDto;
 
     @PostMapping
-    @org.springframework.transaction.annotation.Transactional
     public ProductData add(@RequestBody ProductForm form, Authentication authentication) {
         System.out.println("=== SUPERVISOR PRODUCT ADD ENDPOINT ===");
         System.out.println("Authentication: " + authentication);
@@ -156,7 +155,6 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    @org.springframework.transaction.annotation.Transactional
     public ProductData update(@PathVariable Integer id, @RequestBody ProductForm form, Authentication authentication) {
         System.out.println("=== SUPERVISOR PRODUCT UPDATE ENDPOINT ===");
         System.out.println("Authentication: " + authentication);

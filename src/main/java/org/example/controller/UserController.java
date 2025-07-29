@@ -109,7 +109,6 @@ public class UserController {
     }
 
     @PostMapping("/orders")
-    @org.springframework.transaction.annotation.Transactional
     public OrderData createOrder(@RequestBody OrderForm form, Authentication authentication) {
         System.out.println("=== USER ORDER CREATE ENDPOINT ===");
         System.out.println("Authentication: " + authentication);
@@ -343,7 +342,6 @@ public class UserController {
      * Add a new order item to an order (user access)
      */
     @PostMapping("/orders/{orderId}/items")
-    @org.springframework.transaction.annotation.Transactional
     public OrderItemData addMyOrderItem(
             @PathVariable Integer orderId,
             @RequestBody OrderItemForm orderItemForm,
@@ -374,7 +372,6 @@ public class UserController {
      * Update an order item (user access)
      */
     @PutMapping("/orders/items/{itemId}")
-    @org.springframework.transaction.annotation.Transactional
     public OrderItemData updateMyOrderItem(
             @PathVariable Integer itemId,
             @RequestBody OrderItemForm orderItemForm,

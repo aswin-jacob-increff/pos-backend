@@ -1,5 +1,6 @@
 package org.example.api;
 
+import jakarta.transaction.Transactional;
 import org.example.dao.AbstractDao;
 import org.example.exception.ApiException;
 import org.example.model.form.PaginationRequest;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
+@Transactional
 public abstract class AbstractApi<T> {
 
     @Autowired
