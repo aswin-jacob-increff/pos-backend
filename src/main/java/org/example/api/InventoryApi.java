@@ -1,6 +1,6 @@
 package org.example.api;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.example.exception.ApiException;
 import org.example.pojo.InventoryPojo;
 import org.example.pojo.ProductPojo;

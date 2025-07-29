@@ -1,6 +1,6 @@
 package org.example.api;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.example.dao.OrderItemDao;
 import org.example.dao.OrderDao;
 import org.example.exception.ApiException;

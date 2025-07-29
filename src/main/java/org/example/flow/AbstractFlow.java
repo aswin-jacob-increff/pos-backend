@@ -7,6 +7,7 @@ import org.example.model.form.PaginationQuery;
 import org.example.model.data.PaginationResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Objects;
 import java.lang.reflect.Method;
@@ -34,7 +35,7 @@ public abstract class AbstractFlow<T> {
     /**
      * Update entity by ID
      */
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public void update(Integer id, T entity) {
         if (id == null) {
             throw new ApiException("ID cannot be null");

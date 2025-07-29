@@ -46,7 +46,7 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public OrderPojo add(OrderPojo orderPojo) {
         if (Objects.isNull(orderPojo)) {
             throw new ApiException("Order cannot be null");
@@ -58,7 +58,7 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public void update(Integer id, OrderPojo entity) {
         if (id == null) {
             throw new ApiException("ID cannot be null");

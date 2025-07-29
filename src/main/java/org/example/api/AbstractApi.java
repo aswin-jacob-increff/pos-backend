@@ -1,6 +1,6 @@
 package org.example.api;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.example.dao.AbstractDao;
 import org.example.exception.ApiException;
 import org.example.model.form.PaginationRequest;
@@ -49,7 +49,7 @@ public abstract class AbstractApi<T> {
     /**
      * Update entity by ID
      */
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public void update(Integer id, T entity) {
         validateId(id);
         if (entity == null) {
@@ -61,7 +61,7 @@ public abstract class AbstractApi<T> {
     /**
      * Delete entity by ID
      */
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public void delete(Integer id) {
         validateId(id);
         // Note: Implement actual deletion logic in subclasses if needed
