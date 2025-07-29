@@ -2,10 +2,12 @@ package org.example.order.unit;
 
 import org.example.flow.OrderFlow;
 import org.example.api.OrderApi;
+import org.example.api.InventoryApi;
 
 import org.example.model.enums.OrderStatus;
 import org.example.pojo.OrderPojo;
 import org.example.pojo.OrderItemPojo;
+import org.example.model.form.OrderItemForm;
 import org.example.exception.ApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,9 @@ class OrderFlowTest {
 
     @Mock
     private OrderApi api;
+
+    @Mock
+    private InventoryApi inventoryApi;
 
 
 
@@ -61,6 +66,11 @@ class OrderFlowTest {
         Field apiField = orderFlow.getClass().getDeclaredField("api");
         apiField.setAccessible(true);
         apiField.set(orderFlow, api);
+        
+        // Inject inventoryApi field
+        Field inventoryApiField = orderFlow.getClass().getDeclaredField("inventoryApi");
+        inventoryApiField.setAccessible(true);
+        inventoryApiField.set(orderFlow, inventoryApi);
     }
 
     @Test
@@ -134,17 +144,69 @@ class OrderFlowTest {
 
 
 
+
+
     @Test
-    void testGenerateInvoice_Success() throws Exception {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderFlow.generateInvoice(1));
-        verify(api, never()).generateInvoice(any());
+    void testCreateOrderWithItems_Success() {
+        // Arrange
+        OrderPojo order = new OrderPojo();
+        order.setId(1);
+        order.setUserId("testuser@example.com");
+        order.setDate(ZonedDateTime.now());
+        
+        OrderItemForm itemForm = new OrderItemForm();
+        itemForm.setProductId(1);
+        itemForm.setQuantity(2);
+        itemForm.setSellingPrice(50.0);
+        
+        List<OrderItemForm> itemForms = Arrays.asList(itemForm);
+        
+        doNothing().when(api).add(any(OrderPojo.class));
+        doNothing().when(api).addOrderItem(any(OrderItemPojo.class));
+        doNothing().when(api).update(anyInt(), any(OrderPojo.class));
+        doNothing().when(inventoryApi).removeStock(anyInt(), anyInt());
+
+        // Act
+        OrderPojo result = orderFlow.createOrderWithItems(order, itemForms);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(100.0, result.getTotal()); // 2 * 50.0
+        verify(api).add(order);
+        verify(api).addOrderItem(any(OrderItemPojo.class));
+        verify(api).update(eq(1), any(OrderPojo.class));
+        verify(inventoryApi).removeStock(1, 2);
     }
 
     @Test
-    void testGenerateInvoice_NullId() throws Exception {
+    void testCreateOrderWithItems_NullOrder() {
+        // Arrange
+        OrderItemForm itemForm = new OrderItemForm();
+        List<OrderItemForm> itemForms = Arrays.asList(itemForm);
+
         // Act & Assert
-        assertThrows(ApiException.class, () -> orderFlow.generateInvoice(null));
-        verify(api, never()).generateInvoice(any());
+        assertThrows(ApiException.class, () -> orderFlow.createOrderWithItems(null, itemForms));
+        verify(api, never()).add(any());
+    }
+
+    @Test
+    void testCreateOrderWithItems_NullItemList() {
+        // Arrange
+        OrderPojo order = new OrderPojo();
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderFlow.createOrderWithItems(order, null));
+        verify(api, never()).add(any());
+    }
+
+    @Test
+    void testCreateOrderWithItems_EmptyItemList() {
+        // Arrange
+        OrderPojo order = new OrderPojo();
+        List<OrderItemForm> itemForms = Arrays.asList();
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderFlow.createOrderWithItems(order, itemForms));
+        verify(api, never()).add(any());
     }
 } 

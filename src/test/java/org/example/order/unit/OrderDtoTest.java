@@ -7,12 +7,17 @@ import org.example.model.form.OrderForm;
 import org.example.model.data.OrderItemData;
 import org.example.model.form.OrderItemForm;
 import org.example.pojo.OrderPojo;
+import org.example.pojo.OrderItemPojo;
+import org.example.pojo.ProductPojo;
+import org.example.pojo.ClientPojo;
 import org.example.exception.ApiException;
 import org.example.api.ProductApi;
 import org.example.api.ClientApi;
 import org.example.api.InvoiceApi;
 import org.example.api.OrderApi;
 import org.example.dao.OrderItemDao;
+import org.example.model.data.PaginationResponse;
+import org.example.model.form.PaginationRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,8 +54,7 @@ class OrderDtoTest {
 
 
 
-    @Mock
-    private RestTemplate restTemplate;
+
 
     @Mock
     private OrderApi orderApi;
@@ -62,6 +66,8 @@ class OrderDtoTest {
     private OrderPojo testOrder;
     private OrderItemForm testOrderItemForm;
     private OrderItemData testOrderItemData;
+    private ProductPojo testProduct;
+    private ClientPojo testClient;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -76,6 +82,8 @@ class OrderDtoTest {
         testOrder.setStatus(OrderStatus.CREATED);
 
         testOrderItemForm = new OrderItemForm();
+        testOrderItemForm.setOrderId(1);
+        testOrderItemForm.setProductId(1);
         testOrderItemForm.setBarcode("TEST123");
         testOrderItemForm.setQuantity(2);
         testOrderItemForm.setSellingPrice(50.0);
@@ -87,6 +95,18 @@ class OrderDtoTest {
         testOrderItemData.setQuantity(2);
         testOrderItemData.setSellingPrice(50.0);
         testOrderItemData.setAmount(100.0);
+
+        testProduct = new ProductPojo();
+        testProduct.setId(1);
+        testProduct.setName("Test Product");
+        testProduct.setBarcode("123456789");
+        testProduct.setMrp(100.0);
+        testProduct.setClientId(1);
+
+        testClient = new ClientPojo();
+        testClient.setId(1);
+        testClient.setClientName("Test Client");
+        testClient.setStatus(true);
 
         // Inject the orderFlow field
         Field orderFlowField = orderDto.getClass().getDeclaredField("orderFlow");
@@ -110,10 +130,10 @@ class OrderDtoTest {
 
 
 
-        // Inject the restTemplate field
-        Field restTemplateField = orderDto.getClass().getDeclaredField("restTemplate");
-        restTemplateField.setAccessible(true);
-        restTemplateField.set(orderDto, restTemplate);
+        // Inject the InvoiceClientApi field
+        Field invoiceClientApiField = orderDto.getClass().getDeclaredField("invoiceClientApi");
+        invoiceClientApiField.setAccessible(true);
+        invoiceClientApiField.set(orderDto, mock(org.example.api.InvoiceClientApi.class));
 
         // Inject the api field from AbstractDto
         Field apiField = orderDto.getClass().getSuperclass().getDeclaredField("api");
@@ -124,10 +144,139 @@ class OrderDtoTest {
 
 
     @Test
+    void testAdd_Success() {
+        // Arrange
+        testForm.setOrderItemFormList(Arrays.asList(testOrderItemForm));
+        OrderPojo createdOrder = new OrderPojo();
+        createdOrder.setId(1);
+        createdOrder.setTotal(100.0);
+        createdOrder.setUserId("testuser@example.com");
+        createdOrder.setStatus(OrderStatus.CREATED);
+        
+        when(orderFlow.createOrderWithItems(any(OrderPojo.class), anyList())).thenReturn(createdOrder);
+
+        // Act
+        OrderData result = orderDto.add(testForm);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(createdOrder.getId(), result.getId());
+        assertEquals(createdOrder.getUserId(), result.getUserId());
+        verify(orderFlow).createOrderWithItems(any(OrderPojo.class), eq(Arrays.asList(testOrderItemForm)));
+    }
+
+    @Test
     void testAdd_NullForm() {
         // Act & Assert
         assertThrows(ApiException.class, () -> orderDto.add(null));
-        verify(orderFlow, never()).add(any());
+        verify(orderFlow, never()).createOrderWithItems(any(), any());
+    }
+
+    @Test
+    void testAdd_NullUserId() {
+        // Arrange
+        testForm.setUserId(null);
+        testForm.setOrderItemFormList(Arrays.asList(testOrderItemForm));
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.add(testForm));
+        verify(orderFlow, never()).createOrderWithItems(any(), any());
+    }
+
+    @Test
+    void testAdd_EmptyUserId() {
+        // Arrange
+        testForm.setUserId("");
+        testForm.setOrderItemFormList(Arrays.asList(testOrderItemForm));
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.add(testForm));
+        verify(orderFlow, never()).createOrderWithItems(any(), any());
+    }
+
+    @Test
+    void testAdd_NullOrderItemList() {
+        // Arrange
+        testForm.setOrderItemFormList(null);
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.add(testForm));
+        verify(orderFlow, never()).createOrderWithItems(any(), any());
+    }
+
+    @Test
+    void testAdd_EmptyOrderItemList() {
+        // Arrange
+        testForm.setOrderItemFormList(Arrays.asList());
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.add(testForm));
+        verify(orderFlow, never()).createOrderWithItems(any(), any());
+    }
+
+    @Test
+    void testAdd_NullOrderItem() {
+        // Arrange
+        testForm.setOrderItemFormList(Arrays.asList((OrderItemForm) null));
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.add(testForm));
+        verify(orderFlow, never()).createOrderWithItems(any(), any());
+    }
+
+    @Test
+    void testAdd_NullProductId() {
+        // Arrange
+        testOrderItemForm.setProductId(null);
+        testForm.setOrderItemFormList(Arrays.asList(testOrderItemForm));
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.add(testForm));
+        verify(orderFlow, never()).createOrderWithItems(any(), any());
+    }
+
+    @Test
+    void testAdd_NullQuantity() {
+        // Arrange
+        testOrderItemForm.setQuantity(null);
+        testForm.setOrderItemFormList(Arrays.asList(testOrderItemForm));
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.add(testForm));
+        verify(orderFlow, never()).createOrderWithItems(any(), any());
+    }
+
+    @Test
+    void testAdd_ZeroQuantity() {
+        // Arrange
+        testOrderItemForm.setQuantity(0);
+        testForm.setOrderItemFormList(Arrays.asList(testOrderItemForm));
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.add(testForm));
+        verify(orderFlow, never()).createOrderWithItems(any(), any());
+    }
+
+    @Test
+    void testAdd_NullSellingPrice() {
+        // Arrange
+        testOrderItemForm.setSellingPrice(null);
+        testForm.setOrderItemFormList(Arrays.asList(testOrderItemForm));
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.add(testForm));
+        verify(orderFlow, never()).createOrderWithItems(any(), any());
+    }
+
+    @Test
+    void testAdd_ZeroSellingPrice() {
+        // Arrange
+        testOrderItemForm.setSellingPrice(0.0);
+        testForm.setOrderItemFormList(Arrays.asList(testOrderItemForm));
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.add(testForm));
+        verify(orderFlow, never()).createOrderWithItems(any(), any());
     }
 
     @Test
@@ -155,10 +304,18 @@ class OrderDtoTest {
     @Test
     void testGetAll_Success() {
         // Given
-        List<OrderPojo> orders = Arrays.asList(
-            new OrderPojo(), new OrderPojo()
-        );
+        OrderPojo order1 = new OrderPojo();
+        order1.setId(1);
+        order1.setUserId("user1");
+        
+        OrderPojo order2 = new OrderPojo();
+        order2.setId(2);
+        order2.setUserId("user2");
+        
+        List<OrderPojo> orders = Arrays.asList(order1, order2);
         when(orderApi.getAll()).thenReturn(orders);
+        when(orderApi.getOrderItemsByOrderId(1)).thenReturn(Arrays.asList());
+        when(orderApi.getOrderItemsByOrderId(2)).thenReturn(Arrays.asList());
 
         // When
         List<OrderData> result = orderDto.getAll();
@@ -271,5 +428,352 @@ class OrderDtoTest {
         // When & Then
         assertThrows(ApiException.class, () -> orderDto.downloadInvoice(null));
         verify(orderApi, never()).get(any());
+    }
+
+    // ========== ORDER ITEM MANAGEMENT TESTS ==========
+
+    @Test
+    void testGetOrderItemsByOrderId_Success() {
+        // Arrange
+        OrderItemPojo orderItemPojo = new OrderItemPojo();
+        orderItemPojo.setId(1);
+        orderItemPojo.setOrderId(1);
+        orderItemPojo.setProductId(1);
+        orderItemPojo.setQuantity(2);
+        orderItemPojo.setSellingPrice(50.0);
+        orderItemPojo.setAmount(100.0);
+        
+        when(orderApi.getOrderItemsByOrderId(1)).thenReturn(Arrays.asList(orderItemPojo));
+        when(productApi.get(1)).thenReturn(testProduct);
+        when(clientApi.get(1)).thenReturn(testClient);
+        when(orderApi.get(1)).thenReturn(testOrder);
+
+        // Act
+        List<OrderItemData> result = orderDto.getOrderItemsByOrderId(1);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(orderItemPojo.getId(), result.get(0).getId());
+        verify(orderApi).getOrderItemsByOrderId(1);
+    }
+
+    @Test
+    void testGetOrderItemsByOrderId_NullOrderId() {
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.getOrderItemsByOrderId(null));
+        verify(orderApi, never()).getOrderItemsByOrderId(any());
+    }
+
+    @Test
+    void testGetOrderItemsByOrderId_InvalidOrderId() {
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.getOrderItemsByOrderId(0));
+        verify(orderApi, never()).getOrderItemsByOrderId(any());
+    }
+
+    @Test
+    void testAddOrderItem_Success() {
+        // Arrange
+        OrderItemPojo orderItemPojo = new OrderItemPojo();
+        orderItemPojo.setId(1);
+        orderItemPojo.setOrderId(1);
+        orderItemPojo.setProductId(1);
+        orderItemPojo.setQuantity(2);
+        orderItemPojo.setSellingPrice(50.0);
+        orderItemPojo.setAmount(100.0);
+        
+        when(productApi.get(1)).thenReturn(testProduct);
+        doNothing().when(orderFlow).reduceInventoryForOrderItem(1, 2);
+        doNothing().when(orderApi).addOrderItem(any(OrderItemPojo.class));
+        when(productApi.get(1)).thenReturn(testProduct);
+        when(clientApi.get(1)).thenReturn(testClient);
+        when(orderApi.get(1)).thenReturn(testOrder);
+
+        // Act
+        OrderItemData result = orderDto.addOrderItem(testOrderItemForm);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(testOrderItemForm.getProductId(), result.getProductId());
+        verify(productApi, times(3)).get(1);
+        verify(orderFlow).reduceInventoryForOrderItem(1, 2);
+        verify(orderApi).addOrderItem(any(OrderItemPojo.class));
+    }
+
+    @Test
+    void testAddOrderItem_NullForm() {
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.addOrderItem(null));
+        verify(productApi, never()).get(any());
+        verify(orderFlow, never()).reduceInventoryForOrderItem(any(), any());
+        verify(orderApi, never()).addOrderItem(any());
+    }
+
+    @Test
+    void testAddOrderItem_NullOrderId() {
+        // Arrange
+        testOrderItemForm.setOrderId(null);
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.addOrderItem(testOrderItemForm));
+        verify(productApi, never()).get(any());
+        verify(orderFlow, never()).reduceInventoryForOrderItem(any(), any());
+        verify(orderApi, never()).addOrderItem(any());
+    }
+
+    @Test
+    void testAddOrderItem_NullProductId() {
+        // Arrange
+        testOrderItemForm.setProductId(null);
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.addOrderItem(testOrderItemForm));
+        verify(productApi, never()).get(any());
+        verify(orderFlow, never()).reduceInventoryForOrderItem(any(), any());
+        verify(orderApi, never()).addOrderItem(any());
+    }
+
+    @Test
+    void testAddOrderItem_ProductNotFound() {
+        // Arrange
+        when(productApi.get(1)).thenThrow(new ApiException("Product not found"));
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.addOrderItem(testOrderItemForm));
+        verify(productApi).get(1);
+        verify(orderFlow, never()).reduceInventoryForOrderItem(any(), any());
+        verify(orderApi, never()).addOrderItem(any());
+    }
+
+    @Test
+    void testUpdateOrderItem_Success() {
+        // Arrange
+        OrderItemPojo existingItem = new OrderItemPojo();
+        existingItem.setId(1);
+        existingItem.setProductId(1);
+        existingItem.setQuantity(1);
+        
+        OrderItemPojo updatedItem = new OrderItemPojo();
+        updatedItem.setId(1);
+        updatedItem.setOrderId(1);
+        updatedItem.setProductId(1);
+        updatedItem.setQuantity(3);
+        updatedItem.setSellingPrice(50.0);
+        updatedItem.setAmount(150.0);
+        
+        when(orderFlow.getOrderItem(1)).thenReturn(existingItem);
+        doNothing().when(orderFlow).adjustInventoryForOrderItemUpdate(1, 1, 2);
+        doNothing().when(orderApi).updateOrderItem(eq(1), any(OrderItemPojo.class));
+        when(orderApi.getOrderItem(1)).thenReturn(updatedItem);
+        when(productApi.get(1)).thenReturn(testProduct);
+        when(clientApi.get(1)).thenReturn(testClient);
+        when(orderApi.get(1)).thenReturn(testOrder);
+
+        // Act
+        OrderItemData result = orderDto.updateOrderItem(1, testOrderItemForm);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(updatedItem.getId(), result.getId());
+        verify(orderFlow).getOrderItem(1);
+        verify(orderFlow).adjustInventoryForOrderItemUpdate(1, 1, 2);
+        verify(orderApi).updateOrderItem(eq(1), any(OrderItemPojo.class));
+    }
+
+    @Test
+    void testUpdateOrderItem_NullId() {
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.updateOrderItem(null, testOrderItemForm));
+        verify(orderFlow, never()).getOrderItem(any());
+        verify(orderFlow, never()).adjustInventoryForOrderItemUpdate(any(), any(), any());
+        verify(orderApi, never()).updateOrderItem(any(), any());
+    }
+
+    @Test
+    void testUpdateOrderItem_NullForm() {
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.updateOrderItem(1, null));
+        verify(orderFlow, never()).getOrderItem(any());
+        verify(orderFlow, never()).adjustInventoryForOrderItemUpdate(any(), any(), any());
+        verify(orderApi, never()).updateOrderItem(any(), any());
+    }
+
+    @Test
+    void testUpdateOrderItem_OrderItemNotFound() {
+        // Arrange
+        when(orderFlow.getOrderItem(1)).thenReturn(null);
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.updateOrderItem(1, testOrderItemForm));
+        verify(orderFlow).getOrderItem(1);
+        verify(orderFlow, never()).adjustInventoryForOrderItemUpdate(any(), any(), any());
+        verify(orderApi, never()).updateOrderItem(any(), any());
+    }
+
+    @Test
+    void testGetOrderItem_Success() {
+        // Arrange
+        OrderItemPojo orderItemPojo = new OrderItemPojo();
+        orderItemPojo.setId(1);
+        orderItemPojo.setOrderId(1);
+        orderItemPojo.setProductId(1);
+        orderItemPojo.setQuantity(2);
+        orderItemPojo.setSellingPrice(50.0);
+        orderItemPojo.setAmount(100.0);
+        
+        when(orderApi.getOrderItem(1)).thenReturn(orderItemPojo);
+        when(productApi.get(1)).thenReturn(testProduct);
+        when(clientApi.get(1)).thenReturn(testClient);
+        when(orderApi.get(1)).thenReturn(testOrder);
+
+        // Act
+        OrderItemData result = orderDto.getOrderItem(1);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(orderItemPojo.getId(), result.getId());
+        verify(orderApi).getOrderItem(1);
+    }
+
+    @Test
+    void testGetOrderItem_NullId() {
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.getOrderItem(null));
+        verify(orderApi, never()).getOrderItem(any());
+    }
+
+    // ========== PAGINATION TESTS ==========
+
+    @Test
+    void testGetOrdersByUserIdPaginated_Success() {
+        // Arrange
+        String userId = "testuser@example.com";
+        PaginationRequest request = new PaginationRequest();
+        request.setPageNumber(0);
+        request.setPageSize(10);
+        
+        PaginationResponse<OrderPojo> expectedResponse = new PaginationResponse<>();
+        expectedResponse.setContent(Arrays.asList(testOrder));
+        expectedResponse.setTotalElements(1);
+        
+        when(orderFlow.getByUserIdPaginated(userId, request)).thenReturn(expectedResponse);
+        when(orderApi.getOrderItemsByOrderId(1)).thenReturn(Arrays.asList());
+
+        // Act
+        PaginationResponse<OrderData> result = orderDto.getOrdersByUserIdPaginated(userId, request);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        assertEquals(1, result.getContent().size());
+        verify(orderFlow).getByUserIdPaginated(userId, request);
+    }
+
+    @Test
+    void testGetOrdersByDateRangePaginated_Success() {
+        // Arrange
+        LocalDate startDate = LocalDate.now();
+        LocalDate endDate = LocalDate.now().plusDays(1);
+        PaginationRequest request = new PaginationRequest();
+        request.setPageNumber(0);
+        request.setPageSize(10);
+        
+        PaginationResponse<OrderPojo> expectedResponse = new PaginationResponse<>();
+        expectedResponse.setContent(Arrays.asList(testOrder));
+        expectedResponse.setTotalElements(1);
+        
+        when(orderFlow.getByDateRangePaginated(startDate, endDate, request)).thenReturn(expectedResponse);
+        when(orderApi.getOrderItemsByOrderId(1)).thenReturn(Arrays.asList());
+
+        // Act
+        PaginationResponse<OrderData> result = orderDto.getOrdersByDateRangePaginated(startDate, endDate, request);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        assertEquals(1, result.getContent().size());
+        verify(orderFlow).getByDateRangePaginated(startDate, endDate, request);
+    }
+
+    // ========== SUBSTRING SEARCH TESTS ==========
+
+    @Test
+    void testFindOrdersBySubstringId_Success() {
+        // Arrange
+        String searchId = "123";
+        int maxResults = 10;
+        List<OrderPojo> orders = Arrays.asList(testOrder);
+        when(orderFlow.findOrdersBySubstringId(searchId, maxResults)).thenReturn(orders);
+        when(orderApi.getOrderItemsByOrderId(1)).thenReturn(Arrays.asList());
+
+        // Act
+        List<OrderData> result = orderDto.findOrdersBySubstringId(searchId, maxResults);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(testOrder.getId(), result.get(0).getId());
+        verify(orderFlow).findOrdersBySubstringId(searchId, maxResults);
+    }
+
+    @Test
+    void testFindOrdersBySubstringId_NullSearchId() {
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.findOrdersBySubstringId(null, 10));
+        verify(orderFlow, never()).findOrdersBySubstringId(any(), anyInt());
+    }
+
+    @Test
+    void testFindOrdersBySubstringId_EmptySearchId() {
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.findOrdersBySubstringId("", 10));
+        verify(orderFlow, never()).findOrdersBySubstringId(any(), anyInt());
+    }
+
+    @Test
+    void testFindOrdersBySubstringId_InvalidMaxResults() {
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.findOrdersBySubstringId("123", 0));
+        verify(orderFlow, never()).findOrdersBySubstringId(any(), anyInt());
+    }
+
+    @Test
+    void testFindOrdersBySubstringIdPaginated_Success() {
+        // Arrange
+        String searchId = "123";
+        PaginationRequest request = new PaginationRequest();
+        request.setPageNumber(0);
+        request.setPageSize(10);
+        
+        PaginationResponse<OrderPojo> expectedResponse = new PaginationResponse<>();
+        expectedResponse.setContent(Arrays.asList(testOrder));
+        expectedResponse.setTotalElements(1);
+        
+        when(orderFlow.findOrdersBySubstringIdPaginated(searchId, request)).thenReturn(expectedResponse);
+        when(orderApi.getOrderItemsByOrderId(1)).thenReturn(Arrays.asList());
+
+        // Act
+        PaginationResponse<OrderData> result = orderDto.findOrdersBySubstringIdPaginated(searchId, request);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        assertEquals(1, result.getContent().size());
+        verify(orderFlow).findOrdersBySubstringIdPaginated(searchId, request);
+    }
+
+    @Test
+    void testFindOrdersBySubstringIdPaginated_NullSearchId() {
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.findOrdersBySubstringIdPaginated(null, new PaginationRequest()));
+        verify(orderFlow, never()).findOrdersBySubstringIdPaginated(any(), any());
+    }
+
+    @Test
+    void testFindOrdersBySubstringIdPaginated_EmptySearchId() {
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderDto.findOrdersBySubstringIdPaginated("", new PaginationRequest()));
+        verify(orderFlow, never()).findOrdersBySubstringIdPaginated(any(), any());
     }
 } 

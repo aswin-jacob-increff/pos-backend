@@ -1,6 +1,12 @@
 package org.example.model.data;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
 public class ApiError {
+    // Getters and Setters
     private int status;
     private String message;
     private String path;
@@ -24,36 +30,4 @@ public class ApiError {
         this.errorType = errorType;
     }
 
-    // Getters and Setters
-    public int getStatus() {
-        return status;
-    }
-
-    public void setStatus(int status) {
-        this.status = status;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
-    }
-
-    public String getErrorType() {
-        return errorType;
-    }
-
-    public void setErrorType(String errorType) {
-        this.errorType = errorType;
-    }
-} 
+}

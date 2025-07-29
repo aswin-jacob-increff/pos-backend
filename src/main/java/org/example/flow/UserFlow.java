@@ -26,10 +26,6 @@ public class UserFlow {
         return api.getByEmail(email);
     }
 
-    public boolean checkPassword(String rawPassword, String hashedPassword) {
-        return api.checkPassword(rawPassword, hashedPassword);
-    }
-
     public UserPojo get(Integer id) {
         if (id == null) {
             throw new ApiException("User ID cannot be null");

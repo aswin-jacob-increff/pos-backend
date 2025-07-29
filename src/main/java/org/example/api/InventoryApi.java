@@ -95,32 +95,4 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
         updatedInventory.setQuantity(inventory.getQuantity() - quantityToRemove);
         dao.update(inventory.getId(), updatedInventory);
     }
-
-    /**
-     * Set stock to a specific quantity by product ID
-     */
-    public void setStock(Integer productId, Integer newQuantity) {
-        validateNonNegative(newQuantity, "Stock quantity");
-        InventoryPojo inventory = getByProductId(productId);
-        if (Objects.isNull(inventory)) {
-            throw new ApiException("No inventory found for product ID: " + productId);
-        }
-        
-        validateProductAndClient(productId);
-        
-        InventoryPojo updatedInventory = new InventoryPojo();
-        updatedInventory.setProductId(inventory.getProductId());
-        updatedInventory.setQuantity(newQuantity);
-        dao.update(inventory.getId(), updatedInventory);
-    }
-
-    public PaginationResponse<InventoryPojo> getByProductIdPaginated(Integer productId, PaginationRequest request) {
-        if (productId == null) {
-            throw new ApiException("Product ID cannot be null");
-        }
-        if (request == null) {
-            request = new PaginationRequest();
-        }
-        return getPaginated(PaginationQuery.byField("productId", productId, request));
-    }
 } 

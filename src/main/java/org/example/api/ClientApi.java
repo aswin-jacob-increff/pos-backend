@@ -66,8 +66,4 @@ public class ClientApi extends AbstractApi<ClientPojo> {
         
         ((ClientDao) dao).toggleStatusByName(name);
     }
-
-    public PaginationResponse<ClientPojo> getByNameLikePaginated(String name, PaginationRequest request) {
-        return getByFieldLikePaginatedWithValidation("clientName", name, request, "Client name");
-    }
 } 

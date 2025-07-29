@@ -90,10 +90,6 @@ public class ClientDto extends AbstractDto<ClientPojo, ClientForm, ClientData> {
         }
     }
 
-    public List<ClientData> getByNameLike(String name) {
-        return getByFieldLike("clientName", name);
-    }
-
     public PaginationResponse<ClientData> getByNameLikePaginated(String name, PaginationRequest request) {
         return getByFieldLikePaginated("clientName", name, request);
     }

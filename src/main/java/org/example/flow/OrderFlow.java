@@ -79,16 +79,6 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         return api.getAll();
     }
 
-
-
-    public String generateInvoice(Integer orderId) throws Exception {
-        if (Objects.isNull(orderId)) {
-            throw new ApiException("Order ID cannot be null");
-        }
-        // This method is now handled by OrderDto.downloadInvoice()
-        throw new ApiException("Use OrderDto.downloadInvoice() instead");
-    }
-
     public org.springframework.core.io.Resource getInvoiceFile(Integer orderId) {
         String fileName = "order-" + orderId + ".pdf";
         java.nio.file.Path filePath = java.nio.file.Paths.get("src/main/resources/invoice/", fileName);
@@ -107,12 +97,6 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         api.updateStatus(id, status);
     }
 
-    /**
-     * Get orders within a date range
-     * @param startDate Start date (inclusive)
-     * @param endDate End date (inclusive)
-     * @return List of orders within the date range
-     */
     public List<OrderPojo> getOrdersByDateRange(LocalDate startDate, LocalDate endDate) {
         return api.getOrdersByDateRange(startDate, endDate);
     }
@@ -123,14 +107,6 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
 
     // ========== SUBSTRING SEARCH METHODS ==========
 
-    /**
-     * Find orders by ID substring matching.
-     * This allows finding orders where the search term appears exactly as a substring in the order ID.
-     * 
-     * @param searchId The ID substring to search for
-     * @param maxResults Maximum number of results to return
-     * @return List of orders where the search term appears as a substring in the ID
-     */
     public List<OrderPojo> findOrdersBySubstringId(String searchId, int maxResults) {
         if (searchId == null || searchId.trim().isEmpty()) {
             throw new ApiException("Search ID cannot be null or empty");
@@ -141,13 +117,6 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         return api.findOrdersBySubstringId(searchId, maxResults);
     }
 
-    /**
-     * Find orders by ID substring with pagination support.
-     * 
-     * @param searchId The ID substring to search for
-     * @param request Pagination request
-     * @return Paginated response with orders containing the substring
-     */
     public PaginationResponse<OrderPojo> findOrdersBySubstringIdPaginated(
             String searchId, 
             PaginationRequest request) {
@@ -160,31 +129,8 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         return api.findOrdersBySubstringIdPaginated(searchId, request);
     }
 
-    /**
-     * Count orders by ID substring.
-     * 
-     * @param searchId The ID substring to search for
-     * @return Number of orders containing the substring
-     */
-    public long countOrdersBySubstringId(String searchId) {
-        if (searchId == null || searchId.trim().isEmpty()) {
-            throw new ApiException("Search ID cannot be null or empty");
-        }
-        return api.countOrdersBySubstringId(searchId);
-    }
-
     // ========== PAGINATION METHODS ==========
 
-    /**
-     * Get all orders with pagination support, ordered by date descending (most recent first).
-     */
-    public PaginationResponse<OrderPojo> getAllPaginated(PaginationRequest request) {
-        return api.getPaginated(PaginationQuery.all(request));
-    }
-
-    /**
-     * Get orders by user ID with pagination support, ordered by date descending (most recent first).
-     */
     public PaginationResponse<OrderPojo> getByUserIdPaginated(String userId, PaginationRequest request) {
         if (userId == null || userId.trim().isEmpty()) {
             throw new ApiException("User ID cannot be null or empty");
@@ -192,9 +138,6 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         return api.getPaginated(PaginationQuery.byField("userId", userId, request));
     }
 
-    /**
-     * Get orders by date range with pagination support, ordered by date descending (most recent first).
-     */
     public PaginationResponse<OrderPojo> getByDateRangePaginated(LocalDate startDate, LocalDate endDate, PaginationRequest request) {
         if (startDate == null || endDate == null) {
             throw new ApiException("Start date and end date cannot be null");
@@ -211,9 +154,6 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
 
     // ========== INVENTORY MANAGEMENT METHODS ==========
 
-    /**
-     * Reduce inventory when adding an order item
-     */
     public void reduceInventoryForOrderItem(Integer productId, Integer quantity) {
         if (productId == null) {
             throw new ApiException("Product ID cannot be null");
@@ -270,9 +210,6 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         }
     }
 
-    /**
-     * Get order item by ID for inventory calculations
-     */
     public OrderItemPojo getOrderItem(Integer orderItemId) {
         if (orderItemId == null) {
             throw new ApiException("Order item ID cannot be null");
@@ -280,12 +217,6 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         return orderItemDao.select(orderItemId);
     }
 
-    /**
-     * Create order with items and handle inventory reduction
-     * @param orderPojo The order to create
-     * @param orderItemFormList List of order item forms
-     * @return The created order with updated total
-     */
     public OrderPojo createOrderWithItems(OrderPojo orderPojo, List<org.example.model.form.OrderItemForm> orderItemFormList) {
         if (Objects.isNull(orderPojo)) {
             throw new ApiException("Order cannot be null");
@@ -323,10 +254,7 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         
         return orderPojo;
     }
-    
-    /**
-     * Convert OrderItemForm to OrderItemPojo
-     */
+
     private OrderItemPojo convertOrderItemFormToPojo(org.example.model.form.OrderItemForm itemForm) {
         OrderItemPojo orderItemPojo = new OrderItemPojo();
         orderItemPojo.setOrderId(itemForm.getOrderId());

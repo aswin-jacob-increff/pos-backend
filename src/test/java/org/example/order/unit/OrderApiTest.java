@@ -131,6 +131,56 @@ class OrderApiTest {
     }
 
     @Test
+    void testAddOrderItem_Success() {
+        // Arrange
+        OrderItemPojo orderItem = new OrderItemPojo();
+        orderItem.setOrderId(1);
+        orderItem.setProductId(1);
+        orderItem.setQuantity(2);
+        orderItem.setSellingPrice(50.0);
+        orderItem.setAmount(100.0);
+        
+        doNothing().when(orderItemDao).insert(any(OrderItemPojo.class));
+
+        // Act
+        orderApi.addOrderItem(orderItem);
+
+        // Assert
+        verify(orderItemDao).insert(orderItem);
+    }
+
+    @Test
+    void testAddOrderItem_NullOrderItem() {
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderApi.addOrderItem(null));
+        verify(orderItemDao, never()).insert(any());
+    }
+
+    @Test
+    void testAddOrderItem_NullOrderId() {
+        // Arrange
+        OrderItemPojo orderItem = new OrderItemPojo();
+        orderItem.setOrderId(null);
+        orderItem.setProductId(1);
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderApi.addOrderItem(orderItem));
+        verify(orderItemDao, never()).insert(any());
+    }
+
+    @Test
+    void testAddOrderItem_NullProductId() {
+        // Arrange
+        OrderItemPojo orderItem = new OrderItemPojo();
+        orderItem.setOrderId(1);
+        orderItem.setProductId(null);
+
+        // Act & Assert
+        assertThrows(ApiException.class, () -> orderApi.addOrderItem(orderItem));
+        verify(orderItemDao, never()).insert(any());
+    }
+
+    @Test
     void testGet_Success() {
         // Arrange
         when(orderDao.select(1)).thenReturn(testOrder);

@@ -115,46 +115,12 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         return convertEntitiesToData(products);
     }
 
-    public List<ProductData> getByBarcodeLike(String barcode) {
-        return getByFieldLike("barcode", barcode);
-    }
-
     public List<ProductData> getByNameLike(String name) {
         return getByFieldLike("name", name);
     }
 
     public List<ProductData> getByClientId(Integer clientId) {
         return getByFields(new String[]{"clientId"}, new Object[]{clientId});
-    }
-
-    public PaginationResponse<ProductData> getByNameLikePaginated(String name, PaginationRequest request) {
-        return getByFieldLikePaginated("name", name, request);
-    }
-
-    public PaginationResponse<ProductData> getByClientIdPaginated(Integer clientId, PaginationRequest request) {
-        return getByFieldPaginated("clientId", clientId, request);
-    }
-
-    public PaginationResponse<ProductData> getByClientNamePaginated(String clientName, PaginationRequest request) {
-        validateFieldValue("clientName", clientName);
-        PaginationResponse<ProductPojo> paginatedEntities = ((org.example.api.ProductApi) api).getByClientNamePaginated(clientName, request);
-        
-        List<ProductData> dataList = paginatedEntities.getContent().stream()
-                .map(this::convertEntityToData)
-                .collect(Collectors.toList());
-        
-        return new PaginationResponse<>(
-            dataList,
-            paginatedEntities.getTotalElements(),
-            paginatedEntities.getCurrentPage(),
-            paginatedEntities.getPageSize()
-        );
-    }
-
-    public String getProductImageUrl(Integer productId) {
-        validateId(productId);
-        ProductPojo product = api.get(productId);
-        return product.getImageUrl();
     }
 
     public TsvUploadResult uploadProductsFromTsv(MultipartFile file) {

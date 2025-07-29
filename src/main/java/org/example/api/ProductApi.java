@@ -102,7 +102,6 @@ public class ProductApi extends AbstractApi<ProductPojo> {
 
     public PaginationResponse<ProductPojo> getByClientNamePaginated(String clientName, PaginationRequest request) {
         validateString(clientName, "Client name");
-        // Get client ID from client name first
         try {
             var client = clientApi.getByName(clientName);
             if (client == null) {

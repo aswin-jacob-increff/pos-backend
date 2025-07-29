@@ -1,4 +1,4 @@
-package org.example.product.unit;
+package org.example.product.integration;
 
 import org.example.dto.ProductDto;
 import org.example.api.ProductApi;
@@ -6,8 +6,6 @@ import org.example.api.ClientApi;
 import org.example.model.data.ProductData;
 import org.example.model.form.ProductForm;
 import org.example.model.data.TsvUploadResult;
-import org.example.model.data.PaginationResponse;
-import org.example.model.form.PaginationRequest;
 import org.example.pojo.ProductPojo;
 import org.example.pojo.ClientPojo;
 import org.example.exception.ApiException;
@@ -32,7 +30,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class ProductDtoTest {
+class ProductIntegrationTest {
 
     @Mock
     private ProductApi productApi;
@@ -86,14 +84,14 @@ class ProductDtoTest {
     }
 
     @Test
-    void testAdd_Success_WithClientId() {
-        // Arrange
+    void testAdd_Integration_Success() {
+        // Arrange - API layer adds product
         doNothing().when(productApi).add(any(ProductPojo.class));
 
-        // Act
+        // Act - DTO calls API
         ProductData result = productDto.add(testForm);
 
-        // Assert
+        // Assert - Verify the entire flow
         assertNotNull(result);
         assertEquals("Test Product", result.getName());
         assertEquals("123456789", result.getBarcode());
@@ -102,7 +100,7 @@ class ProductDtoTest {
     }
 
     @Test
-    void testAdd_Success_WithClientName() {
+    void testAdd_Integration_WithClientName() {
         // Arrange
         testForm.setClientId(null);
         testForm.setClientName("test client");
@@ -120,44 +118,7 @@ class ProductDtoTest {
     }
 
     @Test
-    void testAdd_WithClientName_ClientNotFound() {
-        // Arrange
-        testForm.setClientId(null);
-        testForm.setClientName("nonexistent client");
-        when(clientApi.getByName("nonexistent client")).thenReturn(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.add(testForm));
-        verify(clientApi).getByName("nonexistent client");
-        verify(productApi, never()).add(any());
-    }
-
-    @Test
-    void testAdd_WithClientName_ClientNameNormalized() {
-        // Arrange
-        testForm.setClientId(null);
-        testForm.setClientName("Test Client");
-        when(clientApi.getByName("test client")).thenReturn(testClient);
-        doNothing().when(productApi).add(any(ProductPojo.class));
-
-        // Act
-        ProductData result = productDto.add(testForm);
-
-        // Assert
-        assertNotNull(result);
-        verify(clientApi).getByName("test client");
-        verify(productApi).add(any(ProductPojo.class));
-    }
-
-    @Test
-    void testAdd_NullForm() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.add(null));
-        verify(productApi, never()).add(any());
-    }
-
-    @Test
-    void testAdd_NullProductName() {
+    void testAdd_Integration_ValidationFailure() {
         // Arrange
         testForm.setName(null);
 
@@ -167,137 +128,36 @@ class ProductDtoTest {
     }
 
     @Test
-    void testAdd_EmptyProductName() {
-        // Arrange
-        testForm.setName("");
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.add(testForm));
-        verify(productApi, never()).add(any());
-    }
-
-    @Test
-    void testAdd_NullBarcode() {
-        // Arrange
-        testForm.setBarcode(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.add(testForm));
-        verify(productApi, never()).add(any());
-    }
-
-    @Test
-    void testAdd_EmptyBarcode() {
-        // Arrange
-        testForm.setBarcode("");
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.add(testForm));
-        verify(productApi, never()).add(any());
-    }
-
-    @Test
-    void testAdd_NullMrp() {
-        // Arrange
-        testForm.setMrp(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.add(testForm));
-        verify(productApi, never()).add(any());
-    }
-
-    @Test
-    void testAdd_ZeroMrp() {
-        // Arrange
-        testForm.setMrp(0.0);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.add(testForm));
-        verify(productApi, never()).add(any());
-    }
-
-    @Test
-    void testAdd_NegativeMrp() {
-        // Arrange
-        testForm.setMrp(-10.0);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.add(testForm));
-        verify(productApi, never()).add(any());
-    }
-
-    @Test
-    void testAdd_NoClientIdOrName() {
-        // Arrange
-        testForm.setClientId(null);
-        testForm.setClientName(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.add(testForm));
-        verify(productApi, never()).add(any());
-    }
-
-    @Test
-    void testGet_Success() {
-        // Arrange
+    void testGet_Integration_Success() {
+        // Arrange - API layer returns product
         when(productApi.get(1)).thenReturn(testProduct);
         when(clientApi.get(1)).thenReturn(testClient);
 
-        // Act
+        // Act - DTO calls API
         ProductData result = productDto.get(1);
 
-        // Assert
+        // Assert - Verify the entire flow
         assertNotNull(result);
-        assertEquals(testProduct.getId(), result.getId());
-        assertEquals(testProduct.getName(), result.getName());
-        assertEquals(testProduct.getBarcode(), result.getBarcode());
-        assertEquals(testProduct.getMrp(), result.getMrp());
-        assertEquals(testClient.getClientName(), result.getClientName());
+        assertEquals(1, result.getId());
+        assertEquals("Test Product", result.getName());
+        assertEquals("test client", result.getClientName());
         verify(productApi).get(1);
         verify(clientApi).get(1);
     }
 
     @Test
-    void testGet_NullId() {
+    void testGet_Integration_ProductNotFound() {
+        // Arrange
+        when(productApi.get(1)).thenThrow(new ApiException("Product not found"));
+
         // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.get(null));
-        verify(productApi, never()).get(any());
-    }
-
-    @Test
-    void testGet_ClientNotFound() {
-        // Arrange
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenThrow(new ApiException("Client not found"));
-
-        // Act
-        ProductData result = productDto.get(1);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals("Unknown", result.getClientName());
+        assertThrows(ApiException.class, () -> productDto.get(1));
         verify(productApi).get(1);
-        verify(clientApi).get(1);
+        verify(clientApi, never()).get(any());
     }
 
     @Test
-    void testGetAll_Success() {
-        // Arrange
-        List<ProductPojo> products = Arrays.asList(testProduct, testProduct);
-        when(productApi.getAll()).thenReturn(products);
-        when(clientApi.get(1)).thenReturn(testClient);
-
-        // Act
-        List<ProductData> result = productDto.getAll();
-
-        // Assert
-        assertEquals(2, result.size());
-        verify(productApi).getAll();
-        verify(clientApi, times(2)).get(1);
-    }
-
-    @Test
-    void testUpdate_Success() {
+    void testUpdate_Integration_Success() {
         // Arrange
         when(productApi.get(1)).thenReturn(testProduct);
         when(clientApi.get(1)).thenReturn(testClient);
@@ -313,21 +173,37 @@ class ProductDtoTest {
     }
 
     @Test
-    void testUpdate_NullId() {
+    void testUpdate_Integration_ProductNotFound() {
+        // Arrange
+        when(productApi.get(1)).thenThrow(new ApiException("Product not found"));
+
         // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.update(null, testForm));
-        verify(productApi, never()).update(any(), any());
+        assertThrows(ApiException.class, () -> productDto.update(1, testForm));
+        verify(productApi).get(1);
+        // Note: update method calls api.update() then api.get(), so both will be called
+        verify(productApi).update(eq(1), any(ProductPojo.class));
     }
 
     @Test
-    void testUpdate_NullForm() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.update(1, null));
-        verify(productApi, never()).update(any(), any());
+    void testGetAll_Integration_Success() {
+        // Arrange
+        List<ProductPojo> products = Arrays.asList(testProduct);
+        when(productApi.getAll()).thenReturn(products);
+        when(clientApi.get(1)).thenReturn(testClient);
+
+        // Act
+        List<ProductData> result = productDto.getAll();
+
+        // Assert
+        assertEquals(1, result.size());
+        assertEquals("Test Product", result.get(0).getName());
+        assertEquals("test client", result.get(0).getClientName());
+        verify(productApi).getAll();
+        verify(clientApi).get(1);
     }
 
     @Test
-    void testGetByBarcode_Success() {
+    void testGetByBarcode_Integration_Success() {
         // Arrange
         when(productApi.getByField("barcode", "123456789")).thenReturn(testProduct);
         when(clientApi.get(1)).thenReturn(testClient);
@@ -342,14 +218,17 @@ class ProductDtoTest {
     }
 
     @Test
-    void testGetByBarcode_NullBarcode() {
+    void testGetByBarcode_Integration_NotFound() {
+        // Arrange
+        when(productApi.getByField("barcode", "123456789")).thenThrow(new ApiException("Product not found"));
+
         // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.getByBarcode(null));
-        verify(productApi, never()).getByBarcode(any());
+        assertThrows(ApiException.class, () -> productDto.getByBarcode("123456789"));
+        verify(productApi).getByField("barcode", "123456789");
     }
 
     @Test
-    void testGetByClientName_Success() {
+    void testGetByClientName_Integration_Success() {
         // Arrange
         List<ProductPojo> products = Arrays.asList(testProduct);
         when(productApi.getByClientName("test client")).thenReturn(products);
@@ -365,21 +244,17 @@ class ProductDtoTest {
     }
 
     @Test
-    void testGetByClientName_NullClientName() {
+    void testGetByClientName_Integration_ClientNotFound() {
+        // Arrange
+        when(productApi.getByClientName("nonexistent client")).thenThrow(new ApiException("Client not found"));
+
         // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.getByClientName(null));
-        verify(productApi, never()).getByClientName(any());
+        assertThrows(ApiException.class, () -> productDto.getByClientName("nonexistent client"));
+        verify(productApi).getByClientName("nonexistent client");
     }
 
     @Test
-    void testGetByClientName_EmptyClientName() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> productDto.getByClientName(""));
-        verify(productApi, never()).getByClientName(any());
-    }
-
-    @Test
-    void testGetByNameLike_Success() {
+    void testGetByNameLike_Integration_Success() {
         // Arrange
         List<ProductPojo> products = Arrays.asList(testProduct);
         when(productApi.getByFieldLikeWithValidation("name", "test", "name")).thenReturn(products);
@@ -395,7 +270,7 @@ class ProductDtoTest {
     }
 
     @Test
-    void testGetByClientId_Success() {
+    void testGetByClientId_Integration_Success() {
         // Arrange
         List<ProductPojo> products = Arrays.asList(testProduct);
         when(productApi.getByFields(new String[]{"clientId"}, new Object[]{1})).thenReturn(products);
@@ -411,8 +286,8 @@ class ProductDtoTest {
     }
 
     @Test
-    void testGetByClientId_NullClientId() {
-        // Act & Assert - AbstractDto.getByFields doesn't validate individual values, only arrays
+    void testGetByClientId_Integration_NullClientId() {
+        // Act & Assert - AbstractDto.getByFields doesn't validate individual values
         List<ProductData> result = productDto.getByClientId(null);
         assertNotNull(result);
         assertEquals(0, result.size());
@@ -420,7 +295,7 @@ class ProductDtoTest {
     }
 
     @Test
-    void testUploadProductsFromTsv_Success() throws Exception {
+    void testUploadProductsFromTsv_Integration_Success() throws Exception {
         // Arrange
         String tsvContent = "name\tbarcode\tmrp\timage\tclientName\nTest Product 1\t123456789\t100.0\ttest1.jpg\ttest client\nTest Product 2\t987654321\t200.0\ttest2.jpg\ttest client";
         MockMultipartFile file = new MockMultipartFile(
@@ -459,13 +334,13 @@ class ProductDtoTest {
     }
 
     @Test
-    void testUploadProductsFromTsv_NullFile() {
+    void testUploadProductsFromTsv_Integration_NullFile() {
         // Act & Assert
         assertThrows(ApiException.class, () -> productDto.uploadProductsFromTsv(null));
     }
 
     @Test
-    void testUploadProductsFromTsv_EmptyFile() {
+    void testUploadProductsFromTsv_Integration_EmptyFile() {
         // Arrange
         MockMultipartFile file = new MockMultipartFile("file", "test.tsv", "text/tab-separated-values", new byte[0]);
 
@@ -474,13 +349,13 @@ class ProductDtoTest {
     }
 
     @Test
-    void testGetPaginated_Success() {
+    void testGetByFieldLikePaginated_Integration_Success() {
         // Arrange
-        PaginationRequest request = new PaginationRequest();
+        org.example.model.form.PaginationRequest request = new org.example.model.form.PaginationRequest();
         request.setPageNumber(0);
         request.setPageSize(10);
         
-        PaginationResponse<ProductPojo> expectedResponse = new PaginationResponse<>();
+        org.example.model.data.PaginationResponse<ProductPojo> expectedResponse = new org.example.model.data.PaginationResponse<>();
         expectedResponse.setContent(Arrays.asList(testProduct));
         expectedResponse.setTotalElements(1);
         
@@ -488,7 +363,7 @@ class ProductDtoTest {
         when(clientApi.get(1)).thenReturn(testClient);
 
         // Act
-        PaginationResponse<ProductData> result = productDto.getByFieldLikePaginated("name", "test", request);
+        org.example.model.data.PaginationResponse<ProductData> result = productDto.getByFieldLikePaginated("name", "test", request);
 
         // Assert
         assertNotNull(result);

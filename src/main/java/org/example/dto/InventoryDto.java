@@ -102,10 +102,6 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
         return getByField("productId", productId);
     }
 
-    public List<InventoryData> getByProductId(Integer productId, PaginationRequest request) {
-        return getByFieldPaginated("productId", productId, request).getContent();
-    }
-
     public PaginationResponse<InventoryData> getByProductIdPaginated(Integer productId, PaginationRequest request) {
         return getByFieldPaginated("productId", productId, request);
     }

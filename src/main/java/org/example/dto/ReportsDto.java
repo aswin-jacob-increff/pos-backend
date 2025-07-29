@@ -215,33 +215,7 @@ public class ReportsDto {
             throw new ApiException("Failed to generate custom date range sales report: " + e.getMessage());
         }
     }
-    
-    public List<DaySalesForm> getDayOnDaySalesReport(LocalDate startDate, LocalDate endDate) {
-        if (Objects.isNull(startDate) || Objects.isNull(endDate)) {
-            throw new ApiException("Start date and end date are required");
-        }
-        if (endDate.isBefore(startDate)) {
-            throw new ApiException("End date cannot be before start date");
-        }
-        
-        try {
-            List<DaySalesPojo> daySalesList = reportsFlow.getDaySalesByDateRange(startDate, endDate);
-            return daySalesList.stream()
-                .map(daySales -> {
-                    DaySalesForm form = new DaySalesForm();
-                    form.setDate(daySales.getDate());
-                    form.setInvoicedOrdersCount(daySales.getInvoicedOrdersCount());
-                    form.setInvoicedItemsCount(daySales.getInvoicedItemsCount());
-                    form.setTotalRevenue(daySales.getTotalRevenue());
-                    return form;
-                })
-                .collect(Collectors.toList());
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new ApiException("Failed to generate day-on-day sales report: " + e.getMessage());
-        }
-    }
-    
+
     public List<DaySalesForm> getAllDaySales() {
         try {
             List<DaySalesPojo> daySalesList = reportsFlow.getAllDaySales();
