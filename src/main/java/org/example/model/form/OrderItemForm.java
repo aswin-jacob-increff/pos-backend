@@ -5,14 +5,14 @@ import lombok.Setter;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Setter
 @Getter
 public class OrderItemForm {
 
     private Integer orderId;
-    private LocalDateTime dateTime; // Always IST from frontend
+    private ZonedDateTime dateTime; // Always IST from frontend
     @NotNull(message = "Product ID is required")
     private Integer productId;
     private String productName;

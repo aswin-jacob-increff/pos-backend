@@ -3,7 +3,7 @@ package org.example.pojo;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import java.time.LocalDate;
+import java.time.ZonedDateTime;
 
 @Entity
 @Table(name = "pos_day_sales")
@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @Setter
 public class DaySalesPojo {
     @Id
-    private LocalDate date;
+    private ZonedDateTime date;
 
     @Column(nullable = false)
     private int invoicedOrdersCount;

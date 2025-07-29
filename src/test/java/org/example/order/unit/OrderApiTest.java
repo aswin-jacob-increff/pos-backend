@@ -21,7 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
-import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
@@ -58,7 +58,7 @@ class OrderApiTest {
         testOrder.setId(1);
         testOrder.setUserId("user123");
         testOrder.setStatus(OrderStatus.CREATED);
-        testOrder.setDate(Instant.now());
+        testOrder.setDate(ZonedDateTime.now());
         testOrder.setTotal(100.0);
 
         testOrderItem = new OrderItemPojo();
@@ -117,7 +117,7 @@ class OrderApiTest {
     @Test
     void testAdd_WithExistingDate() {
         // Arrange
-        Instant existingDate = Instant.now().minusSeconds(3600); // 1 hour ago
+        ZonedDateTime existingDate = ZonedDateTime.now().minusHours(1); // 1 hour ago
         testOrder.setDate(existingDate);
         doNothing().when(orderDao).insert(any(OrderPojo.class));
 

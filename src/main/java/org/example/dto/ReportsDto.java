@@ -55,8 +55,8 @@ public class ReportsDto {
             for (OrderItemPojo item : allItems) {
                 OrderPojo order = reportsFlow.getOrder(item.getOrderId());
                 if (Objects.nonNull(order) && Objects.nonNull(order.getDate())) {
-                    // Convert order date (Instant) to IST LocalDate
-                    LocalDate orderDateIST = TimeUtil.toIST(order.getDate()).toLocalDate();
+                    // Convert order date (ZonedDateTime) to LocalDate
+                    LocalDate orderDateIST = order.getDate().toLocalDate();
                     if ((orderDateIST.isEqual(start) || orderDateIST.isAfter(start)) && orderDateIST.isBefore(end.plusDays(1))) {
                         filtered.add(item);
                     }
@@ -159,8 +159,8 @@ public class ReportsDto {
             for (OrderItemPojo item : allItems) {
                 OrderPojo order = reportsFlow.getOrder(item.getOrderId());
                 if (Objects.isNull(order) || Objects.isNull(order.getDate())) continue;
-                // Convert order date (Instant) to IST LocalDate
-                LocalDate orderDateIST = TimeUtil.toIST(order.getDate()).toLocalDate();
+                                    // Convert order date (ZonedDateTime) to LocalDate
+                    LocalDate orderDateIST = order.getDate().toLocalDate();
                 // Use inclusive date range filtering (same as getSalesReport)
                 if ((orderDateIST.isEqual(start) || orderDateIST.isAfter(start)) && orderDateIST.isBefore(end.plusDays(1))) {
                     // Fetch product and client information using productId

@@ -27,10 +27,8 @@ public class ClientController {
 
 
     @PostMapping("/add")
-    public ClientData add(@RequestBody ClientForm form, Authentication authentication) {
-        System.out.println("=== SUPERVISOR CLIENT ADD ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public ClientData add(@RequestBody ClientForm form) {
+
         
         try {
             return clientDto.add(form);
@@ -42,10 +40,8 @@ public class ClientController {
     }
 
     @GetMapping("/{id}")
-    public ClientData get(@PathVariable Integer id, Authentication authentication) {
-        System.out.println("=== SUPERVISOR CLIENT GET ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public ClientData get(@PathVariable Integer id) {
+
         
         try {
             return clientDto.get(id);
@@ -57,10 +53,8 @@ public class ClientController {
     }
 
     @GetMapping
-    public List<ClientData> getAll(Authentication authentication) {
-        System.out.println("=== SUPERVISOR CLIENT GET ALL ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public List<ClientData> getAll() {
+
         
         try {
             return clientDto.getAll();
@@ -76,12 +70,8 @@ public class ClientController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection,
-            Authentication authentication) {
-        System.out.println("=== SUPERVISOR CLIENT GET ALL PAGINATED ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("Page: " + page + ", Size: " + size + ", SortBy: " + sortBy + ", SortDirection: " + sortDirection);
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+
         
         try {
             PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
@@ -100,12 +90,8 @@ public class ClientController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection,
-            Authentication authentication) {
-        System.out.println("=== SUPERVISOR CLIENT SEARCH BY NAME PAGINATED ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("Name: " + name + ", Page: " + page + ", Size: " + size);
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+
         
         try {
             PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
@@ -119,10 +105,8 @@ public class ClientController {
     }
 
     @PutMapping("/{id}")
-    public ClientData update(@PathVariable Integer id, @RequestBody ClientForm form, Authentication authentication) {
-        System.out.println("=== SUPERVISOR CLIENT UPDATE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public ClientData update(@PathVariable Integer id, @RequestBody ClientForm form) {
+
         
         try {
             return clientDto.update(id, form);
@@ -135,11 +119,8 @@ public class ClientController {
 
     @PutMapping("/toggle")
     public void toggleStatus(@RequestParam(required = false) Integer id,
-                            @RequestParam(required = false) String name,
-                            Authentication authentication) {
-        System.out.println("=== SUPERVISOR CLIENT TOGGLE STATUS ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+                            @RequestParam(required = false) String name) {
+
         
         try {
             clientDto.toggleStatus(id, name);
@@ -152,11 +133,8 @@ public class ClientController {
 
     @GetMapping("/search")
     public ClientData getClient(@RequestParam(required = false) Integer id,
-                               @RequestParam(required = false) String name,
-                               Authentication authentication) {
-        System.out.println("=== SUPERVISOR CLIENT SEARCH ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+                               @RequestParam(required = false) String name) {
+
         
         try {
             return clientDto.getByNameOrId(id, name);
@@ -168,10 +146,8 @@ public class ClientController {
     }
 
     @GetMapping("/name/search/{name}")
-    public List<ClientData> searchByName(@PathVariable String name, Authentication authentication) {
-        System.out.println("=== SUPERVISOR CLIENT SEARCH BY NAME ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public List<ClientData> searchByName(@PathVariable String name) {
+
         
         try {
             return clientDto.getByNameLike(name);
@@ -183,42 +159,25 @@ public class ClientController {
     }
 
     @GetMapping("/health")
-    public ResponseEntity<String> health(Authentication authentication) {
-        System.out.println("=== HEALTH CHECK ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        return ResponseEntity.ok("Client controller is working - Authentication: " + (authentication != null ? "YES" : "NO"));
+    public ResponseEntity<String> health() {
+        return ResponseEntity.ok("Client controller is working");
     }
 
     @GetMapping("/test")
-    public ResponseEntity<String> test(Authentication authentication) {
-        System.out.println("=== TEST ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        return ResponseEntity.ok("Test endpoint working - Authentication: " + (authentication != null ? "YES" : "NO"));
+    public ResponseEntity<String> test() {
+        return ResponseEntity.ok("Test endpoint working");
     }
 
     @PostMapping(value = "/test-upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> testUpload(@RequestParam("file") MultipartFile file, Authentication authentication) {
-        System.out.println("=== TEST UPLOAD ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("File received: " + (file != null ? "YES" : "NO"));
-        if (file != null) {
-            System.out.println("File name: " + file.getOriginalFilename());
-            System.out.println("File size: " + file.getSize());
-            System.out.println("File content type: " + file.getContentType());
-            System.out.println("File is empty: " + file.isEmpty());
-        }
+    public ResponseEntity<String> testUpload(@RequestParam("file") MultipartFile file) {
+
         
         return ResponseEntity.ok("Test upload successful - File received: " + (file != null ? "YES" : "NO"));
     }
 
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<org.example.model.data.TsvUploadResult> uploadClientsFromTsv(@RequestParam("file") MultipartFile file, Authentication authentication) {
+    public ResponseEntity<org.example.model.data.TsvUploadResult> uploadClientsFromTsv(@RequestParam("file") MultipartFile file) {
         System.out.println("=== SUPERVISOR CLIENT UPLOAD TSV ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
         System.out.println("File received: " + (file != null ? "YES" : "NO"));
         if (file != null) {
             System.out.println("File name: " + file.getOriginalFilename());

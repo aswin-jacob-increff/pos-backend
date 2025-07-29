@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import java.time.Instant;
+import java.time.ZonedDateTime;
 
 @MappedSuperclass
 @Getter
@@ -17,8 +17,8 @@ public abstract class AbstractPojo {
 
     @CreationTimestamp
     @Column(updatable = false)
-    private Instant createdAt;
+    private ZonedDateTime createdAt;
 
     @UpdateTimestamp
-    private Instant updatedAt;
+    private ZonedDateTime updatedAt;
 }

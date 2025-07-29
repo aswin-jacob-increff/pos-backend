@@ -2,7 +2,8 @@ package org.example.model.data;
 
 import lombok.Getter;
 import lombok.Setter;
-import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.ZonedDateTime;
 
 @Getter
 @Setter
@@ -11,6 +12,8 @@ public class InvoiceDetailsData {
     private Integer orderId;
     private String filePath;
     private String invoiceId;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX", timezone = "Asia/Kolkata")
+    private ZonedDateTime createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX", timezone = "Asia/Kolkata")
+    private ZonedDateTime updatedAt;
 } 

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
+import java.time.ZonedDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,8 +23,8 @@ class ClientApiTest {
         testClient.setId(1);
         testClient.setClientName("Test Client");
         testClient.setStatus(true);
-        testClient.setCreatedAt(Instant.now());
-        testClient.setUpdatedAt(Instant.now());
+        testClient.setCreatedAt(ZonedDateTime.now());
+        testClient.setUpdatedAt(ZonedDateTime.now());
 
         clientApi = new ClientApi();
     }

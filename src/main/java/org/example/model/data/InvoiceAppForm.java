@@ -7,10 +7,10 @@ import java.util.List;
 
 @Getter
 @Setter
-public class InvoiceData {
+public class InvoiceAppForm {
 
     private Integer id;
-    private List<InvoiceItemData> invoiceItemPojoList;
+    private List<InvoiceAppFormItem> invoiceItemPojoList;
     private Double total;
     private Integer orderId;
     private Integer totalQuantity;

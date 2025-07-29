@@ -25,10 +25,8 @@ public class ReportsController {
     private ReportsDto reportsDto;
 
     @PostMapping("/sales")
-    public List<SalesReportData> getSalesReport(@RequestBody SalesReportForm form, Authentication authentication) {
-        System.out.println("=== SUPERVISOR REPORTS SALES ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public List<SalesReportData> getSalesReport(@RequestBody SalesReportForm form) {
+
         
         try {
             return reportsDto.getSalesReport(form);
@@ -40,10 +38,8 @@ public class ReportsController {
     }
     
     @PostMapping("/sales/custom-date-range")
-    public List<CustomDateRangeSalesData> getCustomDateRangeSalesReport(@RequestBody CustomDateRangeSalesForm form, Authentication authentication) {
-        System.out.println("=== SUPERVISOR REPORTS CUSTOM DATE RANGE SALES ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public List<CustomDateRangeSalesData> getCustomDateRangeSalesReport(@RequestBody CustomDateRangeSalesForm form) {
+
         
         try {
             return reportsDto.getCustomDateRangeSalesReport(form);
@@ -55,10 +51,8 @@ public class ReportsController {
     }
     
     @GetMapping("/day-sales")
-    public List<DaySalesForm> getAllDaySales(Authentication authentication) {
-        System.out.println("=== SUPERVISOR REPORTS GET ALL DAY SALES ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public List<DaySalesForm> getAllDaySales() {
+
         
         try {
             return reportsDto.getAllDaySales();
@@ -72,11 +66,8 @@ public class ReportsController {
     @GetMapping("/day-sales/by-date-range")
     public List<DaySalesForm> getDaySalesByDateRange(
             @RequestParam String startDate,
-            @RequestParam String endDate,
-            Authentication authentication) {
-        System.out.println("=== SUPERVISOR REPORTS GET DAY SALES BY DATE RANGE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+            @RequestParam String endDate) {
+
         
         try {
             LocalDate start = LocalDate.parse(startDate);

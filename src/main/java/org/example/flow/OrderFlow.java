@@ -51,8 +51,7 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         if (Objects.isNull(orderPojo)) {
             throw new ApiException("Order cannot be null");
         }
-        // Order items are now managed separately in OrderApi
-        // The order itself is created first, then items are added
+
         api.add(orderPojo);
         return orderPojo;
     }
@@ -279,5 +278,62 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
             throw new ApiException("Order item ID cannot be null");
         }
         return orderItemDao.select(orderItemId);
+    }
+
+    /**
+     * Create order with items and handle inventory reduction
+     * @param orderPojo The order to create
+     * @param orderItemFormList List of order item forms
+     * @return The created order with updated total
+     */
+    public OrderPojo createOrderWithItems(OrderPojo orderPojo, List<org.example.model.form.OrderItemForm> orderItemFormList) {
+        if (Objects.isNull(orderPojo)) {
+            throw new ApiException("Order cannot be null");
+        }
+        if (Objects.isNull(orderItemFormList) || orderItemFormList.isEmpty()) {
+            throw new ApiException("Order must contain at least one item");
+        }
+
+        // Add the order first
+        api.add(orderPojo);
+        
+        double totalAmount = 0.0;
+        
+        // Create order items and reduce inventory
+        for (org.example.model.form.OrderItemForm itemForm : orderItemFormList) {
+            // Set the order ID for each item
+            itemForm.setOrderId(orderPojo.getId());
+            
+            // Convert form to pojo
+            OrderItemPojo orderItemPojo = convertOrderItemFormToPojo(itemForm);
+            
+            // Add order item through API
+            api.addOrderItem(orderItemPojo);
+            
+            // Reduce inventory
+            reduceInventoryForOrderItem(itemForm.getProductId(), itemForm.getQuantity());
+            
+            // Calculate total
+            totalAmount += orderItemPojo.getAmount();
+        }
+        
+        // Update order total
+        orderPojo.setTotal(totalAmount);
+        api.update(orderPojo.getId(), orderPojo);
+        
+        return orderPojo;
+    }
+    
+    /**
+     * Convert OrderItemForm to OrderItemPojo
+     */
+    private OrderItemPojo convertOrderItemFormToPojo(org.example.model.form.OrderItemForm itemForm) {
+        OrderItemPojo orderItemPojo = new OrderItemPojo();
+        orderItemPojo.setOrderId(itemForm.getOrderId());
+        orderItemPojo.setProductId(itemForm.getProductId());
+        orderItemPojo.setQuantity(itemForm.getQuantity());
+        orderItemPojo.setSellingPrice(itemForm.getSellingPrice());
+        orderItemPojo.setAmount(itemForm.getSellingPrice() * itemForm.getQuantity());
+        return orderItemPojo;
     }
 }

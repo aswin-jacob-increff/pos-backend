@@ -14,7 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
-import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 
@@ -34,11 +34,11 @@ class ClientDtoTest {
     private ClientPojo testPojo;
     private ClientData testData;
     private ClientForm testForm;
-    private Instant testDateTime;
+    private ZonedDateTime testDateTime;
 
     @BeforeEach
     void setUp() throws Exception {
-        testDateTime = Instant.now();
+        testDateTime = ZonedDateTime.now();
         
         testPojo = new ClientPojo();
         testPojo.setId(1);

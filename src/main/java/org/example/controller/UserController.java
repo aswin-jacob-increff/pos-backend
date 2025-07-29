@@ -52,13 +52,11 @@ public class UserController {
     private UserApi userApi;
 
     @GetMapping("/orders")
-    public List<OrderData> getMyOrders(Authentication authentication) {
-        System.out.println("=== USER ORDERS ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public List<OrderData> getMyOrders() {
+
         
         try {
-            String userEmail = AuthHelper.getUserId(authentication);
+            String userEmail = AuthHelper.getUserId();
             return orderDto.getOrdersByUserId(userEmail);
         } catch (Exception e) {
             throw new ApiException("Failed to get user orders: " + e.getMessage());
@@ -70,15 +68,11 @@ public class UserController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection,
-            Authentication authentication) {
-        System.out.println("=== USER ORDERS PAGINATED ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("Page: " + page + ", Size: " + size + ", SortBy: " + sortBy + ", SortDirection: " + sortDirection);
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+
         
         try {
-            String userEmail = AuthHelper.getUserId(authentication);
+            String userEmail = AuthHelper.getUserId();
             PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
             PaginationResponse<OrderData> response = orderDto.getOrdersByUserIdPaginated(userEmail, request);
             return ResponseEntity.ok(response);
@@ -92,10 +86,9 @@ public class UserController {
     @GetMapping("/orders/by-date-range")
     public List<OrderData> getMyOrdersByDateRange(
             @RequestParam String startDate,
-            @RequestParam String endDate,
-            Authentication authentication) {
+            @RequestParam String endDate) {
         try {
-            String userEmail = AuthHelper.getUserId(authentication);
+            String userEmail = AuthHelper.getUserId();
             LocalDate start = LocalDate.parse(startDate);
             LocalDate end = LocalDate.parse(endDate);
             return orderDto.getOrdersByDateRange(start, end);
@@ -109,14 +102,12 @@ public class UserController {
     }
 
     @PostMapping("/orders")
-    public OrderData createOrder(@RequestBody OrderForm form, Authentication authentication) {
-        System.out.println("=== USER ORDER CREATE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public OrderData createOrder(@RequestBody OrderForm form) {
+
         
         try {
             // Set the user ID from the authenticated user
-            String userEmail = AuthHelper.getUserId(authentication);
+            String userEmail = AuthHelper.getUserId();
             form.setUserId(userEmail);
             
             return orderDto.add(form);
@@ -128,25 +119,15 @@ public class UserController {
     }
 
     @GetMapping("/orders/{id}")
-    public OrderData getMyOrder(@PathVariable Integer id, Authentication authentication) {
-        System.out.println("=== USER ORDER GET ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        
+    public OrderData getMyOrder(@PathVariable Integer id) {
         try {
-            if (authentication != null && authentication.isAuthenticated()) {
-                String userEmail = authentication.getName();
-                OrderData order = orderDto.get(id);
-                
-                // Check if the order belongs to the authenticated user
-                if (!userEmail.equals(order.getUserId())) {
-                    throw new ApiException("Access denied. You can only view your own orders.");
-                }
-                
-                return order;
-            } else {
-                throw new ApiException("User not authenticated");
+            String userEmail = AuthHelper.getUserId();
+            OrderData order = orderDto.get(id);
+            // Check if the order belongs to the authenticated user
+            if (!userEmail.equals(order.getUserId())) {
+                throw new ApiException("Access denied. You can only view your own orders.");
             }
+            return order;
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
@@ -156,9 +137,7 @@ public class UserController {
 
     @GetMapping("/orders/{id}/download-invoice")
     public ResponseEntity<org.springframework.core.io.Resource> downloadMyOrderInvoice(@PathVariable Integer id, Authentication authentication) {
-        System.out.println("=== USER ORDER DOWNLOAD INVOICE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+
         
         try {
             if (authentication != null && authentication.isAuthenticated()) {
@@ -234,9 +213,7 @@ public class UserController {
 
     @GetMapping("/products/barcode/{barcode}")
     public ProductData getProductByBarcode(@PathVariable String barcode, Authentication authentication) {
-        System.out.println("=== USER PRODUCT GET BY BARCODE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+
         
         try {
             AuthHelper.getUserId(authentication); // Verify authentication
@@ -250,9 +227,7 @@ public class UserController {
 
     @GetMapping("/inventory/barcode/{barcode}")
     public InventoryData getInventoryByBarcode(@PathVariable String barcode, Authentication authentication) {
-        System.out.println("=== USER INVENTORY GET BY BARCODE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+
         
         try {
             AuthHelper.getUserId(authentication); // Verify authentication
@@ -271,9 +246,7 @@ public class UserController {
 
     @GetMapping("/search/barcode/{barcode}")
     public ResponseEntity<Object> searchByBarcode(@PathVariable String barcode, Authentication authentication) {
-        System.out.println("=== USER SEARCH BY BARCODE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+
         
         try {
             AuthHelper.getUserId(authentication); // Verify authentication
@@ -319,9 +292,7 @@ public class UserController {
      */
     @GetMapping("/orders/{orderId}/items")
     public List<OrderItemData> getMyOrderItems(@PathVariable Integer orderId, Authentication authentication) {
-        System.out.println("=== USER ORDER ITEMS GET ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+
         
         try {
             // Verify the order belongs to the authenticated user
@@ -346,9 +317,7 @@ public class UserController {
             @PathVariable Integer orderId,
             @RequestBody OrderItemForm orderItemForm,
             Authentication authentication) {
-        System.out.println("=== USER ORDER ITEM ADD ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+
         
         try {
             // Verify the order belongs to the authenticated user
@@ -376,9 +345,7 @@ public class UserController {
             @PathVariable Integer itemId,
             @RequestBody OrderItemForm orderItemForm,
             Authentication authentication) {
-        System.out.println("=== USER ORDER ITEM UPDATE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+
         
         try {
             // Verify the order item belongs to the authenticated user
@@ -402,9 +369,7 @@ public class UserController {
      */
     @GetMapping("/orders/items/{itemId}")
     public OrderItemData getMyOrderItem(@PathVariable Integer itemId, Authentication authentication) {
-        System.out.println("=== USER ORDER ITEM GET ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+
         
         try {
             // Verify the order item belongs to the authenticated user

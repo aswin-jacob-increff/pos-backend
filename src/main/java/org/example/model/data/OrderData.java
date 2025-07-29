@@ -3,8 +3,9 @@ package org.example.model.data;
 import lombok.Getter;
 import lombok.Setter;
 import org.example.util.TimeUtil;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 import org.example.model.enums.OrderStatus;
 
@@ -13,7 +14,8 @@ import org.example.model.enums.OrderStatus;
 public class OrderData {
 
     private Integer id;
-    private LocalDateTime date; // Always IST for frontend
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX", timezone = "Asia/Kolkata")
+    private ZonedDateTime date; // Always IST for frontend
     private List<OrderItemData> orderItemDataList;
     private Double total;
     private OrderStatus status; // Order status

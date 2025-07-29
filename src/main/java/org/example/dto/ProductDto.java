@@ -36,7 +36,27 @@ public class ProductDto extends AbstractDto<ProductPojo, ProductForm, ProductDat
         pojo.setBarcode(form.getBarcode());
         pojo.setMrp(form.getMrp());
         pojo.setImageUrl(form.getImage());
-        pojo.setClientId(form.getClientId());
+        
+        // Handle client ID conversion
+        if (form.getClientId() != null) {
+            // If clientId is provided directly, use it
+            pojo.setClientId(form.getClientId());
+        } else if (form.getClientName() != null && !form.getClientName().trim().isEmpty()) {
+            // If clientName is provided, convert it to clientId
+            try {
+                var client = clientApi.getByName(form.getClientName().trim().toLowerCase());
+                if (client != null) {
+                    pojo.setClientId(client.getId());
+                } else {
+                    throw new ApiException("Client not found with name: " + form.getClientName());
+                }
+            } catch (Exception e) {
+                throw new ApiException("Failed to find client with name '" + form.getClientName() + "': " + e.getMessage());
+            }
+        } else {
+            throw new ApiException("Either clientId or clientName must be provided");
+        }
+        
         return pojo;
     }
 

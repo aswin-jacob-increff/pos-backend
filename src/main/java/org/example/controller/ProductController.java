@@ -8,10 +8,14 @@ import org.example.model.data.PaginationResponse;
 import org.example.model.form.PaginationRequest;
 import org.example.model.form.PaginationQuery;
 import org.example.dto.ProductDto;
+import org.example.util.AuthHelper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -23,10 +27,8 @@ public class ProductController {
     private ProductDto productDto;
 
     @PostMapping
-    public ProductData add(@RequestBody ProductForm form, Authentication authentication) {
-        System.out.println("=== SUPERVISOR PRODUCT ADD ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public ProductData add(@RequestBody ProductForm form) {
+
         
         try {
             return productDto.add(form);
@@ -38,10 +40,8 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ProductData get(@PathVariable Integer id, Authentication authentication) {
-        System.out.println("=== SUPERVISOR PRODUCT GET ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public ProductData get(@PathVariable Integer id) {
+
         
         try {
             return productDto.get(id);
@@ -53,10 +53,8 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<ProductData> getAll(Authentication authentication) {
-        System.out.println("=== SUPERVISOR PRODUCT GET ALL ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public List<ProductData> getAll() {
+
         
         try {
             return productDto.getAll();
@@ -74,14 +72,12 @@ public class ProductController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection,
-            Authentication authentication) {
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
         
         PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
         
         return PaginationControllerHelper.handlePaginatedRequest(
             "SUPERVISOR PRODUCT GET ALL PAGINATED ENDPOINT",
-            authentication,
             request,
             (req) -> productDto.getPaginated(PaginationQuery.all(req))
         );
@@ -93,8 +89,7 @@ public class ProductController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection,
-            Authentication authentication) {
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
         
         PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
         
@@ -102,7 +97,6 @@ public class ProductController {
             "SUPERVISOR PRODUCT GET BY CLIENT ID PAGINATED ENDPOINT",
             "clientId",
             clientId,
-            authentication,
             request,
             productDto::getPaginated
         );
@@ -114,8 +108,7 @@ public class ProductController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection,
-            Authentication authentication) {
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
         
         PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
         
@@ -123,7 +116,6 @@ public class ProductController {
             "SUPERVISOR PRODUCT SEARCH BY NAME PAGINATED ENDPOINT",
             "name",
             name,
-            authentication,
             request,
             productDto::getPaginated
         );
@@ -136,12 +128,8 @@ public class ProductController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection,
-            Authentication authentication) {
-        System.out.println("=== SUPERVISOR PRODUCT GET ALL PAGINATED ENDPOINT (LEGACY) ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("Page: " + page + ", Size: " + size + ", SortBy: " + sortBy + ", SortDirection: " + sortDirection);
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+
         
         try {
             PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
@@ -155,10 +143,8 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ProductData update(@PathVariable Integer id, @RequestBody ProductForm form, Authentication authentication) {
-        System.out.println("=== SUPERVISOR PRODUCT UPDATE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public ProductData update(@PathVariable Integer id, @RequestBody ProductForm form) {
+
         
         try {
             return productDto.update(id, form);
@@ -170,10 +156,8 @@ public class ProductController {
     }
 
     @GetMapping("/barcode/{barcode}")
-    public ProductData getByBarcode(@PathVariable String barcode, Authentication authentication) {
-        System.out.println("=== SUPERVISOR PRODUCT GET BY BARCODE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public ProductData getByBarcode(@PathVariable String barcode) {
+
         
         try {
             return productDto.getByBarcode(barcode);
@@ -185,10 +169,8 @@ public class ProductController {
     }
 
     @GetMapping("/name/search/{name}")
-    public List<ProductData> searchByName(@PathVariable String name, Authentication authentication) {
-        System.out.println("=== SUPERVISOR PRODUCT SEARCH BY NAME ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public List<ProductData> searchByName(@PathVariable String name) {
+
         
         try {
             return productDto.getByNameLike(name);
@@ -200,10 +182,8 @@ public class ProductController {
     }
 
     @GetMapping("/client/{clientId}")
-    public List<ProductData> getByClientId(@PathVariable Integer clientId, Authentication authentication) {
-        System.out.println("=== SUPERVISOR PRODUCT GET BY CLIENT ID ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public List<ProductData> getByClientId(@PathVariable Integer clientId) {
+
         
         try {
             return productDto.getByClientId(clientId);
@@ -211,6 +191,34 @@ public class ProductController {
             throw e;
         } catch (Exception e) {
             throw new ApiException("Failed to get products by client ID: " + e.getMessage());
+        }
+    }
+
+    @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<org.example.model.data.TsvUploadResult> uploadProductsFromTsv(@RequestParam("file") MultipartFile file) {
+
+        
+        try {
+            org.example.model.data.TsvUploadResult result = productDto.uploadProductsFromTsv(file);
+
+            
+            // Return appropriate status based on the result
+            if (result.hasErrors()) {
+                // If there are validation errors, return 400 Bad Request
+                return ResponseEntity.badRequest().body(result);
+            } else if (result.getSuccessfulRows() == 0) {
+                // If no successful rows, return 400 Bad Request
+                return ResponseEntity.badRequest().body(result);
+            } else {
+                // If there are successful rows, return 200 OK
+                return ResponseEntity.ok(result);
+            }
+        } catch (Exception e) {
+
+            e.printStackTrace();
+            org.example.model.data.TsvUploadResult errorResult = new org.example.model.data.TsvUploadResult();
+            errorResult.addError("Unexpected error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResult);
         }
     }
 }

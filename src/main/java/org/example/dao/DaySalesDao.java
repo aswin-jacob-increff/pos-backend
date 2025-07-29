@@ -5,6 +5,7 @@ import jakarta.persistence.criteria.*;
 import org.example.pojo.DaySalesPojo;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 @Repository
@@ -53,16 +54,18 @@ public class DaySalesDao extends AbstractDao<DaySalesPojo> {
 
     public LocalDate findLatestDate() {
         CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<LocalDate> query = cb.createQuery(LocalDate.class);
+        CriteriaQuery<ZonedDateTime> query = cb.createQuery(ZonedDateTime.class);
         Root<DaySalesPojo> root = query.from(DaySalesPojo.class);
         query.select(root.get("date")).orderBy(cb.desc(root.get("date")));
-        List<LocalDate> results = em.createQuery(query).setMaxResults(1).getResultList();
+        List<ZonedDateTime> results = em.createQuery(query).setMaxResults(1).getResultList();
         if (results.isEmpty() || results.get(0) == null) return LocalDate.now();
-        return results.get(0);
+        return results.get(0).toLocalDate();
     }
 
     public DaySalesPojo findByDate(LocalDate date) {
-        return em.find(DaySalesPojo.class, date);
+        // Convert LocalDate to ZonedDateTime for the primary key lookup
+        ZonedDateTime zonedDate = date.atStartOfDay(java.time.ZoneId.of("Asia/Kolkata"));
+        return em.find(DaySalesPojo.class, zonedDate);
     }
     
     @Override

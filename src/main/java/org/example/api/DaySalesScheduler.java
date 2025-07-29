@@ -93,7 +93,7 @@ public class DaySalesScheduler {
             daySales = existingDaySales;
         } else {
             daySales = new DaySalesPojo();
-            daySales.setDate(date);
+            daySales.setDate(date.atStartOfDay(ZoneId.of("Asia/Kolkata")));
         }
         
         daySales.setInvoicedOrdersCount(ordersCount);

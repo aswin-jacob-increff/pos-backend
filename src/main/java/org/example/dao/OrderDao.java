@@ -9,10 +9,9 @@ import org.example.util.PaginationUtil;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import org.example.pojo.OrderPojo;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 
 @Repository
 public class OrderDao extends AbstractDao<OrderPojo> {
@@ -57,8 +56,9 @@ public class OrderDao extends AbstractDao<OrderPojo> {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderPojo> cq = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = cq.from(OrderPojo.class);
-        Instant start = date.atStartOfDay(ZoneOffset.UTC).toInstant();
-        Instant end = date.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        ZoneId istZone = ZoneId.of("Asia/Kolkata");
+        ZonedDateTime start = date.atStartOfDay(istZone);
+        ZonedDateTime end = date.plusDays(1).atStartOfDay(istZone);
         Predicate dateBetween = cb.between(root.get("date"), start, end);
         cq.select(root).where(dateBetween);
         return em.createQuery(cq).getResultList();
@@ -74,10 +74,10 @@ public class OrderDao extends AbstractDao<OrderPojo> {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<OrderPojo> cq = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = cq.from(OrderPojo.class);
-        // Convert LocalDate (IST) to UTC Instants for comparison
+        // Convert LocalDate (IST) to ZonedDateTime for comparison
         ZoneId istZone = ZoneId.of("Asia/Kolkata");
-        Instant start = startDate.atStartOfDay(istZone).toInstant();
-        Instant end = endDate.plusDays(1).atStartOfDay(istZone).toInstant();
+        ZonedDateTime start = startDate.atStartOfDay(istZone);
+        ZonedDateTime end = endDate.plusDays(1).atStartOfDay(istZone);
         Predicate dateBetween = cb.between(root.get("date"), start, end);
         cq.select(root)
           .where(dateBetween)
@@ -87,12 +87,12 @@ public class OrderDao extends AbstractDao<OrderPojo> {
 
     public LocalDate findEarliestOrderDate() {
         CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Instant> cq = cb.createQuery(Instant.class);
+        CriteriaQuery<ZonedDateTime> cq = cb.createQuery(ZonedDateTime.class);
         Root<OrderPojo> root = cq.from(OrderPojo.class);
         cq.select(root.get("date")).orderBy(cb.asc(root.get("date")));
-        List<Instant> results = em.createQuery(cq).setMaxResults(1).getResultList();
+        List<ZonedDateTime> results = em.createQuery(cq).setMaxResults(1).getResultList();
         if (results.isEmpty() || results.get(0) == null) return LocalDate.now(ZoneId.of("Asia/Kolkata"));
-        return results.get(0).atZone(ZoneId.of("Asia/Kolkata")).toLocalDate();
+        return results.get(0).toLocalDate();
     }
 
     public List<OrderPojo> findByUserId(String userId) {
@@ -169,10 +169,10 @@ public class OrderDao extends AbstractDao<OrderPojo> {
         CriteriaQuery<Long> query = cb.createQuery(Long.class);
         Root<OrderPojo> root = query.from(OrderPojo.class);
         
-        // Convert LocalDate (IST) to UTC Instants for comparison
+        // Convert LocalDate (IST) to ZonedDateTime for comparison
         ZoneId istZone = ZoneId.of("Asia/Kolkata");
-        Instant start = startDate.atStartOfDay(istZone).toInstant();
-        Instant end = endDate.plusDays(1).atStartOfDay(istZone).toInstant();
+        ZonedDateTime start = startDate.atStartOfDay(istZone);
+        ZonedDateTime end = endDate.plusDays(1).atStartOfDay(istZone);
         
         Predicate dateBetween = cb.between(root.get("date"), start, end);
         query.select(cb.count(root)).where(dateBetween);
@@ -340,10 +340,10 @@ public class OrderDao extends AbstractDao<OrderPojo> {
         CriteriaQuery<OrderPojo> query = cb.createQuery(OrderPojo.class);
         Root<OrderPojo> root = query.from(OrderPojo.class);
         
-        // Convert LocalDate (IST) to UTC Instants for comparison
+        // Convert LocalDate (IST) to ZonedDateTime for comparison
         ZoneId istZone = ZoneId.of("Asia/Kolkata");
-        Instant start = startDate.atStartOfDay(istZone).toInstant();
-        Instant end = endDate.plusDays(1).atStartOfDay(istZone).toInstant();
+        ZonedDateTime start = startDate.atStartOfDay(istZone);
+        ZonedDateTime end = endDate.plusDays(1).atStartOfDay(istZone);
         
         Predicate dateBetween = cb.between(root.get("date"), start, end);
         query.select(root).where(dateBetween);

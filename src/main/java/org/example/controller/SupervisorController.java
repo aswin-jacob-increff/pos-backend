@@ -21,11 +21,7 @@ public class SupervisorController {
     private UserDto userDto;
 
     @GetMapping("/users")
-    public List<UserData> getAllUsers(Authentication authentication) {
-        System.out.println("=== SUPERVISOR USERS ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        
+    public List<UserData> getAllUsers() {
         try {
             return userDto.getAll();
         } catch (Exception e) {
@@ -38,13 +34,7 @@ public class SupervisorController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection,
-            Authentication authentication) {
-        System.out.println("=== SUPERVISOR USERS PAGINATED ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("Page: " + page + ", Size: " + size + ", SortBy: " + sortBy + ", SortDirection: " + sortDirection);
-        
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
         try {
             PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
             PaginationResponse<UserData> response = userDto.getPaginated(PaginationQuery.all(request));

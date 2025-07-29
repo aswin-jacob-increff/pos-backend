@@ -23,9 +23,8 @@ import org.springframework.web.client.RestTemplate;
 import org.example.model.enums.OrderStatus;
 
 import java.lang.reflect.Field;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 
@@ -48,8 +47,7 @@ class OrderDtoTest {
     @Mock
     private InvoiceApi invoiceApi;
 
-    @Mock
-    private OrderItemDao orderItemDao;
+
 
     @Mock
     private RestTemplate restTemplate;
@@ -72,7 +70,7 @@ class OrderDtoTest {
 
         testOrder = new OrderPojo();
         testOrder.setId(1); // Ensure ID is set
-        testOrder.setDate(Instant.now());
+        testOrder.setDate(ZonedDateTime.now());
         testOrder.setTotal(100.0);
         testOrder.setUserId("testuser@example.com");
         testOrder.setStatus(OrderStatus.CREATED);
@@ -110,10 +108,7 @@ class OrderDtoTest {
         invoiceApiField.setAccessible(true);
         invoiceApiField.set(orderDto, invoiceApi);
 
-        // Inject the orderItemDao field
-        Field orderItemDaoField = orderDto.getClass().getDeclaredField("orderItemDao");
-        orderItemDaoField.setAccessible(true);
-        orderItemDaoField.set(orderDto, orderItemDao);
+
 
         // Inject the restTemplate field
         Field restTemplateField = orderDto.getClass().getDeclaredField("restTemplate");
@@ -177,12 +172,12 @@ class OrderDtoTest {
     void testUpdate_Success() {
         // Given
         OrderForm form = new OrderForm();
-        form.setDate(LocalDateTime.now());
+        form.setDate(ZonedDateTime.now());
         form.setUserId("user123");
 
         OrderPojo order = new OrderPojo();
         order.setId(1);
-        order.setDate(Instant.now());
+        order.setDate(ZonedDateTime.now());
         order.setTotal(100.0);
         order.setStatus(OrderStatus.CREATED);
         order.setUserId("user123");

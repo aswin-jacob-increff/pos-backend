@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.example.util.TimeUtil;
 
-import java.time.Instant;
+import java.time.ZonedDateTime;
 import org.example.model.enums.OrderStatus;
 
 @Getter
@@ -26,7 +26,7 @@ public class OrderPojo extends AbstractPojo {
     )
     private Integer id;
 
-    private Instant date;
+    private ZonedDateTime date;
 
     private double total;
 

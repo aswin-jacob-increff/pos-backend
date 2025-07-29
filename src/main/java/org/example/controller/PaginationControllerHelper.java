@@ -31,11 +31,10 @@ public class PaginationControllerHelper {
      */
     public static <T> ResponseEntity<PaginationResponse<T>> handlePaginatedRequest(
             String endpointName,
-            Authentication authentication,
             PaginationRequest request,
             Function<PaginationRequest, PaginationResponse<T>> paginationFunction) {
         
-        logEndpointCall(endpointName, authentication, request);
+        logEndpointCall(endpointName, request);
         
         try {
             PaginationResponse<T> response = paginationFunction.apply(request);
@@ -54,11 +53,10 @@ public class PaginationControllerHelper {
             String endpointName,
             String fieldName,
             Object fieldValue,
-            Authentication authentication,
             PaginationRequest request,
             Function<PaginationQuery, PaginationResponse<T>> paginationFunction) {
         
-        logFieldEndpointCall(endpointName, fieldName, fieldValue, authentication, request);
+        logFieldEndpointCall(endpointName, fieldName, fieldValue, request);
         
         try {
             PaginationQuery query = PaginationQuery.byField(fieldName, fieldValue, request);
@@ -78,11 +76,10 @@ public class PaginationControllerHelper {
             String endpointName,
             String fieldName,
             String searchPattern,
-            Authentication authentication,
             PaginationRequest request,
             Function<PaginationQuery, PaginationResponse<T>> paginationFunction) {
         
-        logLikeEndpointCall(endpointName, fieldName, searchPattern, authentication, request);
+        logLikeEndpointCall(endpointName, fieldName, searchPattern, request);
         
         try {
             PaginationQuery query = PaginationQuery.byFieldLike(fieldName, searchPattern, request);
@@ -102,11 +99,10 @@ public class PaginationControllerHelper {
             String endpointName,
             String[] fieldNames,
             Object[] fieldValues,
-            Authentication authentication,
             PaginationRequest request,
             Function<PaginationQuery, PaginationResponse<T>> paginationFunction) {
         
-        logMultiFieldEndpointCall(endpointName, fieldNames, fieldValues, authentication, request);
+        logMultiFieldEndpointCall(endpointName, fieldNames, fieldValues, request);
         
         try {
             PaginationQuery query = PaginationQuery.byFields(fieldNames, fieldValues, request);
@@ -121,56 +117,24 @@ public class PaginationControllerHelper {
 
     // ========== PRIVATE HELPER METHODS ==========
 
-    private static void logEndpointCall(String endpointName, Authentication authentication, PaginationRequest request) {
-        System.out.println("=== " + endpointName + " ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("Page: " + request.getPageNumber() + 
-                          ", Size: " + request.getPageSize() + 
-                          ", SortBy: " + request.getSortBy() + 
-                          ", SortDirection: " + request.getSortDirection());
+    private static void logEndpointCall(String endpointName, PaginationRequest request) {
     }
 
     private static void logFieldEndpointCall(String endpointName, String fieldName, Object fieldValue, 
-                                           Authentication authentication, PaginationRequest request) {
-        System.out.println("=== " + endpointName + " ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("Field: " + fieldName + " = " + fieldValue + 
-                          ", Page: " + request.getPageNumber() + 
-                          ", Size: " + request.getPageSize() + 
-                          ", SortBy: " + request.getSortBy() + 
-                          ", SortDirection: " + request.getSortDirection());
+                                           PaginationRequest request) {
     }
 
     private static void logLikeEndpointCall(String endpointName, String fieldName, String searchPattern, 
-                                          Authentication authentication, PaginationRequest request) {
-        System.out.println("=== " + endpointName + " ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("Field: " + fieldName + " LIKE '" + searchPattern + "'" + 
-                          ", Page: " + request.getPageNumber() + 
-                          ", Size: " + request.getPageSize() + 
-                          ", SortBy: " + request.getSortBy() + 
-                          ", SortDirection: " + request.getSortDirection());
+                                          PaginationRequest request) {
     }
 
     private static void logMultiFieldEndpointCall(String endpointName, String[] fieldNames, Object[] fieldValues, 
-                                                Authentication authentication, PaginationRequest request) {
-        System.out.println("=== " + endpointName + " ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+                                                PaginationRequest request) {
         
         StringBuilder fields = new StringBuilder();
         for (int i = 0; i < fieldNames.length; i++) {
             if (i > 0) fields.append(", ");
             fields.append(fieldNames[i]).append(" = ").append(fieldValues[i]);
         }
-        
-        System.out.println("Fields: " + fields.toString() + 
-                          ", Page: " + request.getPageNumber() + 
-                          ", Size: " + request.getPageSize() + 
-                          ", SortBy: " + request.getSortBy() + 
-                          ", SortDirection: " + request.getSortDirection());
     }
 } 

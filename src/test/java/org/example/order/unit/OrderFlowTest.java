@@ -15,7 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
-import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 
@@ -40,7 +40,7 @@ class OrderFlowTest {
     void setUp() throws Exception {
         testOrder = new OrderPojo();
         testOrder.setId(1);
-        testOrder.setDate(Instant.now());
+        testOrder.setDate(ZonedDateTime.now());
         testOrder.setTotal(100.0);
         testOrder.setStatus(OrderStatus.CREATED);
 
@@ -104,7 +104,7 @@ class OrderFlowTest {
         // Given
         OrderPojo order = new OrderPojo();
         order.setId(1);
-        order.setDate(Instant.now());
+        order.setDate(ZonedDateTime.now());
         order.setTotal(100.0);
         order.setStatus(OrderStatus.CREATED);
         order.setUserId("user123");

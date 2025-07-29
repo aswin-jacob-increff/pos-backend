@@ -1,16 +1,15 @@
 package org.example.util;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 /**
- * Utility class for handling date/time conversions between IST and UTC.
+ * Utility class for handling date/time conversions.
  * 
  * Date handling strategy:
- * - Frontend sends dates in IST (Asia/Kolkata timezone)
- * - Database stores dates in UTC (Instant)
- * - When sending data to frontend, convert UTC back to IST
+ * - Frontend sends dates in IST (Asia/Kolkata timezone) as ZonedDateTime
+ * - Database stores dates in IST (Asia/Kolkata timezone) as ZonedDateTime
+ * - All dates maintain timezone information throughout the application
  * 
  * This ensures consistent timezone handling across the application.
  */
@@ -19,43 +18,39 @@ public class TimeUtil {
     private static final ZoneId UTC_ZONE = ZoneId.of("UTC");
 
     /**
-     * Convert UTC Instant to IST LocalDateTime for frontend display
-     * @param utcInstant UTC timestamp from database
-     * @return IST LocalDateTime for frontend
+     * Convert any ZonedDateTime to IST ZonedDateTime
+     * @param dateTime ZonedDateTime to convert
+     * @return IST ZonedDateTime
      */
-    public static LocalDateTime toIST(Instant utcInstant) {
-        if (utcInstant == null) return null;
-        return LocalDateTime.ofInstant(utcInstant, IST_ZONE);
+    public static ZonedDateTime toIST(ZonedDateTime dateTime) {
+        if (dateTime == null) return null;
+        return dateTime.withZoneSameInstant(IST_ZONE);
     }
 
     /**
-     * Convert IST LocalDateTime from frontend to UTC Instant for database storage
-     * @param istDateTime IST timestamp from frontend
-     * @return UTC Instant for database
+     * Convert any ZonedDateTime to UTC ZonedDateTime
+     * @param dateTime ZonedDateTime to convert
+     * @return UTC ZonedDateTime
      */
-    public static Instant toUTC(LocalDateTime istDateTime) {
-        if (istDateTime == null) return null;
-        return istDateTime.atZone(IST_ZONE).toInstant();
+    public static ZonedDateTime toUTC(ZonedDateTime dateTime) {
+        if (dateTime == null) return null;
+        return dateTime.withZoneSameInstant(UTC_ZONE);
     }
 
     /**
-     * Convert UTC Instant to UTC LocalDateTime (utility method)
-     * @param utcInstant UTC timestamp
-     * @return UTC LocalDateTime
+     * Get current time in IST
+     * @return Current ZonedDateTime in IST
      */
-    public static LocalDateTime toUTCDateTime(Instant utcInstant) {
-        if (utcInstant == null) return null;
-        return LocalDateTime.ofInstant(utcInstant, UTC_ZONE);
+    public static ZonedDateTime nowIST() {
+        return ZonedDateTime.now(IST_ZONE);
     }
 
     /**
-     * Convert UTC LocalDateTime to UTC Instant (utility method)
-     * @param utcDateTime UTC LocalDateTime
-     * @return UTC Instant
+     * Get current time in UTC
+     * @return Current ZonedDateTime in UTC
      */
-    public static Instant fromUTCDateTime(LocalDateTime utcDateTime) {
-        if (utcDateTime == null) return null;
-        return utcDateTime.atZone(UTC_ZONE).toInstant();
+    public static ZonedDateTime nowUTC() {
+        return ZonedDateTime.now(UTC_ZONE);
     }
 
     public static double round2(double value) {

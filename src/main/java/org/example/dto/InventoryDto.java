@@ -32,7 +32,24 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
     @Override
     protected InventoryPojo convertFormToEntity(InventoryForm form) {
         InventoryPojo pojo = new InventoryPojo();
-        pojo.setProductId(form.getProductId());
+        
+        // Handle product ID conversion
+        if (form.getProductId() != null) {
+            // If productId is provided directly, use it
+            pojo.setProductId(form.getProductId());
+        } else if (form.getBarcode() != null && !form.getBarcode().trim().isEmpty()) {
+            // If barcode is provided, convert it to productId
+                var product = productApi.getByBarcode(form.getBarcode().trim().toLowerCase());
+                if (product != null) {
+                    pojo.setProductId(product.getId());
+                } else {
+                    throw new ApiException("Product not found with barcode: " + form.getBarcode());
+                }
+
+        } else {
+            throw new ApiException("Either productId or barcode must be provided");
+        }
+        
         pojo.setQuantity(form.getQuantity());
         return pojo;
     }
@@ -70,8 +87,9 @@ public class InventoryDto extends AbstractDto<InventoryPojo, InventoryForm, Inve
         if (inventoryForm == null) {
             throw new ApiException("Inventory form cannot be null");
         }
-        if (inventoryForm.getProductId() == null || inventoryForm.getProductId() <= 0) {
-            throw new ApiException("Product ID is required and must be positive");
+        if ((inventoryForm.getProductId() == null || inventoryForm.getProductId() <= 0) && 
+            (inventoryForm.getBarcode() == null || inventoryForm.getBarcode().trim().isEmpty())) {
+            throw new ApiException("Either Product ID or Barcode is required");
         }
         if (inventoryForm.getQuantity() == null || inventoryForm.getQuantity() < 0) {
             throw new ApiException("Quantity must be non-negative");

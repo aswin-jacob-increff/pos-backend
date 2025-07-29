@@ -3,8 +3,9 @@ package org.example.model.data;
 import lombok.Getter;
 import lombok.Setter;
 import org.example.util.TimeUtil;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Setter
 @Getter
@@ -12,7 +13,8 @@ public class OrderItemData {
 
     private Integer id;
     private Integer orderId;
-    private LocalDateTime dateTime; // Always IST for frontend
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX", timezone = "Asia/Kolkata")
+    private ZonedDateTime dateTime; // Always IST for frontend
     private Integer productId;
     private String productName;
     private String barcode;

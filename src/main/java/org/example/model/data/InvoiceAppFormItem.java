@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class InvoiceItemData {
+public class InvoiceAppFormItem {
 
     private Integer id;
     private Integer productId;

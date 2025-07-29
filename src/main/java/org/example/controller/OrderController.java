@@ -29,14 +29,12 @@ public class OrderController {
     private OrderDto orderDto;
 
     @PostMapping("/add")
-    public OrderData add(@RequestBody OrderForm form, Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER ADD ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public OrderData add(@RequestBody OrderForm form) {
+
         
         try {
             // Set the user ID from the authenticated user
-            String userEmail = AuthHelper.getUserId(authentication);
+            String userEmail = AuthHelper.getUserId();
             form.setUserId(userEmail);
             
             return orderDto.add(form);
@@ -48,10 +46,8 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    public OrderData get(@PathVariable Integer id, Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER GET ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public OrderData get(@PathVariable Integer id) {
+
         
         try {
             return orderDto.get(id);
@@ -63,10 +59,8 @@ public class OrderController {
     }
 
     @GetMapping
-    public List<OrderData> getAll(Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER GET ALL ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public List<OrderData> getAll() {
+
         
         try {
             return orderDto.getAll();
@@ -82,12 +76,8 @@ public class OrderController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection,
-            Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER GET ALL PAGINATED ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("Page: " + page + ", Size: " + size + ", SortBy: " + sortBy + ", SortDirection: " + sortDirection);
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+
         
         try {
             PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
@@ -106,12 +96,8 @@ public class OrderController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection,
-            Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER GET BY USER ID PAGINATED ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("User ID: " + userId + ", Page: " + page + ", Size: " + size);
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+
         
         try {
             PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
@@ -131,12 +117,8 @@ public class OrderController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection,
-            Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER GET BY DATE RANGE PAGINATED ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("Start Date: " + startDate + ", End Date: " + endDate + ", Page: " + page + ", Size: " + size);
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+
         
         try {
             LocalDate start = LocalDate.parse(startDate);
@@ -155,10 +137,8 @@ public class OrderController {
     }
 
     @PutMapping("/{id}")
-    public OrderData update(@PathVariable Integer id, @RequestBody OrderForm form, Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER UPDATE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public OrderData update(@PathVariable Integer id, @RequestBody OrderForm form) {
+
         
         try {
             return orderDto.update(id, form);
@@ -172,10 +152,8 @@ public class OrderController {
 
 
     @GetMapping("/{id}/download-invoice")
-    public ResponseEntity<org.springframework.core.io.Resource> downloadInvoice(@PathVariable Integer id, Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER DOWNLOAD INVOICE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public ResponseEntity<org.springframework.core.io.Resource> downloadInvoice(@PathVariable Integer id) {
+
         
         try {
             org.springframework.core.io.Resource pdfResource = orderDto.downloadInvoice(id);
@@ -200,11 +178,8 @@ public class OrderController {
     @GetMapping("/by-date-range")
     public List<OrderData> getOrdersByDateRange(
             @RequestParam String startDate,
-            @RequestParam String endDate,
-            Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER BY DATE RANGE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+            @RequestParam String endDate) {
+
         
         try {
             LocalDate start = LocalDate.parse(startDate);
@@ -219,10 +194,8 @@ public class OrderController {
     }
 
     @GetMapping("/by-user")
-    public List<OrderData> getOrdersByUserId(@RequestParam String userId, Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER BY USER ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public List<OrderData> getOrdersByUserId(@RequestParam String userId) {
+
         
         try {
             return orderDto.getOrdersByUserId(userId);
@@ -238,12 +211,8 @@ public class OrderController {
     @GetMapping("/substring-id/{searchId}")
     public List<OrderData> findOrdersBySubstringId(
             @PathVariable String searchId,
-            @RequestParam(defaultValue = "10") Integer maxResults,
-            Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER SUBSTRING ID SEARCH ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("SearchId: " + searchId + ", MaxResults: " + maxResults);
+            @RequestParam(defaultValue = "10") Integer maxResults) {
+
         
         try {
             return orderDto.findOrdersBySubstringId(searchId, maxResults);
@@ -260,12 +229,8 @@ public class OrderController {
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDirection,
-            Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER SUBSTRING ID SEARCH PAGINATED ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
-        System.out.println("SearchId: " + searchId + ", Page: " + page + ", Size: " + size);
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+
         
         try {
             PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
@@ -284,10 +249,8 @@ public class OrderController {
      * Get order items for a specific order
      */
     @GetMapping("/{orderId}/items")
-    public List<OrderItemData> getOrderItems(@PathVariable Integer orderId, Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER ITEMS GET ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public List<OrderItemData> getOrderItems(@PathVariable Integer orderId) {
+
         
         try {
             return orderDto.getOrderItemsByOrderId(orderId);
@@ -304,11 +267,8 @@ public class OrderController {
     @PostMapping("/{orderId}/items")
     public OrderItemData addOrderItem(
             @PathVariable Integer orderId,
-            @RequestBody OrderItemForm orderItemForm,
-            Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER ITEM ADD ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+            @RequestBody OrderItemForm orderItemForm) {
+
         
         try {
             // Set the order ID from the path variable
@@ -327,11 +287,8 @@ public class OrderController {
     @PutMapping("/items/{itemId}")
     public OrderItemData updateOrderItem(
             @PathVariable Integer itemId,
-            @RequestBody OrderItemForm orderItemForm,
-            Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER ITEM UPDATE ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+            @RequestBody OrderItemForm orderItemForm) {
+
         
         try {
             return orderDto.updateOrderItem(itemId, orderItemForm);
@@ -346,10 +303,9 @@ public class OrderController {
      * Get a specific order item by ID
      */
     @GetMapping("/items/{itemId}")
-    public OrderItemData getOrderItem(@PathVariable Integer itemId, Authentication authentication) {
-        System.out.println("=== SUPERVISOR ORDER ITEM GET ENDPOINT ===");
-        System.out.println("Authentication: " + authentication);
-        System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+    public OrderItemData getOrderItem(@PathVariable Integer itemId) {
+
+
         
         try {
             return orderDto.getOrderItem(itemId);

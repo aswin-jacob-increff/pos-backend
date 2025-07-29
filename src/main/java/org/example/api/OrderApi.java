@@ -12,7 +12,7 @@ import org.example.model.form.PaginationRequest;
 import org.example.model.form.PaginationQuery;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -40,9 +40,58 @@ public class OrderApi extends AbstractApi<OrderPojo> {
         if (Objects.isNull(orderPojo)) {
             throw new ApiException("Order cannot be null");
         }
-        orderPojo.setDate(Objects.nonNull(orderPojo.getDate()) ? orderPojo.getDate() : Instant.now());
+        orderPojo.setDate(Objects.nonNull(orderPojo.getDate()) ? orderPojo.getDate() : ZonedDateTime.now());
         orderPojo.setStatus(OrderStatus.CREATED);
         dao.insert(orderPojo);
+    }
+
+    /**
+     * Add order item directly through OrderApi to maintain transaction boundary
+     */
+    public void addOrderItem(OrderItemPojo orderItemPojo) {
+        if (Objects.isNull(orderItemPojo)) {
+            throw new ApiException("Order item cannot be null");
+        }
+        if (Objects.isNull(orderItemPojo.getOrderId())) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        if (Objects.isNull(orderItemPojo.getProductId())) {
+            throw new ApiException("Product ID cannot be null");
+        }
+        orderItemDao.insert(orderItemPojo);
+    }
+
+    /**
+     * Update order item directly through OrderApi to maintain transaction boundary
+     */
+    public void updateOrderItem(Integer id, OrderItemPojo orderItemPojo) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("Order item ID cannot be null");
+        }
+        if (Objects.isNull(orderItemPojo)) {
+            throw new ApiException("Order item cannot be null");
+        }
+        orderItemDao.update(id, orderItemPojo);
+    }
+
+    /**
+     * Get order item by ID directly through OrderApi
+     */
+    public OrderItemPojo getOrderItem(Integer id) {
+        if (Objects.isNull(id)) {
+            throw new ApiException("Order item ID cannot be null");
+        }
+        return orderItemDao.select(id);
+    }
+
+    /**
+     * Get order items by order ID directly through OrderApi
+     */
+    public List<OrderItemPojo> getOrderItemsByOrderId(Integer orderId) {
+        if (Objects.isNull(orderId)) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        return orderItemDao.selectByOrderId(orderId);
     }
 
     public String generateInvoice(Integer orderId) throws Exception {

@@ -4,29 +4,23 @@ import org.example.flow.OrderFlow;
 import org.example.api.InvoiceApi;
 import org.example.api.ClientApi;
 import org.example.api.ProductApi;
-
-import org.example.dao.OrderItemDao;
-import org.example.model.data.OrderData;
+import org.example.api.OrderApi;
+import org.example.api.InvoiceClientApi;
+import org.example.model.data.*;
 import org.example.model.enums.OrderStatus;
 import org.example.model.form.OrderForm;
-import org.example.model.data.OrderItemData;
 import org.example.model.form.OrderItemForm;
-import org.example.model.data.InvoiceData;
-import org.example.model.data.InvoiceItemData;
+
 import org.example.pojo.OrderItemPojo;
 import org.example.pojo.OrderPojo;
 import org.example.pojo.ProductPojo;
 import org.example.pojo.ClientPojo;
 import org.example.pojo.InvoicePojo;
 import org.example.exception.ApiException;
-import org.example.util.TimeUtil;
 import org.example.util.Base64ToPdfUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
+
 import org.springframework.core.io.Resource;
 import jakarta.validation.Valid;
 import java.util.ArrayList;
@@ -34,10 +28,10 @@ import java.util.List;
 import java.util.Objects;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Collectors;
-import org.example.model.data.PaginationResponse;
+
 import org.example.model.form.PaginationRequest;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Component
 public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
@@ -49,18 +43,13 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     private ProductApi productApi;
 
     @Autowired
-    private RestTemplate restTemplate;
-
-    @Autowired
     private InvoiceApi invoiceApi;
-    
-    @Autowired
-    private OrderItemDao orderItemDao;
-    
+
     @Autowired
     private ClientApi clientApi;
 
-
+    @Autowired
+    private InvoiceClientApi invoiceClientApi;
 
     @Override
     protected String getEntityName() {
@@ -69,252 +58,77 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
 
     @Override
     protected OrderPojo convertFormToEntity(OrderForm orderForm) {
+
         OrderPojo orderPojo = new OrderPojo();
-        // Convert LocalDateTime (IST from frontend) to Instant (UTC) for DB storage
-        orderPojo.setDate(orderForm.getDate() != null ? TimeUtil.toUTC(orderForm.getDate()) : null);
+        orderPojo.setDate(orderForm.getDate());
         orderPojo.setTotal(0.0);
         orderPojo.setUserId(orderForm.getUserId());
-        // Note: Order items are now managed separately in the order creation process
-        // The order is created first, then items are added with orderId reference
+
         return orderPojo;
     }
 
     @Override
     protected OrderData convertEntityToData(OrderPojo orderPojo) {
+
         if (orderPojo == null) {
             throw new ApiException("Order cannot be null");
         }
         
         OrderData orderData = new OrderData();
         orderData.setId(orderPojo.getId());
-        // Convert UTC Instant from DB to IST LocalDateTime for frontend
-        orderData.setDate(TimeUtil.toIST(orderPojo.getDate()));
+        orderData.setDate(orderPojo.getDate());
         orderData.setTotal(orderPojo.getTotal());
         orderData.setStatus(orderPojo.getStatus());
         orderData.setUserId(orderPojo.getUserId());
-        
-        // Fetch order items for this order using internal method
-        try {
-            System.out.println("Fetching order items for order ID: " + orderPojo.getId());
-            List<OrderItemData> orderItems = getOrderItemsByOrderId(orderPojo.getId());
-            System.out.println("Found " + orderItems.size() + " order items for order " + orderPojo.getId());
-            orderData.setOrderItemDataList(orderItems);
-        } catch (Exception e) {
-            // If order items cannot be fetched, set empty list
-            System.out.println("Warning: Could not fetch order items for order " + orderPojo.getId() + ": " + e.getMessage());
-            e.printStackTrace();
-            orderData.setOrderItemDataList(new ArrayList<>());
-        }
+        List<OrderItemData> orderItems = getOrderItemsByOrderId(orderPojo.getId());
+        orderData.setOrderItemDataList(orderItems);
         
         return orderData;
     }
 
-    // Custom methods
-
     public Resource downloadInvoice(Integer orderId) {
-        if (orderId == null) {
-            throw new ApiException("Order ID cannot be null");
-        }
+
+        validate(orderId);
         OrderPojo orderPojo = api.get(orderId);
-        
-        try {
-            System.out.println("Starting invoice download for order: " + orderId);
-            System.out.println("Current order status: " + orderPojo.getStatus());
-            
-            // Clean up any duplicate invoices for this order
-            invoiceApi.cleanupDuplicateInvoices(orderId);
-            
-            // Check if invoice already exists in database
-            InvoicePojo existingInvoice = invoiceApi.getByOrderId(orderId);
-            if (existingInvoice != null) {
-                System.out.println("Invoice exists in database, checking file...");
-                // Invoice exists, try to get the file
-                try {
-                    return orderFlow.getInvoiceFile(orderId);
-                } catch (Exception e) {
-                    // File doesn't exist, regenerate it
-                    System.out.println("Invoice file not found, regenerating... Error: " + e.getMessage());
-                }
-            } else {
-                System.out.println("No invoice found in database, creating new one...");
-            }
-            
-            // Get order items for this order
-            List<OrderItemPojo> orderItems = orderItemDao.selectByOrderId(orderId);
-            
-            // Create InvoiceData object to send to invoice service
-            InvoiceData invoiceData = new InvoiceData();
-            invoiceData.setOrderId(orderPojo.getId());
-            invoiceData.setTotal(orderPojo.getTotal());
-            invoiceData.setTotalQuantity(orderItems.stream()
-                    .mapToInt(OrderItemPojo::getQuantity).sum());
-            invoiceData.setId(orderPojo.getId());
-            // Convert UTC Instant to IST String for invoice in dd/mm/yyyy hh:mm format
-            invoiceData.setDate(orderPojo.getDate() != null ? 
-                formatDateForInvoice(TimeUtil.toIST(orderPojo.getDate())) : null);
 
-            // Convert order items to invoice items
-            List<InvoiceItemData> invoiceItemDataList = new ArrayList<>();
-            for (OrderItemPojo itemPojo : orderItems) {
-                InvoiceItemData itemData = new InvoiceItemData();
-                itemData.setId(itemPojo.getId());
-                itemData.setProductId(itemPojo.getProductId());
-                
-                // Fetch product information using productId
-                String productName = "Unknown";
-                String productBarcode = "Unknown";
-                String clientName = "Unknown";
-                Integer clientId = null;
-                
-                try {
-                    ProductPojo product = productApi.get(itemPojo.getProductId());
-                    if (product != null) {
-                        productName = product.getName() != null ? product.getName() : "Unknown";
-                        productBarcode = product.getBarcode() != null ? product.getBarcode() : "Unknown";
-                        clientId = product.getClientId();
-                        
-                        // Fetch client information
-                        if (product.getClientId() != null && product.getClientId() > 0) {
-                            try {
-                                ClientPojo client = clientApi.get(product.getClientId());
-                                if (client != null) {
-                                    clientName = client.getClientName() != null ? client.getClientName() : "Unknown";
-                                }
-                            } catch (Exception e) {
-                                // Client not found, use "Unknown"
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    System.out.println("Warning: Could not find product for ID " + itemPojo.getProductId() + ", using default values");
-                }
-                
-                itemData.setProductName(productName);
-                itemData.setProductBarcode(productBarcode);
-                itemData.setClientId(clientId);
-                itemData.setClientName(clientName);
-                itemData.setPrice(itemPojo.getSellingPrice());
-                itemData.setQuantity(itemPojo.getQuantity());
-                itemData.setAmount(itemPojo.getAmount());
-                invoiceItemDataList.add(itemData);
-            }
-            invoiceData.setInvoiceItemPojoList(invoiceItemDataList);
-
-            System.out.println("Calling external invoice service...");
-            // Call invoice service
-            String invoiceAppUrl = "http://localhost:8081/api/invoice";
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Content-Type", "application/json");
-            HttpEntity<InvoiceData> entity = new HttpEntity<>(invoiceData, headers);
-
-            ResponseEntity<String> response;
-            try {
-                response = restTemplate.postForEntity(invoiceAppUrl, entity, String.class);
-                System.out.println("Invoice service response status: " + response.getStatusCode());
-            } catch (org.springframework.web.client.ResourceAccessException e) {
-                // Connection refused, timeout, or network issues
-                System.out.println("Network error calling invoice service: " + e.getMessage());
-                throw new ApiException("Invoice service is not available. Please try again later. Error: " + e.getMessage());
-            } catch (org.springframework.web.client.HttpClientErrorException e) {
-                // 4ors (client errors)
-                System.out.println("HTTP client error calling invoice service: " + e.getMessage());
-                throw new ApiException("Invoice service returned an error: " + e.getStatusCode() + " - " + e.getResponseBodyAsString());
-            } catch (org.springframework.web.client.HttpServerErrorException e) {
-                // 5ors (server errors)
-                System.out.println("HTTP server error calling invoice service: " + e.getMessage());
-                throw new ApiException("Invoice service is experiencing issues. Please try again later. Error: " + e.getStatusCode());
-            } catch (org.springframework.web.client.RestClientException e) {
-                // Other RestTemplate exceptions
-                System.out.println("RestTemplate error calling invoice service: " + e.getMessage());
-                throw new ApiException("Failed to communicate with invoice service: " + e.getMessage());
-            } catch (Exception e) {
-                // Any other unexpected exceptions
-                e.printStackTrace();
-                System.out.println("Unexpected error calling invoice service: " + e.getMessage());
-                throw new ApiException("Failed to connect to invoice service at " + invoiceAppUrl + ": " + e.getMessage());
-            }
-
-            if (response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                System.out.println("Invoice service call successful, saving PDF...");
-                // Save PDF file
-                String fileName = "order-" + orderId + ".pdf";
-                String savePath = "src/main/resources/invoice/" + fileName;
-                
-                try {
-                    Base64ToPdfUtil.saveBase64AsPdf(response.getBody(), savePath);
-                    System.out.println("PDF saved successfully to: " + savePath);
-                } catch (Exception e) {
-                    System.out.println("Error saving PDF: " + e.getMessage());
-                    throw new ApiException("Failed to save invoice PDF: " + e.getMessage());
-                }
-
-                System.out.println("Saving invoice to database...");
-                // Create and save invoice entity to database using InvoiceApi
-                InvoicePojo invoicePojo = new InvoicePojo();
-                invoicePojo.setOrderId(orderId);
-                invoicePojo.setFilePath("/invoice/" + fileName);
-                invoicePojo.setInvoiceId(orderId.toString());
-                invoiceApi.add(invoicePojo);
-                System.out.println("Invoice saved to database successfully");
-
-                System.out.println("Updating order status to INVOICED...");
-                // Update order status to INVOICED
-                orderFlow.updateStatus(orderId, OrderStatus.INVOICED);
-
-                // Convert base64 to PDF bytes for immediate return
-                byte[] pdfBytes = java.util.Base64.getDecoder().decode(response.getBody());
-                
-                // Create a resource from the byte array
-                return new org.springframework.core.io.ByteArrayResource(pdfBytes) {
-                    @Override
-                    public String getFilename() {
-                        return fileName;
-                    }
-                };
-            } else {
-                System.out.println("Invoice service returned error. Status: " + (response != null ? response.getStatusCode() : "null"));
-                throw new ApiException("Failed to fetch invoice from invoice service. Status: " + (response != null ? response.getStatusCode() : "null"));
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("Error in downloadInvoice: " + e.getMessage());
-            throw new ApiException("Failed to download invoice: " + e.getMessage());
+        InvoicePojo existingInvoice = invoiceApi.getByOrderId(orderId);
+        if (existingInvoice != null) {
+            return orderFlow.getInvoiceFile(orderId);
         }
+        
+        List<OrderItemPojo> orderItems = ((OrderApi) api).getOrderItemsByOrderId(orderId);
+        List<ProductPojo> products = new ArrayList<>();
+        List<ClientPojo> clients = new ArrayList<>();
+        
+        for (OrderItemPojo itemPojo : orderItems) {
+            ProductPojo product = productApi.get(itemPojo.getProductId());
+            products.add(product);
+            
+            if (product != null && product.getClientId() != null) {
+                ClientPojo client = clientApi.get(product.getClientId());
+                clients.add(client);
+            } else {
+                clients.add(null);
+            }
+        }
+        
+        InvoiceAppForm invoiceAppForm = invoiceFormSetter(orderPojo, orderItems, products, clients);
+        String base64Pdf = invoiceClientApi.generateInvoice(invoiceAppForm);
+        return saveInvoice(orderId, base64Pdf);
     }
 
     @Override
     public OrderData add(@Valid OrderForm form) {
-        if (Objects.isNull(form)) {
-            throw new ApiException("Order form cannot be null");
-        }
-        preprocess(form);
+        // Validate order form
+        validateOrderForm(form);
+        
+        // Convert form to entity
         OrderPojo orderPojo = convertFormToEntity(form);
         
-        // Create the order first
-        orderFlow.add(orderPojo);
+        // Pass to flow layer for complete order creation
+        OrderPojo createdOrder = orderFlow.createOrderWithItems(orderPojo, form.getOrderItemFormList());
         
-        // Now create the order items
-        if (form.getOrderItemFormList() != null && !form.getOrderItemFormList().isEmpty()) {
-            System.out.println("Creating " + form.getOrderItemFormList().size() + " order items for order " + orderPojo.getId());
-            
-            double totalAmount = 0.0;
-            for (OrderItemForm itemForm : form.getOrderItemFormList()) {
-                // Set the order ID for each item
-                itemForm.setOrderId(orderPojo.getId());
-                
-                            // Create order item using internal method - this will trigger preprocessing
-            OrderItemData orderItemData = addOrderItem(itemForm);
-                totalAmount += orderItemData.getAmount();
-            }
-            
-            // Update order total
-            orderPojo.setTotal(totalAmount);
-            orderFlow.update(orderPojo.getId(), orderPojo);
-            
-            System.out.println("Created order items successfully. Total amount: " + totalAmount);
-        }
-        
-        return convertEntityToData(orderPojo);
+        return convertEntityToData(createdOrder);
     }
 
     @Override
@@ -336,14 +150,6 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         return super.get(id);
     }
 
-
-    
-    /**
-     * Get orders within a date range
-     * @param startDate Start date (inclusive)
-     * @param endDate End date (inclusive)
-     * @return List of order data within the date range
-     */
     public List<OrderData> getOrdersByDateRange(LocalDate startDate, LocalDate endDate) {
         if (startDate == null || endDate == null) {
             throw new ApiException("Start date and end date cannot be null");
@@ -374,30 +180,10 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         return orderDataList;
     }
 
-    public List<OrderData> getOrdersByUserIdAndDateRange(String userId, LocalDate startDate, LocalDate endDate) {
-        if (userId == null || startDate == null || endDate == null) {
-            throw new ApiException("User ID, start date, and end date cannot be null");
-        }
-        if (endDate.isBefore(startDate)) {
-            throw new ApiException("End date cannot be before start date");
-        }
-        List<OrderPojo> allUserOrders = orderFlow.getOrdersByUserId(userId);
-        List<OrderData> filtered = new ArrayList<>();
-        for (OrderPojo order : allUserOrders) {
-            if (order.getDate() != null) {
-                LocalDate orderDateIST = TimeUtil.toIST(order.getDate()).toLocalDate();
-                if ((orderDateIST.isEqual(startDate) || orderDateIST.isAfter(startDate)) && orderDateIST.isBefore(endDate.plusDays(1))) {
-                    filtered.add(convertEntityToData(order));
-                }
-            }
-        }
-        return filtered;
-    }
-
     /**
      * Format date for invoice in "Date: dd/mm/yyyy. Time: hh:mm" format
      */
-    private String formatDateForInvoice(LocalDateTime dateTime) {
+    private String formatDateForInvoice(ZonedDateTime dateTime) {
         if (dateTime == null) {
             return null;
         }
@@ -413,11 +199,11 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
      */
     public PaginationResponse<OrderData> getOrdersByUserIdPaginated(String userId, PaginationRequest request) {
         PaginationResponse<OrderPojo> paginatedEntities = orderFlow.getByUserIdPaginated(userId, request);
-        
+
         List<OrderData> dataList = paginatedEntities.getContent().stream()
                 .map(this::convertEntityToData)
                 .collect(Collectors.toList());
-        
+
         return new PaginationResponse<>(
             dataList,
             paginatedEntities.getTotalElements(),
@@ -499,19 +285,6 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         );
     }
 
-    /**
-     * Count orders by ID substring.
-     * 
-     * @param searchId The ID substring to search for
-     * @return Number of orders containing the substring
-     */
-    public long countOrdersBySubstringId(String searchId) {
-        if (searchId == null || searchId.trim().isEmpty()) {
-            throw new ApiException("Search ID cannot be null or empty");
-        }
-        return orderFlow.countOrdersBySubstringId(searchId);
-    }
-
     // ========== ORDER ITEM MANAGEMENT METHODS ==========
 
     /**
@@ -525,7 +298,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
             throw new ApiException("Order ID must be positive");
         }
         System.out.println("OrderDto: Getting order items for order ID: " + orderId);
-        List<OrderItemPojo> orderItemPojoList = orderItemDao.selectByOrderId(orderId);
+        List<OrderItemPojo> orderItemPojoList = ((OrderApi) api).getOrderItemsByOrderId(orderId);
         System.out.println("OrderDto: Found " + orderItemPojoList.size() + " order item POJOs for order " + orderId);
         List<OrderItemData> orderItemDataList = new ArrayList<>();
         for (OrderItemPojo orderItemPojo : orderItemPojoList) {
@@ -569,13 +342,10 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         orderFlow.reduceInventoryForOrderItem(orderItemForm.getProductId(), orderItemForm.getQuantity());
 
         OrderItemPojo orderItemPojo = convertOrderItemFormToPojo(orderItemForm);
-        orderItemDao.insert(orderItemPojo);
+        ((OrderApi) api).addOrderItem(orderItemPojo);
         return convertOrderItemPojoToData(orderItemPojo);
     }
 
-    /**
-     * Update an order item
-     */
     public OrderItemData updateOrderItem(Integer id, OrderItemForm orderItemForm) {
         if (Objects.isNull(id)) {
             throw new ApiException("Order item ID cannot be null");
@@ -598,31 +368,24 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         );
         
         OrderItemPojo orderItemPojo = convertOrderItemFormToPojo(orderItemForm);
-        orderItemDao.update(id, orderItemPojo);
-        return convertOrderItemPojoToData(orderItemDao.select(id));
+        ((OrderApi) api).updateOrderItem(id, orderItemPojo);
+        return convertOrderItemPojoToData(((OrderApi) api).getOrderItem(id));
     }
 
-    /**
-     * Get a single order item by ID
-     */
     public OrderItemData getOrderItem(Integer id) {
         if (Objects.isNull(id)) {
             throw new ApiException("Order item ID cannot be null");
         }
-        OrderItemPojo orderItemPojo = orderItemDao.select(id);
+        OrderItemPojo orderItemPojo = ((OrderApi) api).getOrderItem(id);
         return convertOrderItemPojoToData(orderItemPojo);
     }
 
-    /**
-     * Convert OrderItemForm to OrderItemPojo
-     */
     private OrderItemPojo convertOrderItemFormToPojo(OrderItemForm orderItemForm) {
         OrderItemPojo orderItemPojo = new OrderItemPojo();
         orderItemPojo.setOrderId(orderItemForm.getOrderId());
         orderItemPojo.setProductId(orderItemForm.getProductId());
         orderItemPojo.setQuantity(orderItemForm.getQuantity());
         
-        // Get product details for pricing
         ProductPojo product = productApi.get(orderItemForm.getProductId());
         if (product == null) {
             throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
@@ -638,6 +401,7 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
      * Convert OrderItemPojo to OrderItemData
      */
     private OrderItemData convertOrderItemPojoToData(OrderItemPojo orderItemPojo) {
+
         OrderItemData orderItemData = new OrderItemData();
         orderItemData.setId(orderItemPojo.getId());
         orderItemData.setOrderId(orderItemPojo.getOrderId());
@@ -645,43 +409,132 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         orderItemData.setQuantity(orderItemPojo.getQuantity());
         orderItemData.setSellingPrice(orderItemPojo.getSellingPrice());
         orderItemData.setAmount(orderItemPojo.getAmount());
-        
-        // Fetch product information using productId
-        ProductPojo product = null;
-        try {
-            product = productApi.get(orderItemPojo.getProductId());
-        } catch (Exception e) {
-            // Product not found, continue with null values
-        }
-        
-        if (product != null) {
-            orderItemData.setBarcode(product.getBarcode());
-            orderItemData.setProductName(product.getName());
-            orderItemData.setImageUrl(product.getImageUrl());
-            orderItemData.setClientId(product.getClientId());
-            
-            // Fetch client information
-            if (product.getClientId() != null && product.getClientId() > 0) {
-                try {
-                    ClientPojo client = clientApi.get(product.getClientId());
-                    if (client != null) {
-                        orderItemData.setClientName(client.getClientName());
-                    }
-                } catch (Exception e) {
-                    // Client not found, continue with null
-                }
-            }
-        }
-        
-        // Get order date from the order
-        try {
-            OrderPojo order = api.get(orderItemPojo.getOrderId());
-            orderItemData.setDateTime(TimeUtil.toIST(order.getDate()));
-        } catch (Exception e) {
-            // If order not found, set to null
-            orderItemData.setDateTime(null);
-        }
+        ProductPojo product = productApi.get(orderItemPojo.getProductId());
+        orderItemData.setBarcode(product.getBarcode());
+        orderItemData.setProductName(product.getName());
+        orderItemData.setImageUrl(product.getImageUrl());
+        orderItemData.setClientId(product.getClientId());
+        ClientPojo client = clientApi.get(product.getClientId());
+        orderItemData.setClientName(client.getClientName());
+        OrderPojo order = api.get(orderItemPojo.getOrderId());
+        orderItemData.setDateTime(order.getDate());
         
         return orderItemData;
+    }
+
+    private InvoiceAppForm invoiceFormSetter(OrderPojo orderPojo,
+                                             List<OrderItemPojo> orderItems,
+                                             List<ProductPojo> products,
+                                             List<ClientPojo> clients) {
+        
+        InvoiceAppForm invoiceAppForm = new InvoiceAppForm();
+        invoiceAppForm.setOrderId(orderPojo.getId());
+        invoiceAppForm.setTotal(orderPojo.getTotal());
+        invoiceAppForm.setTotalQuantity(orderItems.stream()
+                .mapToInt(OrderItemPojo::getQuantity).sum());
+        invoiceAppForm.setId(orderPojo.getId());
+        invoiceAppForm.setDate(formatDateForInvoice(orderPojo.getDate()));
+        List<InvoiceAppFormItem> invoiceAppFormItemList = new ArrayList<>();
+        for (int i = 0; i < orderItems.size(); i++) {
+            OrderItemPojo itemPojo = orderItems.get(i);
+            ProductPojo product = products.get(i);
+            ClientPojo client = clients.get(i);
+            invoiceAppFormItemList.add(invoiceAppFormItemSetter(itemPojo, product, client));
+        }
+        invoiceAppForm.setInvoiceItemPojoList(invoiceAppFormItemList);
+        return invoiceAppForm;
+    }
+
+    private static InvoiceAppFormItem invoiceAppFormItemSetter(OrderItemPojo itemPojo,
+                                                               ProductPojo product,
+                                                               ClientPojo client) {
+
+        InvoiceAppFormItem itemData = new InvoiceAppFormItem();
+        itemData.setId(itemPojo.getId());
+        itemData.setProductId(itemPojo.getProductId());
+        itemData.setProductName(product.getName());
+        itemData.setProductBarcode(product.getBarcode());
+        itemData.setClientId(product.getClientId());
+        itemData.setClientName(client.getClientName());
+        itemData.setPrice(itemPojo.getSellingPrice());
+        itemData.setQuantity(itemPojo.getQuantity());
+        itemData.setAmount(itemPojo.getAmount());
+        return itemData;
+    }
+
+    private Resource saveInvoice (Integer orderId, String base64Pdf) {
+
+        String fileName = "order-" + orderId + ".pdf";
+        String savePath = "src/main/resources/invoice/" + fileName;
+
+        try {
+            Base64ToPdfUtil.saveBase64AsPdf(base64Pdf, savePath);
+        } catch (Exception e) {
+            throw new ApiException("Failed to save invoice PDF: " + e.getMessage());
+        }
+
+        InvoicePojo invoicePojo = new InvoicePojo();
+        invoicePojo.setOrderId(orderId);
+        invoicePojo.setFilePath("/invoice/" + fileName);
+        invoicePojo.setInvoiceId(orderId.toString());
+        invoiceApi.add(invoicePojo);
+
+        orderFlow.updateStatus(orderId, OrderStatus.INVOICED);
+
+        byte[] pdfBytes = java.util.Base64.getDecoder().decode(base64Pdf);
+
+        return new org.springframework.core.io.ByteArrayResource(pdfBytes) {
+            @Override
+            public String getFilename() {
+                return fileName;
+            }
+        };
+    }
+
+    private void validateOrderForm(OrderForm form) {
+        if (Objects.isNull(form)) {
+            throw new ApiException("Order form cannot be null");
+        }
+        
+        if (Objects.isNull(form.getUserId()) || form.getUserId().trim().isEmpty()) {
+            throw new ApiException("User ID cannot be null or empty");
+        }
+        
+        if (Objects.isNull(form.getOrderItemFormList()) || form.getOrderItemFormList().isEmpty()) {
+            throw new ApiException("Order must contain at least one item");
+        }
+        
+        // Validate each order item
+        for (OrderItemForm itemForm : form.getOrderItemFormList()) {
+            validateOrderItemForm(itemForm);
+        }
+    }
+    
+    private void validateOrderItemForm(OrderItemForm itemForm) {
+        if (Objects.isNull(itemForm)) {
+            throw new ApiException("Order item form cannot be null");
+        }
+        
+        if (Objects.isNull(itemForm.getProductId())) {
+            throw new ApiException("Product ID is required for all order items");
+        }
+        
+        if (Objects.isNull(itemForm.getQuantity()) || itemForm.getQuantity() <= 0) {
+            throw new ApiException("Quantity must be positive for all order items");
+        }
+        
+        if (Objects.isNull(itemForm.getSellingPrice()) || itemForm.getSellingPrice() <= 0) {
+            throw new ApiException("Selling price must be positive for all order items");
+        }
+    }
+
+    private void validate (Integer orderId) {
+        if (orderId == null) {
+            throw new ApiException("Order ID cannot be null");
+        }
+        OrderPojo orderPojo = api.get(orderId);
+        if (orderPojo == null) {
+            throw new ApiException("Order not found with ID: " + orderId);
+        }
     }
 }
