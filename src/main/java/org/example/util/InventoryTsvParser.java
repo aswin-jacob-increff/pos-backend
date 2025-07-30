@@ -166,16 +166,14 @@ public class InventoryTsvParser {
      * @return TsvUploadResult containing parsed forms and any errors/warnings
      */
     public static TsvUploadResult parseWithCompleteValidation(InputStream inputStream, org.example.api.ProductApi productApi) {
-        System.out.println("InventoryTsvParser.parseWithCompleteValidation - Starting");
+
         TsvUploadResult result = new TsvUploadResult();
         List<InventoryForm> validInventoryForms = new ArrayList<>();
         Set<String> seenBarcodes = new HashSet<>();
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             String header = reader.readLine(); // Expecting: barcode<TAB>quantity
-            System.out.println("InventoryTsvParser.parseWithCompleteValidation - Header: " + header);
             if (header == null || !header.toLowerCase().contains("barcode") || !header.toLowerCase().contains("quantity")) {
-                System.out.println("InventoryTsvParser.parseWithCompleteValidation - Invalid header");
                 result.addError("Missing or invalid header: Expected 'barcode<TAB>quantity'");
                 return result;
             }
@@ -202,11 +200,8 @@ public class InventoryTsvParser {
                 try {
                     String barcode = cols[0].trim().toLowerCase();
                     
-                    System.out.println("InventoryTsvParser.parseWithCompleteValidation - Processing barcode: " + barcode);
-                    
                     // Check for duplicates within the file
                     if (seenBarcodes.contains(barcode)) {
-                        System.out.println("InventoryTsvParser.parseWithCompleteValidation - Duplicate barcode found in file: " + barcode);
                         result.addError("Row " + rowNum + ": Duplicate barcode '" + barcode + "' found in file");
                         result.incrementFailed();
                         rowNum++;
@@ -217,14 +212,12 @@ public class InventoryTsvParser {
                     try {
                         org.example.pojo.ProductPojo existingProduct = productApi.getByBarcode(barcode);
                         if (existingProduct == null) {
-                            System.out.println("InventoryTsvParser.parseWithCompleteValidation - Product not found: " + barcode);
                             result.addError("Row " + rowNum + ": Product with barcode '" + barcode + "' not found");
                             result.incrementFailed();
                             rowNum++;
                             continue;
                         }
                     } catch (Exception e) {
-                        System.out.println("InventoryTsvParser.parseWithCompleteValidation - Error checking product '" + barcode + "': " + e.getMessage());
                         result.addError("Row " + rowNum + ": Error validating product '" + barcode + "': " + e.getMessage());
                         result.incrementFailed();
                         rowNum++;
@@ -233,7 +226,6 @@ public class InventoryTsvParser {
                     
                     Integer quantity = Integer.parseInt(cols[1].trim());
                     if (quantity < 0) {
-                        System.out.println("InventoryTsvParser.parseWithCompleteValidation - Negative quantity in row " + rowNum + ": " + quantity);
                         result.addError("Row " + rowNum + ": Quantity cannot be negative: " + quantity);
                         result.incrementFailed();
                         rowNum++;
@@ -246,28 +238,23 @@ public class InventoryTsvParser {
                     validInventoryForms.add(form);
                     seenBarcodes.add(barcode);
                     result.incrementSuccessful();
-                    System.out.println("InventoryTsvParser.parseWithCompleteValidation - Successfully validated inventory: " + barcode);
                     
                 } catch (NumberFormatException e) {
-                    System.out.println("InventoryTsvParser.parseWithCompleteValidation - Invalid quantity value in row " + rowNum + ": " + cols[1].trim());
                     result.addError("Row " + rowNum + ": Invalid quantity value '" + cols[1].trim() + "'. Must be a valid integer");
                     result.incrementFailed();
                 } catch (Exception e) {
-                    System.out.println("InventoryTsvParser.parseWithCompleteValidation - Error processing row " + rowNum + ": " + e.getMessage());
-                    e.printStackTrace();
                     result.addError("Row " + rowNum + ": " + e.getMessage());
                     result.incrementFailed();
                 }
                 rowNum++;
             }
         } catch (Exception e) {
-            System.out.println("InventoryTsvParser.parseWithCompleteValidation - File reading error: " + e.getMessage());
             result.addError("File reading error: " + e.getMessage());
         }
         
         // Store the valid forms in the result for later use
         result.setParsedForms(validInventoryForms);
-        System.out.println("InventoryTsvParser.parseWithCompleteValidation - Completed. Total: " + result.getTotalRows() + ", Successful: " + result.getSuccessfulRows() + ", Failed: " + result.getFailedRows());
+
         return result;
     }
 }

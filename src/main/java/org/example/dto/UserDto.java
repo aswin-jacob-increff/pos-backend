@@ -51,17 +51,12 @@ public class UserDto {
         
         // Check if email is in supervisors list
         String normalizedEmail = form.getEmail().toLowerCase().trim();
-        System.out.println("UserDto: Checking role for email: " + normalizedEmail);
-        System.out.println("UserDto: Supervisor email from config: " + supervisorEmail);
-        System.out.println("UserDto: Supervisor email from constants: " + org.example.model.constants.Supervisors.ADMIN);
         
         if (normalizedEmail.equals(supervisorEmail.toLowerCase().trim()) || 
             normalizedEmail.equals(org.example.model.constants.Supervisors.ADMIN.toLowerCase().trim())) {
             pojo.setRole(Role.SUPERVISOR);
-            System.out.println("UserDto: Setting role to SUPERVISOR for email: " + normalizedEmail);
         } else {
             pojo.setRole(Role.USER);
-            System.out.println("UserDto: Setting role to USER for email: " + normalizedEmail);
         }
         
         return pojo;

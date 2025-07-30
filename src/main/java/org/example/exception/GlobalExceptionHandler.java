@@ -37,13 +37,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(MultipartException.class)
     public ResponseEntity<ApiError> handleMultipartException(MultipartException ex, HttpServletRequest request) {
-        System.out.println("=== MULTIPART EXCEPTION CAUGHT ===");
-        System.out.println("Request URI: " + request.getRequestURI());
-        System.out.println("Request method: " + request.getMethod());
-        System.out.println("Content type: " + request.getContentType());
-        System.out.println("Exception message: " + ex.getMessage());
-        ex.printStackTrace();
-        
         ApiError error = new ApiError(
             HttpStatus.BAD_REQUEST.value(),
             "Failed to parse multipart request: " + ex.getMessage(),
@@ -54,13 +47,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGenericException(Exception ex, HttpServletRequest request) {
-        System.out.println("=== GENERIC EXCEPTION CAUGHT ===");
-        System.out.println("Request URI: " + request.getRequestURI());
-        System.out.println("Request method: " + request.getMethod());
-        System.out.println("Exception type: " + ex.getClass().getSimpleName());
-        System.out.println("Exception message: " + ex.getMessage());
-        ex.printStackTrace();
-        
         ApiError error = new ApiError(
             HttpStatus.INTERNAL_SERVER_ERROR.value(),
             "An unexpected error occurred: " + ex.getMessage(),

@@ -14,6 +14,7 @@ import org.example.exception.ApiException;
 import org.example.api.ProductApi;
 import org.example.api.ClientApi;
 import org.example.api.InvoiceApi;
+import org.example.api.InventoryApi;
 import org.example.api.OrderApi;
 import org.example.dao.OrderItemDao;
 import org.example.model.data.PaginationResponse;
@@ -52,9 +53,8 @@ class OrderDtoTest {
     @Mock
     private InvoiceApi invoiceApi;
 
-
-
-
+    @Mock
+    private InventoryApi inventoryApi;
 
     @Mock
     private OrderApi orderApi;
@@ -128,7 +128,10 @@ class OrderDtoTest {
         invoiceApiField.setAccessible(true);
         invoiceApiField.set(orderDto, invoiceApi);
 
-
+        // Inject the inventoryApi field
+        Field inventoryApiField = orderDto.getClass().getDeclaredField("inventoryApi");
+        inventoryApiField.setAccessible(true);
+        inventoryApiField.set(orderDto, inventoryApi);
 
         // Inject the InvoiceClientApi field
         Field invoiceClientApiField = orderDto.getClass().getDeclaredField("invoiceClientApi");
@@ -153,6 +156,7 @@ class OrderDtoTest {
         createdOrder.setUserId("testuser@example.com");
         createdOrder.setStatus(OrderStatus.CREATED);
         
+        when(productApi.get(1)).thenReturn(testProduct);
         when(orderFlow.createOrderWithItems(any(OrderPojo.class), anyList())).thenReturn(createdOrder);
 
         // Act
@@ -162,7 +166,7 @@ class OrderDtoTest {
         assertNotNull(result);
         assertEquals(createdOrder.getId(), result.getId());
         assertEquals(createdOrder.getUserId(), result.getUserId());
-        verify(orderFlow).createOrderWithItems(any(OrderPojo.class), eq(Arrays.asList(testOrderItemForm)));
+        verify(orderFlow).createOrderWithItems(any(OrderPojo.class), any(List.class));
     }
 
     @Test
@@ -472,144 +476,7 @@ class OrderDtoTest {
         verify(orderApi, never()).getOrderItemsByOrderId(any());
     }
 
-    @Test
-    void testAddOrderItem_Success() {
-        // Arrange
-        OrderItemPojo orderItemPojo = new OrderItemPojo();
-        orderItemPojo.setId(1);
-        orderItemPojo.setOrderId(1);
-        orderItemPojo.setProductId(1);
-        orderItemPojo.setQuantity(2);
-        orderItemPojo.setSellingPrice(50.0);
-        orderItemPojo.setAmount(100.0);
-        
-        when(productApi.get(1)).thenReturn(testProduct);
-        doNothing().when(orderFlow).reduceInventoryForOrderItem(1, 2);
-        doNothing().when(orderApi).addOrderItem(any(OrderItemPojo.class));
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
-        when(orderApi.get(1)).thenReturn(testOrder);
 
-        // Act
-        OrderItemData result = orderDto.addOrderItem(testOrderItemForm);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(testOrderItemForm.getProductId(), result.getProductId());
-        verify(productApi, times(3)).get(1);
-        verify(orderFlow).reduceInventoryForOrderItem(1, 2);
-        verify(orderApi).addOrderItem(any(OrderItemPojo.class));
-    }
-
-    @Test
-    void testAddOrderItem_NullForm() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderDto.addOrderItem(null));
-        verify(productApi, never()).get(any());
-        verify(orderFlow, never()).reduceInventoryForOrderItem(any(), any());
-        verify(orderApi, never()).addOrderItem(any());
-    }
-
-    @Test
-    void testAddOrderItem_NullOrderId() {
-        // Arrange
-        testOrderItemForm.setOrderId(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderDto.addOrderItem(testOrderItemForm));
-        verify(productApi, never()).get(any());
-        verify(orderFlow, never()).reduceInventoryForOrderItem(any(), any());
-        verify(orderApi, never()).addOrderItem(any());
-    }
-
-    @Test
-    void testAddOrderItem_NullProductId() {
-        // Arrange
-        testOrderItemForm.setProductId(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderDto.addOrderItem(testOrderItemForm));
-        verify(productApi, never()).get(any());
-        verify(orderFlow, never()).reduceInventoryForOrderItem(any(), any());
-        verify(orderApi, never()).addOrderItem(any());
-    }
-
-    @Test
-    void testAddOrderItem_ProductNotFound() {
-        // Arrange
-        when(productApi.get(1)).thenThrow(new ApiException("Product not found"));
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderDto.addOrderItem(testOrderItemForm));
-        verify(productApi).get(1);
-        verify(orderFlow, never()).reduceInventoryForOrderItem(any(), any());
-        verify(orderApi, never()).addOrderItem(any());
-    }
-
-    @Test
-    void testUpdateOrderItem_Success() {
-        // Arrange
-        OrderItemPojo existingItem = new OrderItemPojo();
-        existingItem.setId(1);
-        existingItem.setProductId(1);
-        existingItem.setQuantity(1);
-        
-        OrderItemPojo updatedItem = new OrderItemPojo();
-        updatedItem.setId(1);
-        updatedItem.setOrderId(1);
-        updatedItem.setProductId(1);
-        updatedItem.setQuantity(3);
-        updatedItem.setSellingPrice(50.0);
-        updatedItem.setAmount(150.0);
-        
-        when(orderFlow.getOrderItem(1)).thenReturn(existingItem);
-        doNothing().when(orderFlow).adjustInventoryForOrderItemUpdate(1, 1, 2);
-        doNothing().when(orderApi).updateOrderItem(eq(1), any(OrderItemPojo.class));
-        when(orderApi.getOrderItem(1)).thenReturn(updatedItem);
-        when(productApi.get(1)).thenReturn(testProduct);
-        when(clientApi.get(1)).thenReturn(testClient);
-        when(orderApi.get(1)).thenReturn(testOrder);
-
-        // Act
-        OrderItemData result = orderDto.updateOrderItem(1, testOrderItemForm);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(updatedItem.getId(), result.getId());
-        verify(orderFlow).getOrderItem(1);
-        verify(orderFlow).adjustInventoryForOrderItemUpdate(1, 1, 2);
-        verify(orderApi).updateOrderItem(eq(1), any(OrderItemPojo.class));
-    }
-
-    @Test
-    void testUpdateOrderItem_NullId() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderDto.updateOrderItem(null, testOrderItemForm));
-        verify(orderFlow, never()).getOrderItem(any());
-        verify(orderFlow, never()).adjustInventoryForOrderItemUpdate(any(), any(), any());
-        verify(orderApi, never()).updateOrderItem(any(), any());
-    }
-
-    @Test
-    void testUpdateOrderItem_NullForm() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderDto.updateOrderItem(1, null));
-        verify(orderFlow, never()).getOrderItem(any());
-        verify(orderFlow, never()).adjustInventoryForOrderItemUpdate(any(), any(), any());
-        verify(orderApi, never()).updateOrderItem(any(), any());
-    }
-
-    @Test
-    void testUpdateOrderItem_OrderItemNotFound() {
-        // Arrange
-        when(orderFlow.getOrderItem(1)).thenReturn(null);
-
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderDto.updateOrderItem(1, testOrderItemForm));
-        verify(orderFlow).getOrderItem(1);
-        verify(orderFlow, never()).adjustInventoryForOrderItemUpdate(any(), any(), any());
-        verify(orderApi, never()).updateOrderItem(any(), any());
-    }
 
     @Test
     void testGetOrderItem_Success() {

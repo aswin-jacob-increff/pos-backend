@@ -30,7 +30,7 @@ public class DaySalesScheduler {
     public void calculateDaySales() {
         // Calculate for the current day in IST
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
-        System.out.println("Scheduled day sales calculation triggered at 11:59 PM IST for date: " + today);
+
         calculateDaySalesForDate(today);
     }
 
@@ -40,25 +40,21 @@ public class DaySalesScheduler {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
         LocalDate yesterday = today.minusDays(1);
         
-        System.out.println("DaySalesScheduler startup: Today is " + today + ", processing up to " + yesterday);
+
         
         LocalDate lastCalculated = daySalesRepo.findLatestDate();
         if (lastCalculated == null) {
             lastCalculated = orderDao.findEarliestOrderDate();
             if (lastCalculated == null) {
-                System.out.println("No orders found in database, skipping day sales backfill");
                 return;
             }
         }
         
         LocalDate date = lastCalculated.plusDays(1);
         while (!date.isAfter(yesterday)) {
-            System.out.println("Backfilling day sales for date: " + date);
             calculateDaySalesForDate(date);
             date = date.plusDays(1);
         }
-        
-        System.out.println("DaySalesScheduler startup: Backfill completed");
     }
 
     // Helper to calculate day sales for a specific date
@@ -102,10 +98,6 @@ public class DaySalesScheduler {
         
         try {
             daySalesRepo.saveOrUpdate(daySales);
-            System.out.println("Day sales upserted for date: " + date + 
-                              " (Revenue: " + totalRevenue + 
-                              ", Orders: " + ordersCount + 
-                              ", Items: " + itemsCount + ")");
         } catch (Exception e) {
             System.err.println("Error upserting day sales for date " + date + ": " + e.getMessage());
             e.printStackTrace();

@@ -1,6 +1,7 @@
 package org.example.flow;
 
 import org.example.model.enums.OrderStatus;
+import org.example.model.form.OrderItemForm;
 import org.example.pojo.OrderPojo;
 import org.example.pojo.OrderItemPojo;
 import org.example.api.OrderApi;
@@ -54,18 +55,6 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
 
         api.add(orderPojo);
         return orderPojo;
-    }
-
-    @Override
-    @Transactional
-    public void update(Integer id, OrderPojo entity) {
-        if (id == null) {
-            throw new ApiException("ID cannot be null");
-        }
-        if (entity == null) {
-            throw new ApiException("Entity cannot be null");
-        }
-        api.update(id, entity);
     }
 
     public OrderPojo get(Integer id) {
@@ -154,62 +143,6 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
 
     // ========== INVENTORY MANAGEMENT METHODS ==========
 
-    public void reduceInventoryForOrderItem(Integer productId, Integer quantity) {
-        if (productId == null) {
-            throw new ApiException("Product ID cannot be null");
-        }
-        if (quantity == null || quantity <= 0) {
-            throw new ApiException("Quantity must be positive");
-        }
-
-        try {
-            System.out.println("OrderFlow: Reducing inventory for product ID: " + productId + 
-                              ", quantity: " + quantity);
-            inventoryApi.removeStock(productId, quantity);
-            System.out.println("OrderFlow: Successfully reduced inventory for product ID: " + productId);
-        } catch (Exception e) {
-            System.out.println("OrderFlow: Failed to reduce inventory for product ID: " + productId + 
-                              ", error: " + e.getMessage());
-            throw new ApiException("Failed to reduce inventory: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Adjust inventory when updating an order item
-     */
-    public void adjustInventoryForOrderItemUpdate(Integer productId, Integer oldQuantity, Integer newQuantity) {
-        if (productId == null) {
-            throw new ApiException("Product ID cannot be null");
-        }
-        if (oldQuantity == null || newQuantity == null) {
-            throw new ApiException("Old and new quantities cannot be null");
-        }
-
-        int quantityDifference = newQuantity - oldQuantity;
-        
-        if (quantityDifference != 0) {
-            try {
-                if (quantityDifference > 0) {
-                    // Quantity increased, reduce inventory
-                    System.out.println("OrderFlow: Updating order item - reducing inventory for product ID: " + 
-                                      productId + ", additional quantity: " + quantityDifference);
-                    inventoryApi.removeStock(productId, quantityDifference);
-                } else {
-                    // Quantity decreased, add back inventory
-                    int quantityToAdd = Math.abs(quantityDifference);
-                    System.out.println("OrderFlow: Updating order item - adding back inventory for product ID: " + 
-                                      productId + ", quantity to add: " + quantityToAdd);
-                    inventoryApi.addStock(productId, quantityToAdd);
-                }
-                System.out.println("OrderFlow: Successfully adjusted inventory for product ID: " + productId);
-            } catch (Exception e) {
-                System.out.println("OrderFlow: Failed to adjust inventory for product ID: " + productId + 
-                                  ", error: " + e.getMessage());
-                throw new ApiException("Failed to adjust inventory: " + e.getMessage());
-            }
-        }
-    }
-
     public OrderItemPojo getOrderItem(Integer orderItemId) {
         if (orderItemId == null) {
             throw new ApiException("Order item ID cannot be null");
@@ -217,51 +150,65 @@ public class OrderFlow extends AbstractFlow<OrderPojo> {
         return orderItemDao.select(orderItemId);
     }
 
-    public OrderPojo createOrderWithItems(OrderPojo orderPojo, List<org.example.model.form.OrderItemForm> orderItemFormList) {
+    @Transactional
+    public OrderPojo createOrderWithItems(OrderPojo orderPojo, List<OrderItemPojo> orderItemPojoList) {
+        // Step 1: Check for empty order
         if (Objects.isNull(orderPojo)) {
             throw new ApiException("Order cannot be null");
         }
-        if (Objects.isNull(orderItemFormList) || orderItemFormList.isEmpty()) {
+        if (Objects.isNull(orderItemPojoList) || orderItemPojoList.isEmpty()) {
             throw new ApiException("Order must contain at least one item");
         }
 
-        // Add the order first
+        // Step 2: Check inventory constraints for all items before creating anything
+        for (OrderItemPojo orderItemPojo : orderItemPojoList) {
+            Integer productId = orderItemPojo.getProductId();
+            Integer quantity = orderItemPojo.getQuantity();
+            
+            if (productId == null) {
+                throw new ApiException("Product ID cannot be null");
+            }
+            if (quantity == null || quantity <= 0) {
+                throw new ApiException("Quantity must be positive");
+            }
+
+            // Validate inventory availability without modifying it
+            inventoryApi.checkInventoryAvailability(productId, quantity);
+        }
+
+        // Step 3: All checks passed, now create the order
         api.add(orderPojo);
         
         double totalAmount = 0.0;
         
-        // Create order items and reduce inventory
-        for (org.example.model.form.OrderItemForm itemForm : orderItemFormList) {
+        // Step 4: Create order items and reduce inventory
+        for (OrderItemPojo orderItemPojo : orderItemPojoList) {
             // Set the order ID for each item
-            itemForm.setOrderId(orderPojo.getId());
-            
-            // Convert form to pojo
-            OrderItemPojo orderItemPojo = convertOrderItemFormToPojo(itemForm);
+            orderItemPojo.setOrderId(orderPojo.getId());
             
             // Add order item through API
             api.addOrderItem(orderItemPojo);
             
-            // Reduce inventory
-            reduceInventoryForOrderItem(itemForm.getProductId(), itemForm.getQuantity());
+            // Reduce inventory (this should succeed since we already validated)
+            Integer productId = orderItemPojo.getProductId();
+            Integer quantity = orderItemPojo.getQuantity();
+            
+            try {
+                inventoryApi.removeStock(productId, quantity);
+            } catch (Exception e) {
+                throw new ApiException("Failed to reduce inventory: " + e.getMessage());
+            }
             
             // Calculate total
             totalAmount += orderItemPojo.getAmount();
         }
         
-        // Update order total
+        // Step 5: Update order total
         orderPojo.setTotal(totalAmount);
         api.update(orderPojo.getId(), orderPojo);
         
         return orderPojo;
     }
 
-    private OrderItemPojo convertOrderItemFormToPojo(org.example.model.form.OrderItemForm itemForm) {
-        OrderItemPojo orderItemPojo = new OrderItemPojo();
-        orderItemPojo.setOrderId(itemForm.getOrderId());
-        orderItemPojo.setProductId(itemForm.getProductId());
-        orderItemPojo.setQuantity(itemForm.getQuantity());
-        orderItemPojo.setSellingPrice(itemForm.getSellingPrice());
-        orderItemPojo.setAmount(itemForm.getSellingPrice() * itemForm.getQuantity());
-        return orderItemPojo;
-    }
+
 }

@@ -5,6 +5,7 @@ import org.example.api.InvoiceApi;
 import org.example.api.ClientApi;
 import org.example.api.ProductApi;
 import org.example.api.OrderApi;
+import org.example.api.InventoryApi;
 import org.example.api.InvoiceClientApi;
 import org.example.model.data.*;
 import org.example.model.enums.OrderStatus;
@@ -43,6 +44,9 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
     private ProductApi productApi;
 
     @Autowired
+    private InventoryApi inventoryApi;
+
+    @Autowired
     private InvoiceApi invoiceApi;
 
     @Autowired
@@ -58,6 +62,9 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
 
     @Override
     protected OrderPojo convertFormToEntity(OrderForm orderForm) {
+        if (orderForm == null) {
+            throw new ApiException("Order form cannot be null");
+        }
 
         OrderPojo orderPojo = new OrderPojo();
         orderPojo.setDate(orderForm.getDate());
@@ -125,21 +132,13 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         // Convert form to entity
         OrderPojo orderPojo = convertFormToEntity(form);
         
+        // Convert order item forms to pojos
+        List<OrderItemPojo> orderItemPojos = convertOrderItemFormsToPojos(form.getOrderItemFormList());
+        
         // Pass to flow layer for complete order creation
-        OrderPojo createdOrder = orderFlow.createOrderWithItems(orderPojo, form.getOrderItemFormList());
+        OrderPojo createdOrder = orderFlow.createOrderWithItems(orderPojo, orderItemPojos);
         
         return convertEntityToData(createdOrder);
-    }
-
-    @Override
-    public OrderData update(Integer id, @Valid OrderForm form) {
-        if (Objects.isNull(id)) {
-            throw new ApiException("Order ID cannot be null");
-        }
-        if (Objects.isNull(form)) {
-            throw new ApiException("Order form cannot be null");
-        }
-        return super.update(id, form);
     }
 
     @Override
@@ -180,9 +179,6 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         return orderDataList;
     }
 
-    /**
-     * Format date for invoice in "Date: dd/mm/yyyy. Time: hh:mm" format
-     */
     private String formatDateForInvoice(ZonedDateTime dateTime) {
         if (dateTime == null) {
             return null;
@@ -190,13 +186,6 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         return dateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
     }
 
-    // ========== PAGINATION METHODS ==========
-
-
-
-    /**
-     * Get orders by user ID with pagination support.
-     */
     public PaginationResponse<OrderData> getOrdersByUserIdPaginated(String userId, PaginationRequest request) {
         PaginationResponse<OrderPojo> paginatedEntities = orderFlow.getByUserIdPaginated(userId, request);
 
@@ -212,9 +201,6 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         );
     }
 
-    /**
-     * Get orders by date range with pagination support.
-     */
     public PaginationResponse<OrderData> getOrdersByDateRangePaginated(LocalDate startDate, LocalDate endDate, PaginationRequest request) {
         PaginationResponse<OrderPojo> paginatedEntities = orderFlow.getByDateRangePaginated(startDate, endDate, request);
         
@@ -230,16 +216,6 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         );
     }
 
-    // ========== SUBSTRING SEARCH METHODS ==========
-
-    /**
-     * Find orders by ID substring matching.
-     * This allows finding orders where the search term appears exactly as a substring in the order ID.
-     * 
-     * @param searchId The ID substring to search for
-     * @param maxResults Maximum number of results to return
-     * @return List of orders where the search term appears as a substring in the ID
-     */
     public List<OrderData> findOrdersBySubstringId(String searchId, int maxResults) {
         if (searchId == null || searchId.trim().isEmpty()) {
             throw new ApiException("Search ID cannot be null or empty");
@@ -254,13 +230,6 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Find orders by ID substring with pagination support.
-     * 
-     * @param searchId The ID substring to search for
-     * @param request Pagination request
-     * @return Paginated response with orders containing the substring
-     */
     public PaginationResponse<OrderData> findOrdersBySubstringIdPaginated(
             String searchId, 
             PaginationRequest request) {
@@ -285,11 +254,6 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         );
     }
 
-    // ========== ORDER ITEM MANAGEMENT METHODS ==========
-
-    /**
-     * Get order items for a specific order
-     */
     public List<OrderItemData> getOrderItemsByOrderId(Integer orderId) {
         if (Objects.isNull(orderId)) {
             throw new ApiException("Order ID cannot be null");
@@ -297,79 +261,12 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         if (orderId <= 0) {
             throw new ApiException("Order ID must be positive");
         }
-        System.out.println("OrderDto: Getting order items for order ID: " + orderId);
         List<OrderItemPojo> orderItemPojoList = ((OrderApi) api).getOrderItemsByOrderId(orderId);
-        System.out.println("OrderDto: Found " + orderItemPojoList.size() + " order item POJOs for order " + orderId);
         List<OrderItemData> orderItemDataList = new ArrayList<>();
         for (OrderItemPojo orderItemPojo : orderItemPojoList) {
-            System.out.println("OrderDto: Converting order item POJO ID: " + orderItemPojo.getId());
             orderItemDataList.add(convertOrderItemPojoToData(orderItemPojo));
         }
-        System.out.println("OrderDto: Returning " + orderItemDataList.size() + " order item data objects");
         return orderItemDataList;
-    }
-
-    /**
-     * Add a single order item
-     */
-    public OrderItemData addOrderItem(OrderItemForm orderItemForm) {
-        if (Objects.isNull(orderItemForm)) {
-            throw new ApiException("Order item form cannot be null");
-        }
-        
-        // Validate orderId is provided
-        if (Objects.isNull(orderItemForm.getOrderId())) {
-            throw new ApiException("Order ID cannot be null");
-        }
-        
-        // Validate productId is provided
-        if (Objects.isNull(orderItemForm.getProductId())) {
-            throw new ApiException("Product ID is required");
-        }
-        
-        // Validate that the product exists
-        ProductPojo product = null;
-        try {
-            product = productApi.get(orderItemForm.getProductId());
-            if (product == null) {
-                throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
-            }
-        } catch (Exception e) {
-            throw new ApiException("Product with ID " + orderItemForm.getProductId() + " not found");
-        }
-
-        // Reduce inventory before creating order item
-        orderFlow.reduceInventoryForOrderItem(orderItemForm.getProductId(), orderItemForm.getQuantity());
-
-        OrderItemPojo orderItemPojo = convertOrderItemFormToPojo(orderItemForm);
-        ((OrderApi) api).addOrderItem(orderItemPojo);
-        return convertOrderItemPojoToData(orderItemPojo);
-    }
-
-    public OrderItemData updateOrderItem(Integer id, OrderItemForm orderItemForm) {
-        if (Objects.isNull(id)) {
-            throw new ApiException("Order item ID cannot be null");
-        }
-        if (Objects.isNull(orderItemForm)) {
-            throw new ApiException("Order item form cannot be null");
-        }
-        
-        // Get the existing order item to calculate inventory adjustment
-        OrderItemPojo existingItem = orderFlow.getOrderItem(id);
-        if (existingItem == null) {
-            throw new ApiException("Order item with ID " + id + " not found");
-        }
-        
-        // Adjust inventory based on quantity difference
-        orderFlow.adjustInventoryForOrderItemUpdate(
-            orderItemForm.getProductId(), 
-            existingItem.getQuantity(), 
-            orderItemForm.getQuantity()
-        );
-        
-        OrderItemPojo orderItemPojo = convertOrderItemFormToPojo(orderItemForm);
-        ((OrderApi) api).updateOrderItem(id, orderItemPojo);
-        return convertOrderItemPojoToData(((OrderApi) api).getOrderItem(id));
     }
 
     public OrderItemData getOrderItem(Integer id) {
@@ -395,6 +292,21 @@ public class OrderDto extends AbstractDto<OrderPojo, OrderForm, OrderData> {
         orderItemPojo.setAmount(product.getMrp() * orderItemForm.getQuantity());
         
         return orderItemPojo;
+    }
+
+    /**
+     * Convert a list of OrderItemForm to a list of OrderItemPojo
+     */
+    private List<OrderItemPojo> convertOrderItemFormsToPojos(List<OrderItemForm> orderItemForms) {
+        if (orderItemForms == null || orderItemForms.isEmpty()) {
+            throw new ApiException("Order item list cannot be null or empty");
+        }
+        
+        List<OrderItemPojo> orderItemPojos = new ArrayList<>();
+        for (OrderItemForm form : orderItemForms) {
+            orderItemPojos.add(convertOrderItemFormToPojo(form));
+        }
+        return orderItemPojos;
     }
 
     /**

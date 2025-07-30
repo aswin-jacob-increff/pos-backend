@@ -87,7 +87,7 @@ class InventoryControllerTest {
         when(inventoryDto.add(testForm)).thenThrow(new RuntimeException("Database error"));
 
         // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryController.add(testForm));
+        assertThrows(RuntimeException.class, () -> inventoryController.add(testForm));
         verify(inventoryDto).add(testForm);
     }
 
@@ -111,7 +111,7 @@ class InventoryControllerTest {
         when(inventoryDto.get(1)).thenThrow(new RuntimeException("Database error"));
 
         // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryController.get(1));
+        assertThrows(RuntimeException.class, () -> inventoryController.get(1));
         verify(inventoryDto).get(1);
     }
 
@@ -135,7 +135,7 @@ class InventoryControllerTest {
         when(inventoryDto.getAll()).thenThrow(new RuntimeException("Database error"));
 
         // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryController.getAll());
+        assertThrows(RuntimeException.class, () -> inventoryController.getAll());
         verify(inventoryDto).getAll();
     }
 
@@ -164,7 +164,7 @@ class InventoryControllerTest {
         when(inventoryDto.getPaginated(any())).thenThrow(new RuntimeException("Database error"));
 
         // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryController.getAllInventoryPaginated(0, 20, "id", "ASC"));
+        assertThrows(RuntimeException.class, () -> inventoryController.getAllInventoryPaginated(0, 20, "id", "ASC"));
         verify(inventoryDto).getPaginated(any());
     }
 
@@ -329,7 +329,7 @@ class InventoryControllerTest {
         when(inventoryDto.update(1, testForm)).thenThrow(new RuntimeException("Database error"));
 
         // Act & Assert
-        assertThrows(ApiException.class, () -> inventoryController.update(1, testForm));
+        assertThrows(RuntimeException.class, () -> inventoryController.update(1, testForm));
         verify(inventoryDto).update(1, testForm);
     }
 

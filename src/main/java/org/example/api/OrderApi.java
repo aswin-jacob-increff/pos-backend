@@ -62,19 +62,6 @@ public class OrderApi extends AbstractApi<OrderPojo> {
     }
 
     /**
-     * Update order item directly through OrderApi to maintain transaction boundary
-     */
-    public void updateOrderItem(Integer id, OrderItemPojo orderItemPojo) {
-        if (Objects.isNull(id)) {
-            throw new ApiException("Order item ID cannot be null");
-        }
-        if (Objects.isNull(orderItemPojo)) {
-            throw new ApiException("Order item cannot be null");
-        }
-        orderItemDao.update(id, orderItemPojo);
-    }
-
-    /**
      * Get order item by ID directly through OrderApi
      */
     public OrderItemPojo getOrderItem(Integer id) {
@@ -92,11 +79,6 @@ public class OrderApi extends AbstractApi<OrderPojo> {
             throw new ApiException("Order ID cannot be null");
         }
         return orderItemDao.selectByOrderId(orderId);
-    }
-
-    public String generateInvoice(Integer orderId) throws Exception {
-        // This method is now handled by OrderDto.downloadInvoice()
-        throw new ApiException("Use OrderDto.downloadInvoice() instead");
     }
 
     // Note: Order items are now managed separately with denormalized structure

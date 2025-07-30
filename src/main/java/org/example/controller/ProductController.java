@@ -28,41 +28,17 @@ public class ProductController {
 
     @PostMapping
     public ProductData add(@RequestBody ProductForm form) {
-
-        
-        try {
-            return productDto.add(form);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to add product: " + e.getMessage());
-        }
+        return productDto.add(form);
     }
 
     @GetMapping("/{id}")
     public ProductData get(@PathVariable Integer id) {
-
-        
-        try {
-            return productDto.get(id);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to get product: " + e.getMessage());
-        }
+        return productDto.get(id);
     }
 
     @GetMapping
     public List<ProductData> getAll() {
-
-        
-        try {
-            return productDto.getAll();
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to get all products: " + e.getMessage());
-        }
+        return productDto.getAll();
     }
 
     // ========== GENERALIZED PAGINATION ENDPOINTS ==========
@@ -130,68 +106,29 @@ public class ProductController {
             @RequestParam(required = false) String sortBy,
             @RequestParam(defaultValue = "ASC") String sortDirection) {
 
-        
-        try {
-            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
-            PaginationResponse<ProductData> response = productDto.getPaginated(PaginationQuery.all(request));
-            return ResponseEntity.ok(response);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to get all products: " + e.getMessage());
-        }
+        PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+        PaginationResponse<ProductData> response = productDto.getPaginated(PaginationQuery.all(request));
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
     public ProductData update(@PathVariable Integer id, @RequestBody ProductForm form) {
-
-        
-        try {
-            return productDto.update(id, form);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to update product: " + e.getMessage());
-        }
+        return productDto.update(id, form);
     }
 
     @GetMapping("/barcode/{barcode}")
     public ProductData getByBarcode(@PathVariable String barcode) {
-
-        
-        try {
-            return productDto.getByBarcode(barcode);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to get product by barcode: " + e.getMessage());
-        }
+        return productDto.getByBarcode(barcode);
     }
 
     @GetMapping("/name/search/{name}")
     public List<ProductData> searchByName(@PathVariable String name) {
-
-        
-        try {
-            return productDto.getByNameLike(name);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to search products by name: " + e.getMessage());
-        }
+        return productDto.getByNameLike(name);
     }
 
     @GetMapping("/client/{clientId}")
     public List<ProductData> getByClientId(@PathVariable Integer clientId) {
-
-        
-        try {
-            return productDto.getByClientId(clientId);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to get products by client ID: " + e.getMessage());
-        }
+        return productDto.getByClientId(clientId);
     }
 
     @PostMapping(value = "/upload-tsv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

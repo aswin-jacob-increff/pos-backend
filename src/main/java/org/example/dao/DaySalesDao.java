@@ -17,11 +17,6 @@ public class DaySalesDao extends AbstractDao<DaySalesPojo> {
 
     public void saveOrUpdate(DaySalesPojo daySales) {
         try {
-            System.out.println("Upserting day sales for date: " + daySales.getDate() + 
-                              " (Revenue: " + daySales.getTotalRevenue() + 
-                              ", Orders: " + daySales.getInvoicedOrdersCount() + 
-                              ", Items: " + daySales.getInvoicedItemsCount() + ")");
-            
             // Use native SQL with ON DUPLICATE KEY UPDATE to handle race conditions
             String sql = "INSERT INTO pos_day_sales (date, totalRevenue, invoicedOrdersCount, invoicedItemsCount) " +
                         "VALUES (?, ?, ?, ?) " +
@@ -37,7 +32,6 @@ public class DaySalesDao extends AbstractDao<DaySalesPojo> {
             query.setParameter(4, daySales.getInvoicedItemsCount());
             
             int rowsAffected = query.executeUpdate();
-            System.out.println("Day sales upsert completed. Rows affected: " + rowsAffected);
             em.flush();
         } catch (Exception e) {
             System.err.println("Error in day sales upsert for date " + daySales.getDate() + ": " + e.getMessage());

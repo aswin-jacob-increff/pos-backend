@@ -7,7 +7,7 @@ import org.example.model.data.SalesReportData;
 import org.example.model.form.SalesReportForm;
 import org.example.model.data.CustomDateRangeSalesData;
 import org.example.model.form.CustomDateRangeSalesForm;
-import org.example.model.form.DaySalesForm;
+import org.example.model.data.DaySalesData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -51,7 +51,7 @@ public class ReportsController {
     }
     
     @GetMapping("/day-sales")
-    public List<DaySalesForm> getAllDaySales() {
+    public List<DaySalesData> getAllDaySales() {
 
         
         try {
@@ -64,7 +64,7 @@ public class ReportsController {
     }
 
     @GetMapping("/day-sales/by-date-range")
-    public List<DaySalesForm> getDaySalesByDateRange(
+    public List<DaySalesData> getDaySalesByDateRange(
             @RequestParam String startDate,
             @RequestParam String endDate) {
 

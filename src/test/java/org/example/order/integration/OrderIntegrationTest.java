@@ -5,6 +5,7 @@ import org.example.flow.OrderFlow;
 import org.example.api.OrderApi;
 import org.example.api.ProductApi;
 import org.example.api.ClientApi;
+import org.example.api.InventoryApi;
 import org.example.api.InvoiceApi;
 import org.example.api.InvoiceClientApi;
 import org.example.model.data.OrderData;
@@ -55,6 +56,9 @@ class OrderIntegrationTest {
 
     @Mock
     private InvoiceApi invoiceApi;
+
+    @Mock
+    private InventoryApi inventoryApi;
 
     @Mock
     private InvoiceClientApi invoiceClientApi;
@@ -115,12 +119,18 @@ class OrderIntegrationTest {
         Field apiField = orderDto.getClass().getSuperclass().getDeclaredField("api");
         apiField.setAccessible(true);
         apiField.set(orderDto, orderApi);
+
+        // Inject the inventoryApi field
+        Field inventoryApiField = orderDto.getClass().getDeclaredField("inventoryApi");
+        inventoryApiField.setAccessible(true);
+        inventoryApiField.set(orderDto, inventoryApi);
     }
 
     @Test
     void testAdd_Integration_Success() {
         // Arrange
         testForm.setOrderItemFormList(Arrays.asList(testOrderItemForm));
+        when(productApi.get(1)).thenReturn(testProduct);
         when(orderFlow.createOrderWithItems(any(OrderPojo.class), anyList())).thenReturn(testOrder);
 
         // Act
@@ -130,7 +140,7 @@ class OrderIntegrationTest {
         assertNotNull(result);
         assertEquals(testOrder.getId(), result.getId());
         assertEquals(testOrder.getUserId(), result.getUserId());
-        verify(orderFlow).createOrderWithItems(any(OrderPojo.class), eq(Arrays.asList(testOrderItemForm)));
+        verify(orderFlow).createOrderWithItems(any(OrderPojo.class), any(List.class));
     }
 
     @Test
@@ -236,31 +246,5 @@ class OrderIntegrationTest {
         verify(orderApi).getOrderItemsByOrderId(1);
     }
 
-    @Test
-    void testAddOrderItem_Integration_Success() {
-        // Arrange
-        OrderItemPojo orderItemPojo = new OrderItemPojo();
-        orderItemPojo.setId(1);
-        orderItemPojo.setOrderId(1);
-        orderItemPojo.setProductId(1);
-        orderItemPojo.setQuantity(2);
-        orderItemPojo.setSellingPrice(50.0);
-        orderItemPojo.setAmount(100.0);
-        
-        when(productApi.get(1)).thenReturn(testProduct);
-        doNothing().when(orderFlow).reduceInventoryForOrderItem(1, 2);
-        doNothing().when(orderApi).addOrderItem(any(OrderItemPojo.class));
-        when(clientApi.get(1)).thenReturn(testClient);
-        when(orderApi.get(1)).thenReturn(testOrder);
 
-        // Act
-        OrderItemData result = orderDto.addOrderItem(testOrderItemForm);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(testOrderItemForm.getProductId(), result.getProductId());
-        verify(productApi, times(3)).get(1);
-        verify(orderFlow).reduceInventoryForOrderItem(1, 2);
-        verify(orderApi).addOrderItem(any(OrderItemPojo.class));
-    }
 } 

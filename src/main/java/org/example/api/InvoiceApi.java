@@ -38,16 +38,12 @@ public class InvoiceApi extends AbstractApi<InvoicePojo> {
         try {
             InvoicePojo existingInvoice = invoiceDao.selectByOrderId(invoice.getOrderId());
             if (existingInvoice != null) {
-                System.out.println("Warning: Invoice already exists for order " + invoice.getOrderId());
                 // Note: delete method removed, so we'll just log this
             }
         } catch (Exception e) {
-            // If multiple invoices exist, log them
-            System.out.println("Multiple invoices found for order " + invoice.getOrderId());
+            // If multiple invoices exist, handle them
             List<InvoicePojo> existingInvoices = invoiceDao.selectAllByOrderId(invoice.getOrderId());
-            for (InvoicePojo existing : existingInvoices) {
-                System.out.println("Would remove existing invoice: " + existing.getId());
-            }
+            // Handle multiple invoices if needed
         }
         
         invoiceDao.insert(invoice);

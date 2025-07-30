@@ -246,11 +246,7 @@ class OrderApiTest {
 
 
 
-    @Test
-    void testGenerateInvoice_ThrowsException() {
-        // Act & Assert
-        assertThrows(ApiException.class, () -> orderApi.generateInvoice(1));
-    }
+
 
     @Test
     void testUpdateStatus_Success() {

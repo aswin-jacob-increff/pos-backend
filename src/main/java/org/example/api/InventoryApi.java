@@ -76,6 +76,22 @@ public class InventoryApi extends AbstractApi<InventoryPojo> {
     }
 
     /**
+     * Check if sufficient inventory is available for a product
+     */
+    public void checkInventoryAvailability(Integer productId, Integer requiredQuantity) {
+        validatePositive(requiredQuantity, "Required quantity");
+        InventoryPojo inventory = getByProductId(productId);
+        if (Objects.isNull(inventory)) {
+            throw new ApiException("No inventory found for product ID: " + productId);
+        }
+        if (inventory.getQuantity() < requiredQuantity) {
+            throw new ApiException("Insufficient stock. Available: " + inventory.getQuantity() + ", Requested: " + requiredQuantity);
+        }
+        
+        validateProductAndClient(productId);
+    }
+
+    /**
      * Remove stock from existing inventory by product ID
      */
     public void removeStock(Integer productId, Integer quantityToRemove) {

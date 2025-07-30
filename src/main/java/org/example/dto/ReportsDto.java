@@ -4,6 +4,7 @@ import org.example.model.data.SalesReportData;
 import org.example.model.form.SalesReportForm;
 import org.example.model.form.CustomDateRangeSalesForm;
 import org.example.model.data.CustomDateRangeSalesData;
+import org.example.model.data.DaySalesData;
 import org.example.model.form.DaySalesForm;
 import org.example.pojo.OrderItemPojo;
 import org.example.pojo.OrderPojo;
@@ -216,17 +217,17 @@ public class ReportsDto {
         }
     }
 
-    public List<DaySalesForm> getAllDaySales() {
+    public List<DaySalesData> getAllDaySales() {
         try {
             List<DaySalesPojo> daySalesList = reportsFlow.getAllDaySales();
             return daySalesList.stream()
                 .map(daySales -> {
-                    DaySalesForm form = new DaySalesForm();
-                    form.setDate(daySales.getDate());
-                    form.setInvoicedOrdersCount(daySales.getInvoicedOrdersCount());
-                    form.setInvoicedItemsCount(daySales.getInvoicedItemsCount());
-                    form.setTotalRevenue(daySales.getTotalRevenue());
-                    return form;
+                    DaySalesData data = new DaySalesData();
+                    data.setDate(daySales.getDate().toLocalDate().toString()); // Format as YYYY-MM-DD
+                    data.setInvoicedOrdersCount(daySales.getInvoicedOrdersCount());
+                    data.setInvoicedItemsCount(daySales.getInvoicedItemsCount());
+                    data.setTotalRevenue(daySales.getTotalRevenue());
+                    return data;
                 })
                 .collect(Collectors.toList());
         } catch (Exception e) {
@@ -235,7 +236,7 @@ public class ReportsDto {
         }
     }
     
-    public List<DaySalesForm> getAllDaySales(LocalDate startDate, LocalDate endDate) {
+    public List<DaySalesData> getAllDaySales(LocalDate startDate, LocalDate endDate) {
         if (Objects.isNull(startDate) || Objects.isNull(endDate)) {
             throw new ApiException("Start date and end date are required");
         }
@@ -248,12 +249,12 @@ public class ReportsDto {
             List<DaySalesPojo> daySalesList = reportsFlow.getDaySalesByDateRange(startDate, endDate);
             return daySalesList.stream()
                 .map(daySales -> {
-                    DaySalesForm form = new DaySalesForm();
-                    form.setDate(daySales.getDate());
-                    form.setInvoicedOrdersCount(daySales.getInvoicedOrdersCount());
-                    form.setInvoicedItemsCount(daySales.getInvoicedItemsCount());
-                    form.setTotalRevenue(daySales.getTotalRevenue());
-                    return form;
+                    DaySalesData data = new DaySalesData();
+                    data.setDate(daySales.getDate().toLocalDate().toString()); // Format as YYYY-MM-DD
+                    data.setInvoicedOrdersCount(daySales.getInvoicedOrdersCount());
+                    data.setInvoicedItemsCount(daySales.getInvoicedItemsCount());
+                    data.setTotalRevenue(daySales.getTotalRevenue());
+                    return data;
                 })
                 .collect(Collectors.toList());
         } catch (Exception e) {

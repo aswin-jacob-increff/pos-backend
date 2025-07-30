@@ -40,38 +40,17 @@ public class InventoryController {
 
     @PostMapping
     public InventoryData add(@RequestBody InventoryForm form) {
-        
-        try {
-            return inventoryDto.add(form);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to add inventory: " + e.getMessage());
-        }
+        return inventoryDto.add(form);
     }
 
     @GetMapping("/{id}")
     public InventoryData get(@PathVariable Integer id) {
-        
-        try {
-            return inventoryDto.get(id);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to get inventory: " + e.getMessage());
-        }
+        return inventoryDto.get(id);
     }
 
     @GetMapping
     public List<InventoryData> getAll() {
-        
-        try {
-            return inventoryDto.getAll();
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to get all inventory: " + e.getMessage());
-        }
+        return inventoryDto.getAll();
     }
 
     @GetMapping("/paginated")
@@ -80,16 +59,10 @@ public class InventoryController {
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
             @RequestParam(defaultValue = "ASC") String sortDirection) {
-        
-        try {
-            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
-            PaginationResponse<InventoryData> response = inventoryDto.getPaginated(PaginationQuery.all(request));
-            return ResponseEntity.ok(response);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to get all inventory: " + e.getMessage());
-        }
+
+        PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+        PaginationResponse<InventoryData> response = inventoryDto.getPaginated(PaginationQuery.all(request));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/product/name/{productName}/paginated")
@@ -99,20 +72,14 @@ public class InventoryController {
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
             @RequestParam(defaultValue = "ASC") String sortDirection) {
-        
-        try {
-            ProductPojo product = productApi.getByName(productName);
-            if (product == null) {
-                throw new ApiException("Product with name '" + productName + "' not found");
-            }
-            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
-            PaginationResponse<InventoryData> response = inventoryDto.getByProductIdPaginated(product.getId(), request);
-            return ResponseEntity.ok(response);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to get inventory by product name: " + e.getMessage());
+
+        ProductPojo product = productApi.getByName(productName);
+        if (product == null) {
+            throw new ApiException("Product with name '" + productName + "' not found");
         }
+        PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+        PaginationResponse<InventoryData> response = inventoryDto.getByProductIdPaginated(product.getId(), request);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/product/barcode/{barcode}/paginated")
@@ -122,20 +89,14 @@ public class InventoryController {
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(required = false) String sortBy,
             @RequestParam(defaultValue = "ASC") String sortDirection) {
-        
-        try {
-            ProductPojo product = productApi.getByBarcode(barcode);
-            if (product == null) {
-                throw new ApiException("Product with barcode '" + barcode + "' not found");
-            }
-            PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
-            PaginationResponse<InventoryData> response = inventoryDto.getByProductIdPaginated(product.getId(), request);
-            return ResponseEntity.ok(response);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to get inventory by product barcode: " + e.getMessage());
+
+        ProductPojo product = productApi.getByBarcode(barcode);
+        if (product == null) {
+            throw new ApiException("Product with barcode '" + barcode + "' not found");
         }
+        PaginationRequest request = new PaginationRequest(page, size, sortBy, sortDirection);
+        PaginationResponse<InventoryData> response = inventoryDto.getByProductIdPaginated(product.getId(), request);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/byProduct")
@@ -180,67 +141,39 @@ public class InventoryController {
 
     @PutMapping("/{id}")
     public InventoryData update(@PathVariable Integer id, @RequestBody InventoryForm form) {
-        
-        try {
-            return inventoryDto.update(id, form);
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to update inventory: " + e.getMessage());
-        }
+        return inventoryDto.update(id, form);
     }
 
     @GetMapping("/product/{productBarcode}")
     public InventoryData getByProductBarcode(@PathVariable String productBarcode) {
-        
-        try {
-            // Get product by barcode first, then get inventory by product ID
-            var product = productApi.getByBarcode(productBarcode);
-            if (product == null) {
-                throw new ApiException("Product with barcode '" + productBarcode + "' not found");
-            }
-            return inventoryDto.getByProductId(product.getId());
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to get inventory by product barcode: " + e.getMessage());
+
+        var product = productApi.getByBarcode(productBarcode);
+        if (product == null) {
+            throw new ApiException("Product with barcode '" + productBarcode + "' not found");
         }
+        return inventoryDto.getByProductId(product.getId());
     }
 
     @GetMapping("/product/barcode/search/{productBarcode}")
     public List<InventoryData> searchByProductBarcode(@PathVariable String productBarcode) {
-        
-        try {
-            // Get product by barcode first, then get inventory by product ID
-            var product = productApi.getByBarcode(productBarcode);
-            if (product == null) {
-                throw new ApiException("Product with barcode '" + productBarcode + "' not found");
-            }
-            InventoryData inventory = inventoryDto.getByProductId(product.getId());
-            return inventory != null ? List.of(inventory) : List.of();
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to search inventory by product barcode: " + e.getMessage());
+
+        var product = productApi.getByBarcode(productBarcode);
+        if (product == null) {
+            throw new ApiException("Product with barcode '" + productBarcode + "' not found");
         }
+        InventoryData inventory = inventoryDto.getByProductId(product.getId());
+        return inventory != null ? List.of(inventory) : List.of();
     }
 
     @GetMapping("/product/name/search/{productName}")
     public List<InventoryData> searchByProductName(@PathVariable String productName) {
         
-        try {
-            // Get product by name first, then get inventory by product ID
-            var product = productApi.getByName(productName);
-            if (product == null) {
-                throw new ApiException("Product with name '" + productName + "' not found");
-            }
-            InventoryData inventory = inventoryDto.getByProductId(product.getId());
-            return inventory != null ? List.of(inventory) : List.of();
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException("Failed to search inventory by product name: " + e.getMessage());
+        var product = productApi.getByName(productName);
+        if (product == null) {
+            throw new ApiException("Product with name '" + productName + "' not found");
         }
+        InventoryData inventory = inventoryDto.getByProductId(product.getId());
+        return inventory != null ? List.of(inventory) : List.of();
     }
     
     @PutMapping("/{productId}/addStock")

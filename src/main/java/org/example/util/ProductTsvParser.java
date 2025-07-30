@@ -163,28 +163,26 @@ public class ProductTsvParser {
      * @return TsvUploadResult containing parsed forms and any errors/warnings
      */
     public static TsvUploadResult parseWithCompleteValidation(InputStream inputStream, org.example.api.ProductApi productApi, org.example.api.ClientApi clientApi) {
-        System.out.println("ProductTsvParser.parseWithCompleteValidation - Starting");
         TsvUploadResult result = new TsvUploadResult();
-        List<ProductForm> validProducts = new ArrayList<>();
+        List<ProductForm> validProductForms = new ArrayList<>();
         Set<String> seenBarcodes = new HashSet<>();
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
-            String header = reader.readLine(); // Expecting: barcode, clientname, productname, mrp, imageurl (optional)
-            System.out.println("ProductTsvParser.parseWithCompleteValidation - Header: " + header);
-            if (header == null || !header.toLowerCase().contains("barcode") || !header.toLowerCase().contains("clientname") || !header.toLowerCase().contains("productname") || !header.toLowerCase().contains("mrp")) {
-                System.out.println("ProductTsvParser.parseWithCompleteValidation - Invalid header");
-                result.addError("Missing or invalid header: Expected 'barcode<TAB>clientname<TAB>productname<TAB>mrp<TAB>imageurl' (imageurl is optional)");
+            String header = reader.readLine(); // Expecting: barcode<TAB>name<TAB>client<TAB>mrp
+            if (header == null || !header.toLowerCase().contains("barcode") || !header.toLowerCase().contains("name") || 
+                !header.toLowerCase().contains("client") || !header.toLowerCase().contains("mrp")) {
+                result.addError("Missing or invalid header: Expected 'barcode<TAB>name<TAB>client<TAB>mrp'");
                 return result;
             }
 
             String line;
-            int rowNum = 2; // 1-based, header is row 1
+            int rowNum = 2;
             while ((line = reader.readLine()) != null) {
                 result.setTotalRows(result.getTotalRows() + 1);
                 
                 String[] cols = line.split("\t");
-                if (cols.length < 4 || cols.length > 5) {
-                    result.addError("Row " + rowNum + ": Wrong format. Expected 4-5 columns: barcode, clientname, productname, mrp, imageurl(optional)");
+                if (cols.length != 4) {
+                    result.addError("Row " + rowNum + ": Wrong format. Expected 4 columns: barcode, name, client, mrp");
                     result.incrementFailed();
                     rowNum++;
                     continue;
@@ -195,58 +193,78 @@ public class ProductTsvParser {
                     rowNum++;
                     continue;
                 }
+                if (cols[1].trim().isEmpty()) {
+                    result.addError("Row " + rowNum + ": Product name cannot be empty");
+                    result.incrementFailed();
+                    rowNum++;
+                    continue;
+                }
+                if (cols[2].trim().isEmpty()) {
+                    result.addError("Row " + rowNum + ": Client name cannot be empty");
+                    result.incrementFailed();
+                    rowNum++;
+                    continue;
+                }
                 
                 try {
                     String barcode = cols[0].trim().toLowerCase();
-                    String clientName = cols[1].trim().toLowerCase();
-                    String productName = cols[2].trim().toLowerCase();
-                    
-                    System.out.println("ProductTsvParser.parseWithCompleteValidation - Processing barcode: " + barcode + ", client: " + clientName);
+                    String name = cols[1].trim();
+                    String clientName = cols[2].trim();
                     
                     // Check for duplicates within the file
                     if (seenBarcodes.contains(barcode)) {
-                        System.out.println("ProductTsvParser.parseWithCompleteValidation - Duplicate barcode found in file: " + barcode);
                         result.addError("Row " + rowNum + ": Duplicate barcode '" + barcode + "' found in file");
                         result.incrementFailed();
                         rowNum++;
                         continue;
                     }
                     
-                    // Check for duplicates in database
+                    // Check if product already exists in database
                     try {
                         org.example.pojo.ProductPojo existingProduct = productApi.getByBarcode(barcode);
                         if (existingProduct != null) {
-                            System.out.println("ProductTsvParser.parseWithCompleteValidation - Product already exists in database: " + barcode);
-                            result.addError("Row " + rowNum + ": Product with barcode '" + barcode + "' already exists");
+                            result.addError("Row " + rowNum + ": Product with barcode '" + barcode + "' already exists in database");
                             result.incrementFailed();
                             rowNum++;
                             continue;
                         }
                     } catch (Exception e) {
-                        // If product doesn't exist, that's fine - we can proceed
-                        System.out.println("ProductTsvParser.parseWithCompleteValidation - Product not found in database (expected): " + barcode);
+                        // Product not found is expected for new products
                     }
                     
                     // Check if client exists and is active
                     try {
-                        org.example.pojo.ClientPojo existingClient = clientApi.getByName(clientName);
-                        if (existingClient == null) {
-                            System.out.println("ProductTsvParser.parseWithCompleteValidation - Client not found: " + clientName);
+                        org.example.pojo.ClientPojo client = clientApi.getByName(clientName);
+                        if (client == null) {
                             result.addError("Row " + rowNum + ": Client '" + clientName + "' not found");
                             result.incrementFailed();
                             rowNum++;
                             continue;
                         }
-                        if (!existingClient.getStatus()) {
-                            System.out.println("ProductTsvParser.parseWithCompleteValidation - Client is not active: " + clientName);
+                        if (!client.getStatus()) {
                             result.addError("Row " + rowNum + ": Client '" + clientName + "' is not active");
                             result.incrementFailed();
                             rowNum++;
                             continue;
                         }
                     } catch (Exception e) {
-                        System.out.println("ProductTsvParser.parseWithCompleteValidation - Error checking client '" + clientName + "': " + e.getMessage());
-                        result.addError("Row " + rowNum + ": Error validating client '" + clientName + "': " + e.getMessage());
+                        result.addError("Row " + rowNum + ": Error checking client '" + clientName + "': " + e.getMessage());
+                        result.incrementFailed();
+                        rowNum++;
+                        continue;
+                    }
+                    
+                    // Validate MRP
+                    try {
+                        Double mrp = Double.parseDouble(cols[3].trim());
+                        if (mrp <= 0) {
+                            result.addError("Row " + rowNum + ": MRP must be positive: " + mrp);
+                            result.incrementFailed();
+                            rowNum++;
+                            continue;
+                        }
+                    } catch (NumberFormatException e) {
+                        result.addError("Row " + rowNum + ": Invalid MRP value '" + cols[3].trim() + "'. Must be a valid number");
                         result.incrementFailed();
                         rowNum++;
                         continue;
@@ -254,38 +272,24 @@ public class ProductTsvParser {
                     
                     ProductForm form = new ProductForm();
                     form.setBarcode(barcode);
+                    form.setName(name);
                     form.setClientName(clientName);
-                    form.setName(productName);
                     form.setMrp(Double.parseDouble(cols[3].trim()));
-                    // Set image URL if provided (5th column)
-                    if (cols.length == 5 && cols[4] != null && !cols[4].trim().isEmpty()) {
-                        form.setImage(cols[4].trim());
-                    }
-                    validProducts.add(form);
+                    validProductForms.add(form);
                     seenBarcodes.add(barcode);
                     result.incrementSuccessful();
-                    System.out.println("ProductTsvParser.parseWithCompleteValidation - Successfully validated product: " + barcode);
                     
-                } catch (NumberFormatException e) {
-                    System.out.println("ProductTsvParser.parseWithCompleteValidation - Invalid MRP value in row " + rowNum + ": " + cols[3].trim());
-                    result.addError("Row " + rowNum + ": Invalid MRP value '" + cols[3].trim() + "'. Must be a valid number");
-                    result.incrementFailed();
                 } catch (Exception e) {
-                    System.out.println("ProductTsvParser.parseWithCompleteValidation - Error processing row " + rowNum + ": " + e.getMessage());
-                    e.printStackTrace();
                     result.addError("Row " + rowNum + ": " + e.getMessage());
                     result.incrementFailed();
                 }
                 rowNum++;
             }
         } catch (Exception e) {
-            System.out.println("ProductTsvParser.parseWithCompleteValidation - File reading error: " + e.getMessage());
             result.addError("File reading error: " + e.getMessage());
         }
         
-        // Store the valid forms in the result for later use
-        result.setParsedForms(validProducts);
-        System.out.println("ProductTsvParser.parseWithCompleteValidation - Completed. Total: " + result.getTotalRows() + ", Successful: " + result.getSuccessfulRows() + ", Failed: " + result.getFailedRows());
+        result.setParsedForms(validProductForms);
         return result;
     }
 }

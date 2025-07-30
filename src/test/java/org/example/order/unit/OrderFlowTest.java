@@ -154,20 +154,22 @@ class OrderFlowTest {
         order.setUserId("testuser@example.com");
         order.setDate(ZonedDateTime.now());
         
-        OrderItemForm itemForm = new OrderItemForm();
-        itemForm.setProductId(1);
-        itemForm.setQuantity(2);
-        itemForm.setSellingPrice(50.0);
+        OrderItemPojo itemPojo = new OrderItemPojo();
+        itemPojo.setProductId(1);
+        itemPojo.setQuantity(2);
+        itemPojo.setSellingPrice(50.0);
+        itemPojo.setAmount(100.0);
         
-        List<OrderItemForm> itemForms = Arrays.asList(itemForm);
+        List<OrderItemPojo> itemPojos = Arrays.asList(itemPojo);
         
         doNothing().when(api).add(any(OrderPojo.class));
         doNothing().when(api).addOrderItem(any(OrderItemPojo.class));
         doNothing().when(api).update(anyInt(), any(OrderPojo.class));
         doNothing().when(inventoryApi).removeStock(anyInt(), anyInt());
+        doNothing().when(inventoryApi).checkInventoryAvailability(anyInt(), anyInt());
 
         // Act
-        OrderPojo result = orderFlow.createOrderWithItems(order, itemForms);
+        OrderPojo result = orderFlow.createOrderWithItems(order, itemPojos);
 
         // Assert
         assertNotNull(result);
@@ -175,17 +177,18 @@ class OrderFlowTest {
         verify(api).add(order);
         verify(api).addOrderItem(any(OrderItemPojo.class));
         verify(api).update(eq(1), any(OrderPojo.class));
+        verify(inventoryApi).checkInventoryAvailability(1, 2);
         verify(inventoryApi).removeStock(1, 2);
     }
 
     @Test
     void testCreateOrderWithItems_NullOrder() {
         // Arrange
-        OrderItemForm itemForm = new OrderItemForm();
-        List<OrderItemForm> itemForms = Arrays.asList(itemForm);
+        OrderItemPojo itemPojo = new OrderItemPojo();
+        List<OrderItemPojo> itemPojos = Arrays.asList(itemPojo);
 
         // Act & Assert
-        assertThrows(ApiException.class, () -> orderFlow.createOrderWithItems(null, itemForms));
+        assertThrows(ApiException.class, () -> orderFlow.createOrderWithItems(null, itemPojos));
         verify(api, never()).add(any());
     }
 
@@ -203,10 +206,10 @@ class OrderFlowTest {
     void testCreateOrderWithItems_EmptyItemList() {
         // Arrange
         OrderPojo order = new OrderPojo();
-        List<OrderItemForm> itemForms = Arrays.asList();
+        List<OrderItemPojo> itemPojos = Arrays.asList();
 
         // Act & Assert
-        assertThrows(ApiException.class, () -> orderFlow.createOrderWithItems(order, itemForms));
+        assertThrows(ApiException.class, () -> orderFlow.createOrderWithItems(order, itemPojos));
         verify(api, never()).add(any());
     }
 } 

@@ -36,7 +36,6 @@ public class ContinuousIdGenerator implements IdentifierGenerator {
             session.createNativeQuery(insertSQL).executeUpdate();
         } catch (Exception e) {
             // If table creation fails, try to use existing table
-            System.out.println("Warning: Could not recreate sequence table " + tableName + ": " + e.getMessage());
         }
     }
     
@@ -71,7 +70,6 @@ public class ContinuousIdGenerator implements IdentifierGenerator {
                 }
             } catch (Exception fallbackException) {
                 // Last resort: return a timestamp-based ID
-                System.out.println("Warning: Using fallback ID generation for " + tableName + ": " + fallbackException.getMessage());
                 return (int) (System.currentTimeMillis() % Integer.MAX_VALUE);
             }
         }

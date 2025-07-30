@@ -26,7 +26,7 @@ public class WebInitializer implements WebApplicationInitializer {
 
         servletContext.setInitParameter("spring.profiles.active", "default");
 
-        System.out.println(">> Servlet 3.0 multipart support: " + servletContext.getMajorVersion() + "." + servletContext.getMinorVersion());
+
 
         ServletRegistration.Dynamic servlet = servletContext.addServlet("dispatcher", new DispatcherServlet(context));
         servlet.setLoadOnStartup(1);
